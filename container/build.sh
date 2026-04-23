@@ -29,21 +29,19 @@ mkdir -p "${BOT_OUT}"
 IMAGE_NAME="${IMAGE_NAME:-plang-os}"
 IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
 IMAGE_REF="${IMAGE_NAME}:${IMAGE_TAG}"
-PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
+PLATFORMS="${PLATFORMS:-linux/amd64}"
 
 RUNTIME_DEPS_REF="${RUNTIME_DEPS_REF:-mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23}"
 ALPINE_REF="${ALPINE_REF:-alpine:3.23}"
 
 # ---- Pre-flight: required inputs present ------------------------------------
-for arch in amd64 arm64; do
-  zip="${SCRIPT_DIR}/plang-${arch}.zip"
-  if [[ ! -f "${zip}" ]]; then
-    echo "error: missing ${zip}" >&2
-    echo "  place a self-contained linux-musl-${arch/amd64/x64} publish of PLang there." >&2
-    echo "  see container/README.md." >&2
-    exit 1
-  fi
-done
+zip="${SCRIPT_DIR}/plang-amd64.zip"
+if [[ ! -f "${zip}" ]]; then
+  echo "error: missing ${zip}" >&2
+  echo "  place a self-contained linux-musl-x64 publish of PLang there." >&2
+  echo "  see container/README.md." >&2
+  exit 1
+fi
 
 # ---- Reproducibility knobs ---------------------------------------------------
 # SOURCE_DATE_EPOCH anchors timestamps that would otherwise drift between builds.
@@ -51,11 +49,10 @@ done
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct)}"
 SOURCE_COMMIT="$(git rev-parse HEAD)"
 
-# Record the hashes of the zips we're shipping. If these change between runs
+# Record the hash of the zip we're shipping. If it changes between runs
 # without a SOURCE_DATE_EPOCH bump, the image digest will differ — that's the
 # reproducibility contract.
 ZIP_AMD64_SHA="$(sha256sum "${SCRIPT_DIR}/plang-amd64.zip" | awk '{print $1}')"
-ZIP_ARM64_SHA="$(sha256sum "${SCRIPT_DIR}/plang-arm64.zip" | awk '{print $1}')"
 
 echo "==> plangOS build"
 echo "    branch:        ${BRANCH}"
@@ -64,7 +61,6 @@ echo "    platforms:     ${PLATFORMS}"
 echo "    source commit: ${SOURCE_COMMIT}"
 echo "    date epoch:    ${SOURCE_DATE_EPOCH}"
 echo "    plang-amd64:   sha256:${ZIP_AMD64_SHA}"
-echo "    plang-arm64:   sha256:${ZIP_ARM64_SHA}"
 
 # ---- Resolve digests for pinned bases ----------------------------------------
 # We resolve the tag -> digest at build time and bake the digest into the image
@@ -174,14 +170,13 @@ if [[ -n "${AUDIT_PLATFORM}" ]]; then
     exit 1
   fi
 
-  # Assertion 4: plang binary present and executable, tini present.
+  # Assertion 4: plang binary present and executable.
   [[ -x "${AUDIT_DIR}/opt/plang/plang" ]] || { echo "audit: plang missing/not-exec" >&2; exit 1; }
-  [[ -x "${AUDIT_DIR}/usr/local/bin/tini" ]] || { echo "audit: tini missing/not-exec" >&2; exit 1; }
 
   rm -rf "${AUDIT_DIR}"
   docker rm -f "${CID}" >/dev/null
   trap - EXIT
-  echo "    audit:         PASS (no shell, no apt/apk, no setuid, plang+tini ok)"
+  echo "    audit:         PASS (no shell, no apt/apk, no setuid, plang ok)"
 fi
 
 # ---- SBOM --------------------------------------------------------------------
@@ -231,8 +226,7 @@ cat > "${BOT_OUT}/build-record.json" <<EOF
     "alpine": "${ALPINE_PINNED}"
   },
   "inputs": {
-    "plang_amd64_sha256": "${ZIP_AMD64_SHA}",
-    "plang_arm64_sha256": "${ZIP_ARM64_SHA}"
+    "plang_amd64_sha256": "${ZIP_AMD64_SHA}"
   },
   "oci_archive": "${OCI_TAR}",
   "oci_archive_sha256": "${OCI_SHA}"
