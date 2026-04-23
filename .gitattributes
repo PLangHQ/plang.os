@@ -1,0 +1,8 @@
+# Shell scripts must have LF line endings so the shebang works under WSL
+# (CRLF makes '/usr/bin/env bash' look for 'bash\r').
+*.sh text eol=lf
+
+# PowerShell scripts stay CRLF (Windows default).
+*.ps1 text eol=crlf
+
+# Keep default for the rest (git's autocrlf on Windows will handle .md, etc.)
