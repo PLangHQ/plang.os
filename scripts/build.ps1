@@ -7,10 +7,14 @@
   Windows-side copy of the PLang self-contained publish zip. The zip lives
   outside the repo because it is too big (about 260 MB).
 
-  Docker Desktop (with WSL integration) is assumed. The image is built by the
-  WSL-side docker client, which talks to the same Docker Desktop daemon that
-  Windows PowerShell uses, so after building you can run 'docker run' or
-  'docker images' from either side and see the image.
+  Uses podman inside WSL (no Docker Desktop dependency). The image is stored
+  in the WSL distro's rootless podman store. To list images from Windows:
+    wsl podman images
+  To run:
+    .\scripts\run.ps1
+
+  Prereq in the WSL distro:
+    sudo apt update && sudo apt install -y podman skopeo jq
 
 .PARAMETER PlangZip
   Windows path to the PLang self-contained publish zip. Default:
@@ -80,4 +84,4 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "==> done. Built plang-os images:"
-& docker images plang-os
+& wsl @wslArgs podman images plang-os

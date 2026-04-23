@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 #
-# plangOS v1 container build wrapper.
+# plangOS v1 container build wrapper (podman + skopeo).
 #
-# Reproducible: same git HEAD + same plang-*.zip digests -> same image digest.
+# Reproducible: same git HEAD + same plang-amd64.zip hash -> same image.
 #
 # Produces:
-#   * multi-arch OCI image (linux/amd64 + linux/arm64)
-#   * SBOM (syft, SPDX JSON) under .bot/<branch-dashed>/os/v1/sbom.spdx.json
-#   * vuln scan (trivy JSON)        under .bot/<branch-dashed>/os/v1/trivy.json
+#   * OCI archive (podman save --format oci-archive)
+#     under .bot/<branch-dashed>/os/v1/image.oci.tar
+#   * SBOM (syft, SPDX JSON)    under .bot/<branch-dashed>/os/v1/sbom.spdx.json
+#   * vuln scan (trivy JSON)    under .bot/<branch-dashed>/os/v1/trivy.json
 #   * optional cosign signature (keyless Fulcio by default; COSIGN_KEY overrides)
 #
-# Required on PATH: docker (with buildx), sha256sum, jq, git.
+# Required on PATH: podman, skopeo, sha256sum, jq, git, awk, tar.
 # Optional on PATH: syft, trivy, cosign.
+#
+# Install on Debian/Ubuntu WSL:
+#   sudo apt update && sudo apt install -y podman skopeo jq
 
 set -euo pipefail
 
@@ -29,15 +33,27 @@ mkdir -p "${BOT_OUT}"
 IMAGE_NAME="${IMAGE_NAME:-plang-os}"
 IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
 IMAGE_REF="${IMAGE_NAME}:${IMAGE_TAG}"
-PLATFORMS="${PLATFORMS:-linux/amd64}"
+PLATFORM="${PLATFORM:-linux/amd64}"
 
 RUNTIME_DEPS_REF="${RUNTIME_DEPS_REF:-mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23}"
 ALPINE_REF="${ALPINE_REF:-alpine:3.23}"
 
-# ---- Pre-flight: required inputs present ------------------------------------
+# ---- Tool preflight ----------------------------------------------------------
+missing_tools=()
+for tool in podman skopeo sha256sum git awk tar; do
+  command -v "${tool}" >/dev/null 2>&1 || missing_tools+=("${tool}")
+done
+if [[ ${#missing_tools[@]} -gt 0 ]]; then
+  echo "error: missing required tools: ${missing_tools[*]}" >&2
+  echo "  on Debian/Ubuntu WSL:" >&2
+  echo "    sudo apt update && sudo apt install -y podman skopeo jq" >&2
+  exit 1
+fi
+
+# ---- Pre-flight: zip present -------------------------------------------------
 # The zip is too big for the repo (~260 MB for an untrimmed self-contained
 # publish). It lives outside the repo; build.sh copies it into the build
-# context just before `docker build` and cleans up after. Source path is
+# context just before the build and cleans up after. Source path is
 # ${PLANG_ZIP:-/shared/plang-amd64.zip}.
 zip="${SCRIPT_DIR}/plang-amd64.zip"
 zip_src="${PLANG_ZIP:-/shared/plang-amd64.zip}"
@@ -58,7 +74,7 @@ fi
 CID=""
 cleanup_on_exit() {
   if [[ -n "${CID}" ]]; then
-    docker rm -f "${CID}" >/dev/null 2>&1 || true
+    podman rm -f "${CID}" >/dev/null 2>&1 || true
   fi
   if [[ "${staged_zip}" = "1" && -f "${zip}" ]]; then
     rm -f "${zip}"
@@ -67,43 +83,35 @@ cleanup_on_exit() {
 trap cleanup_on_exit EXIT
 
 # ---- Reproducibility knobs ---------------------------------------------------
-# SOURCE_DATE_EPOCH anchors timestamps that would otherwise drift between builds.
-# We derive from the latest git commit so any change to the tree advances it.
+# SOURCE_DATE_EPOCH anchors timestamps that would otherwise drift between
+# builds. We derive from the latest git commit so any change to the tree
+# advances it. Buildah (podman's backend) honours this for layer timestamps.
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct)}"
 SOURCE_COMMIT="$(git rev-parse HEAD)"
 
-# Record the hash of the zip we're shipping. If it changes between runs
-# without a SOURCE_DATE_EPOCH bump, the image digest will differ — that's the
-# reproducibility contract.
-ZIP_AMD64_SHA="$(sha256sum "${SCRIPT_DIR}/plang-amd64.zip" | awk '{print $1}')"
+ZIP_AMD64_SHA="$(sha256sum "${zip}" | awk '{print $1}')"
 
 echo "==> plangOS build"
 echo "    branch:        ${BRANCH}"
 echo "    image ref:     ${IMAGE_REF}"
-echo "    platforms:     ${PLATFORMS}"
+echo "    platform:      ${PLATFORM}"
 echo "    source commit: ${SOURCE_COMMIT}"
 echo "    date epoch:    ${SOURCE_DATE_EPOCH}"
 echo "    plang-amd64:   sha256:${ZIP_AMD64_SHA}"
 
 # ---- Resolve digests for pinned bases ----------------------------------------
-# We resolve the tag -> digest at build time and bake the digest into the image
-# via --build-arg. The Containerfile never sees a floating tag.
-#
-# Important: we capture buildx output into a variable BEFORE piping to awk.
-# Piping directly causes awk's early 'exit' to close stdin while docker is
-# still writing, giving docker SIGPIPE. With 'set -o pipefail' that counts as
-# pipe failure and the script exits silently.
+# We resolve the tag -> digest via skopeo (which does a plain HTTP query
+# against the registry) and bake the digest into the image via --build-arg.
+# The Containerfile never sees a floating tag.
 resolve_digest() {
-  local ref="$1" output digest
-  if ! output="$(docker buildx imagetools inspect "${ref}" 2>&1)"; then
-    echo "error: 'docker buildx imagetools inspect ${ref}' failed:" >&2
-    echo "${output}" >&2
+  local ref="$1" digest
+  if ! digest="$(skopeo inspect --format '{{.Digest}}' "docker://${ref}" 2>&1)"; then
+    echo "error: 'skopeo inspect docker://${ref}' failed:" >&2
+    echo "${digest}" >&2
     return 1
   fi
-  digest="$(printf '%s\n' "${output}" | awk '/^Digest:/ {print $2; exit}')"
-  if [[ -z "${digest}" ]]; then
-    echo "error: no 'Digest:' line in buildx output for ${ref}:" >&2
-    echo "${output}" >&2
+  if [[ ! "${digest}" =~ ^sha256: ]]; then
+    echo "error: unexpected skopeo output for ${ref}: '${digest}'" >&2
     return 1
   fi
   printf '%s' "${digest}"
@@ -117,100 +125,66 @@ ALPINE_PINNED="${ALPINE_REF%:*}@${ALPINE_DIGEST}"
 echo "    runtime-deps:  ${RUNTIME_DEPS_PINNED}"
 echo "    alpine:        ${ALPINE_PINNED}"
 
-# ---- Ensure a reproducible-friendly buildx builder ---------------------------
-BUILDER_NAME="plang-os-v1"
-if ! docker buildx inspect "${BUILDER_NAME}" >/dev/null 2>&1; then
-  docker buildx create --name "${BUILDER_NAME}" --driver docker-container \
-    --driver-opt image=moby/buildkit:v0.15.2 >/dev/null
-fi
-docker buildx use "${BUILDER_NAME}"
-
 # ---- Build -------------------------------------------------------------------
-# --provenance=false keeps the manifest digest stable across runs (provenance
-# attestations embed per-build timestamps).
-# --sbom=false — we run syft ourselves (output location under .bot/...).
-# --output type=oci,dest=... produces a deterministic OCI archive we can verify.
-OCI_TAR="${BOT_OUT}/image.oci.tar"
-docker buildx build \
-  --builder "${BUILDER_NAME}" \
-  --platform "${PLATFORMS}" \
+# --format oci produces OCI-spec images (more portable than the docker v2
+# manifest). --timestamp seconds makes layer mtimes deterministic.
+echo "==> podman build"
+podman build \
+  --platform "${PLATFORM}" \
+  --format oci \
+  --timestamp "${SOURCE_DATE_EPOCH}" \
   --build-arg "RUNTIME_DEPS_IMAGE=${RUNTIME_DEPS_PINNED}" \
   --build-arg "ALPINE_IMAGE=${ALPINE_PINNED}" \
   --build-arg "SOURCE_COMMIT=${SOURCE_COMMIT}" \
   --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
-  --provenance=false \
-  --sbom=false \
-  --output "type=oci,dest=${OCI_TAR},name=${IMAGE_REF}" \
+  --tag "${IMAGE_REF}" \
   --file "${SCRIPT_DIR}/Containerfile" \
   "${SCRIPT_DIR}"
 
+# ---- Save OCI archive --------------------------------------------------------
+OCI_TAR="${BOT_OUT}/image.oci.tar"
+rm -f "${OCI_TAR}"
+podman save --format oci-archive --output "${OCI_TAR}" "${IMAGE_REF}"
 OCI_SHA="$(sha256sum "${OCI_TAR}" | awk '{print $1}')"
 echo "    oci archive:   sha256:${OCI_SHA}"
 
-# ---- Load to local daemon for post-build audit -------------------------------
-# buildx oci output can't go to both `docker` and an archive in one pass for
-# multi-arch, so we do a second single-arch build loaded to the local daemon
-# for `find -perm -4000`, `ss -tulpn`, shell-absence checks. The archive above
-# is still the shippable artifact.
-HOST_ARCH="$(uname -m)"
-case "${HOST_ARCH}" in
-  x86_64)  AUDIT_PLATFORM="linux/amd64" ;;
-  aarch64) AUDIT_PLATFORM="linux/arm64" ;;
-  *) echo "warn: unsupported host arch ${HOST_ARCH}, skipping local audit" >&2
-     AUDIT_PLATFORM="" ;;
-esac
+# ---- Rootfs audit ------------------------------------------------------------
+# No shell in the final image -> can't 'podman exec sh' to inspect it.
+# Instead create + export the rootfs, then scan the tarball offline.
+AUDIT_DIR="${BOT_OUT}/audit"
+rm -rf "${AUDIT_DIR}"; mkdir -p "${AUDIT_DIR}"
+CID="$(podman create "${IMAGE_REF}")"
+podman export "${CID}" | tar -xf - -C "${AUDIT_DIR}"
 
-if [[ -n "${AUDIT_PLATFORM}" ]]; then
-  docker buildx build \
-    --builder "${BUILDER_NAME}" \
-    --platform "${AUDIT_PLATFORM}" \
-    --build-arg "RUNTIME_DEPS_IMAGE=${RUNTIME_DEPS_PINNED}" \
-    --build-arg "ALPINE_IMAGE=${ALPINE_PINNED}" \
-    --build-arg "SOURCE_COMMIT=${SOURCE_COMMIT}" \
-    --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
-    --provenance=false --sbom=false \
-    --load \
-    --tag "${IMAGE_REF}" \
-    --file "${SCRIPT_DIR}/Containerfile" \
-    "${SCRIPT_DIR}"
-
-  # Export the local image's rootfs and audit it offline. We cannot `exec sh`
-  # because there is no shell in the image — export + scan the tarball.
-  AUDIT_DIR="${BOT_OUT}/audit"
-  rm -rf "${AUDIT_DIR}"; mkdir -p "${AUDIT_DIR}"
-  CID="$(docker create "${IMAGE_REF}")"
-  docker export "${CID}" | tar -xf - -C "${AUDIT_DIR}"
-
-  # Assertion 1: no shell.
-  for forbidden in bin/sh bin/bash bin/ash usr/bin/sh; do
-    if [[ -e "${AUDIT_DIR}/${forbidden}" ]]; then
-      echo "audit failed: ${forbidden} present in final image" >&2; exit 1
-    fi
-  done
-
-  # Assertion 2: no package manager.
-  for forbidden in sbin/apk usr/sbin/apk etc/apk bin/apt usr/bin/dpkg; do
-    if [[ -e "${AUDIT_DIR}/${forbidden}" ]]; then
-      echo "audit failed: ${forbidden} present in final image" >&2; exit 1
-    fi
-  done
-
-  # Assertion 3: no setuid/setgid binaries.
-  SUID_HITS="$(find "${AUDIT_DIR}" -xdev \( -perm -4000 -o -perm -2000 \) -type f -printf '%p\n' || true)"
-  if [[ -n "${SUID_HITS}" ]]; then
-    echo "audit failed: setuid/setgid files found:" >&2
-    echo "${SUID_HITS}" >&2
-    exit 1
+# Assertion 1: no shell.
+for forbidden in bin/sh bin/bash bin/ash usr/bin/sh; do
+  if [[ -e "${AUDIT_DIR}/${forbidden}" ]]; then
+    echo "audit failed: ${forbidden} present in final image" >&2; exit 1
   fi
+done
 
-  # Assertion 4: plang binary present and executable.
-  [[ -x "${AUDIT_DIR}/opt/plang/plang" ]] || { echo "audit: plang missing/not-exec" >&2; exit 1; }
+# Assertion 2: no package manager.
+for forbidden in sbin/apk usr/sbin/apk etc/apk bin/apt usr/bin/dpkg; do
+  if [[ -e "${AUDIT_DIR}/${forbidden}" ]]; then
+    echo "audit failed: ${forbidden} present in final image" >&2; exit 1
+  fi
+done
 
-  rm -rf "${AUDIT_DIR}"
-  docker rm -f "${CID}" >/dev/null
-  CID=""
-  echo "    audit:         PASS (no shell, no apt/apk, no setuid, plang ok)"
+# Assertion 3: no setuid/setgid binaries.
+SUID_HITS="$(find "${AUDIT_DIR}" -xdev \( -perm -4000 -o -perm -2000 \) -type f -printf '%p\n' || true)"
+if [[ -n "${SUID_HITS}" ]]; then
+  echo "audit failed: setuid/setgid files found:" >&2
+  echo "${SUID_HITS}" >&2
+  exit 1
 fi
+
+# Assertion 4: plang binary present and executable.
+[[ -x "${AUDIT_DIR}/opt/plang/plang" ]] || { echo "audit: plang missing/not-exec" >&2; exit 1; }
+
+rm -rf "${AUDIT_DIR}"
+podman rm -f "${CID}" >/dev/null
+CID=""
+echo "    audit:         PASS (no shell, no apt/apk, no setuid, plang ok)"
 
 # ---- SBOM --------------------------------------------------------------------
 if command -v syft >/dev/null 2>&1; then
@@ -222,7 +196,6 @@ fi
 
 # ---- Vuln scan ---------------------------------------------------------------
 if command -v trivy >/dev/null 2>&1; then
-  # Fail the build on HIGH/CRITICAL. Full results written to trivy.json.
   trivy image --input "${OCI_TAR}" \
     --format json --output "${BOT_OUT}/trivy.json" \
     --severity HIGH,CRITICAL \
@@ -233,14 +206,13 @@ else
 fi
 
 # ---- Sign --------------------------------------------------------------------
-# Only sign if we have a place to push to. Signing an oci-archive isn't useful;
-# cosign signs a reference in a registry. COSIGN_PUSH_REF controls this.
+# Cosign signs a registry reference, not a local tarball. Enable signing by
+# setting COSIGN_PUSH_REF to a registry URL you've pushed the image to.
 if [[ -n "${COSIGN_PUSH_REF:-}" ]]; then
   if command -v cosign >/dev/null 2>&1; then
-    # Requires the archive to be pushed first. Left as a user action for v1;
-    # the signing step below works once `docker push ${COSIGN_PUSH_REF}` is run.
-    echo "    cosign:        sign ${COSIGN_PUSH_REF} after pushing the archive"
-    echo "                   (cosign sign --yes ${COSIGN_PUSH_REF})"
+    echo "    cosign:        push and sign ${COSIGN_PUSH_REF}:"
+    echo "                   podman push ${IMAGE_REF} ${COSIGN_PUSH_REF}"
+    echo "                   cosign sign --yes ${COSIGN_PUSH_REF}"
   else
     echo "warn: cosign not installed; skipping signature" >&2
   fi
@@ -254,6 +226,7 @@ cat > "${BOT_OUT}/build-record.json" <<EOF
   "image_ref": "${IMAGE_REF}",
   "source_commit": "${SOURCE_COMMIT}",
   "source_date_epoch": ${SOURCE_DATE_EPOCH},
+  "engine": "podman",
   "bases": {
     "runtime_deps": "${RUNTIME_DEPS_PINNED}",
     "alpine": "${ALPINE_PINNED}"
@@ -268,3 +241,4 @@ EOF
 
 echo "==> done."
 echo "    build record:  ${BOT_OUT}/build-record.json"
+echo "    run:           podman run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=64m --user 10001:10001 --pids-limit=64 ${IMAGE_REF}"
