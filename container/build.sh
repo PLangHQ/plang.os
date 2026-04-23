@@ -35,13 +35,36 @@ RUNTIME_DEPS_REF="${RUNTIME_DEPS_REF:-mcr.microsoft.com/dotnet/runtime-deps:10.0
 ALPINE_REF="${ALPINE_REF:-alpine:3.23}"
 
 # ---- Pre-flight: required inputs present ------------------------------------
+# The zip is too big for the repo (~260 MB for an untrimmed self-contained
+# publish). It lives outside the repo; build.sh copies it into the build
+# context just before `docker build` and cleans up after. Source path is
+# ${PLANG_ZIP:-/shared/plang-amd64.zip}.
 zip="${SCRIPT_DIR}/plang-amd64.zip"
+zip_src="${PLANG_ZIP:-/shared/plang-amd64.zip}"
+staged_zip=0
 if [[ ! -f "${zip}" ]]; then
-  echo "error: missing ${zip}" >&2
-  echo "  place a self-contained linux-musl-x64 publish of PLang there." >&2
-  echo "  see container/README.md." >&2
-  exit 1
+  if [[ -f "${zip_src}" ]]; then
+    echo "==> staging ${zip_src} -> ${zip}"
+    cp "${zip_src}" "${zip}"
+    staged_zip=1
+  else
+    echo "error: missing ${zip} and source ${zip_src} not found" >&2
+    echo "  place a self-contained linux-musl-x64 publish of PLang at either" >&2
+    echo "  location, or set PLANG_ZIP=<path> to override the source." >&2
+    echo "  see container/README.md." >&2
+    exit 1
+  fi
 fi
+CID=""
+cleanup_on_exit() {
+  if [[ -n "${CID}" ]]; then
+    docker rm -f "${CID}" >/dev/null 2>&1 || true
+  fi
+  if [[ "${staged_zip}" = "1" && -f "${zip}" ]]; then
+    rm -f "${zip}"
+  fi
+}
+trap cleanup_on_exit EXIT
 
 # ---- Reproducibility knobs ---------------------------------------------------
 # SOURCE_DATE_EPOCH anchors timestamps that would otherwise drift between builds.
@@ -145,7 +168,6 @@ if [[ -n "${AUDIT_PLATFORM}" ]]; then
   AUDIT_DIR="${BOT_OUT}/audit"
   rm -rf "${AUDIT_DIR}"; mkdir -p "${AUDIT_DIR}"
   CID="$(docker create "${IMAGE_REF}")"
-  trap 'docker rm -f "${CID}" >/dev/null 2>&1 || true' EXIT
   docker export "${CID}" | tar -xf - -C "${AUDIT_DIR}"
 
   # Assertion 1: no shell.
@@ -175,7 +197,7 @@ if [[ -n "${AUDIT_PLATFORM}" ]]; then
 
   rm -rf "${AUDIT_DIR}"
   docker rm -f "${CID}" >/dev/null
-  trap - EXIT
+  CID=""
   echo "    audit:         PASS (no shell, no apt/apk, no setuid, plang ok)"
 fi
 
