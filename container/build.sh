@@ -88,18 +88,29 @@ echo "    plang-amd64:   sha256:${ZIP_AMD64_SHA}"
 # ---- Resolve digests for pinned bases ----------------------------------------
 # We resolve the tag -> digest at build time and bake the digest into the image
 # via --build-arg. The Containerfile never sees a floating tag.
+#
+# Important: we capture buildx output into a variable BEFORE piping to awk.
+# Piping directly causes awk's early 'exit' to close stdin while docker is
+# still writing, giving docker SIGPIPE. With 'set -o pipefail' that counts as
+# pipe failure and the script exits silently.
 resolve_digest() {
-  local ref="$1"
-  # buildx imagetools prints "Name: ... Digest: sha256:..." — pluck the digest.
-  docker buildx imagetools inspect "${ref}" \
-    | awk '/^Digest:/ {print $2; exit}'
+  local ref="$1" output digest
+  if ! output="$(docker buildx imagetools inspect "${ref}" 2>&1)"; then
+    echo "error: 'docker buildx imagetools inspect ${ref}' failed:" >&2
+    echo "${output}" >&2
+    return 1
+  fi
+  digest="$(printf '%s\n' "${output}" | awk '/^Digest:/ {print $2; exit}')"
+  if [[ -z "${digest}" ]]; then
+    echo "error: no 'Digest:' line in buildx output for ${ref}:" >&2
+    echo "${output}" >&2
+    return 1
+  fi
+  printf '%s' "${digest}"
 }
 
 RUNTIME_DEPS_DIGEST="$(resolve_digest "${RUNTIME_DEPS_REF}")"
 ALPINE_DIGEST="$(resolve_digest "${ALPINE_REF}")"
-if [[ -z "${RUNTIME_DEPS_DIGEST:-}" || -z "${ALPINE_DIGEST:-}" ]]; then
-  echo "error: could not resolve base image digests" >&2; exit 1
-fi
 
 RUNTIME_DEPS_PINNED="${RUNTIME_DEPS_REF%:*}@${RUNTIME_DEPS_DIGEST}"
 ALPINE_PINNED="${ALPINE_REF%:*}@${ALPINE_DIGEST}"
