@@ -56,6 +56,26 @@ if (-not (Test-Path -LiteralPath $buildSh)) {
 $wslArgs = @()
 if ($WslDistro) { $wslArgs += @("-d", $WslDistro) }
 
+# --- WSL prereqs: podman + skopeo + jq ---------------------------------------
+# Check each tool, collect missing ones, apt-install them together.
+$tools   = @("podman", "skopeo", "jq")
+$missing = @()
+foreach ($t in $tools) {
+  & wsl @wslArgs bash -c "command -v $t >/dev/null 2>&1"
+  if ($LASTEXITCODE -ne 0) { $missing += $t }
+}
+if ($missing.Count -gt 0) {
+  Write-Host "==> installing in WSL: $($missing -join ' ')"
+  Write-Host "    (you may be prompted for your WSL sudo password)"
+  & wsl @wslArgs sudo apt-get update -qq
+  if ($LASTEXITCODE -ne 0) { Write-Error "apt-get update failed"; exit 1 }
+  $installArgs = @("sudo", "apt-get", "install", "-y", "--no-install-recommends") + $missing
+  & wsl @wslArgs @installArgs
+  if ($LASTEXITCODE -ne 0) { Write-Error "apt-get install failed for: $($missing -join ' ')"; exit 1 }
+  Write-Host "==> installed."
+  Write-Host ""
+}
+
 # Convert Windows paths to WSL paths. 'wsl --exec wslpath' bypasses the shell
 # so paths with spaces survive.
 $wslZip  = (& wsl @wslArgs --exec wslpath -a "$PlangZip").Trim()
