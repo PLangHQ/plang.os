@@ -35,8 +35,13 @@ COPY plang-${TARGETARCH}.zip /staging/plang.zip
 
 # Extract and validate the payload. We expect a `plang` entrypoint + `.dll`s or
 # a single self-contained executable. `plang` must be present and executable.
+#
+# The zip may also carry user-app files (e.g. Start.goal and .build/ from a
+# local `plang build`). Those belong in /home/plang, not mixed with the binary
+# at /opt/plang. We sift them out here so the image follows Unix convention:
+# /opt = immutable app binary, /home = user data / app files.
 RUN set -eux; \
-    mkdir -p /staging/plang; \
+    mkdir -p /staging/plang /staging/home/plang; \
     unzip -q /staging/plang.zip -d /staging/plang; \
     if [ -f /staging/plang/PLang ] && [ ! -f /staging/plang/plang ]; then \
       mv /staging/plang/PLang /staging/plang/plang; \
@@ -45,6 +50,10 @@ RUN set -eux; \
       echo "plang binary not found at /staging/plang/plang"; ls -la /staging/plang; exit 1; \
     fi; \
     chmod 0755 /staging/plang/plang; \
+    for f in /staging/plang/*.goal; do \
+      [ -e "$f" ] && mv "$f" /staging/home/plang/; \
+    done; \
+    if [ -d /staging/plang/.build ]; then mv /staging/plang/.build /staging/home/plang/; fi; \
     rm /staging/plang.zip
 
 # Minimal /etc files for a UID 10001 non-root user. We bake these rather than
