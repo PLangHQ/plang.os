@@ -42,24 +42,41 @@ COPY plang-${TARGETARCH}.zip /staging/plang.zip
 # /opt = immutable app binary, /home = user data / app files.
 RUN set -eux; \
     mkdir -p /staging/plang /staging/home/plang; \
-    # unzip exits 1 on warnings (common: Windows-created zips use backslash \
-    # path separators, triggering a warning). Only fail on exit >= 2. \
+    # unzip exits 1 on warnings (common on Windows-produced zips using \
+    # backslash separators). Only fail on exit >= 2. \
     unzip_rc=0; unzip -q /staging/plang.zip -d /staging/plang || unzip_rc=$?; \
     if [ "${unzip_rc}" -gt 1 ]; then \
       echo "unzip failed with exit ${unzip_rc}"; exit "${unzip_rc}"; \
+    fi; \
+    rm /staging/plang.zip; \
+    # If the zip nested everything under a single top-level directory (common \
+    # when Compress-Archive was called on the folder instead of folder\*), \
+    # flatten it so /staging/plang ends up with the binary at its root. \
+    top_count=$(ls -1A /staging/plang | wc -l); \
+    if [ "${top_count}" = "1" ]; then \
+      only=$(ls -1A /staging/plang); \
+      if [ -d "/staging/plang/${only}" ]; then \
+        echo "flattening single top-level dir: ${only}"; \
+        mv "/staging/plang/${only}" /staging/plang.flat; \
+        rmdir /staging/plang; \
+        mv /staging/plang.flat /staging/plang; \
+      fi; \
     fi; \
     if [ -f /staging/plang/PLang ] && [ ! -f /staging/plang/plang ]; then \
       mv /staging/plang/PLang /staging/plang/plang; \
     fi; \
     if [ ! -f /staging/plang/plang ]; then \
-      echo "plang binary not found at /staging/plang/plang"; ls -la /staging/plang; exit 1; \
+      echo "ERROR: plang binary not found at /staging/plang/plang"; \
+      echo "=== recursive listing of /staging/plang (up to 3 levels) ==="; \
+      find /staging/plang -maxdepth 3 -printf "%y %p\n" | head -80; \
+      echo "=== end ==="; \
+      exit 1; \
     fi; \
     chmod 0755 /staging/plang/plang; \
     for f in /staging/plang/*.goal; do \
       [ -e "$f" ] && mv "$f" /staging/home/plang/; \
     done; \
-    if [ -d /staging/plang/.build ]; then mv /staging/plang/.build /staging/home/plang/; fi; \
-    rm /staging/plang.zip
+    if [ -d /staging/plang/.build ]; then mv /staging/plang/.build /staging/home/plang/; fi
 
 # Minimal /etc files for a UID 10001 non-root user. We bake these rather than
 # running `adduser` so we ship only the two lines we actually need.
