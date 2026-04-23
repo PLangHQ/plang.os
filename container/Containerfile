@@ -42,7 +42,12 @@ COPY plang-${TARGETARCH}.zip /staging/plang.zip
 # /opt = immutable app binary, /home = user data / app files.
 RUN set -eux; \
     mkdir -p /staging/plang /staging/home/plang; \
-    unzip -q /staging/plang.zip -d /staging/plang; \
+    # unzip exits 1 on warnings (common: Windows-created zips use backslash \
+    # path separators, triggering a warning). Only fail on exit >= 2. \
+    unzip_rc=0; unzip -q /staging/plang.zip -d /staging/plang || unzip_rc=$?; \
+    if [ "${unzip_rc}" -gt 1 ]; then \
+      echo "unzip failed with exit ${unzip_rc}"; exit "${unzip_rc}"; \
+    fi; \
     if [ -f /staging/plang/PLang ] && [ ! -f /staging/plang/plang ]; then \
       mv /staging/plang/PLang /staging/plang/plang; \
     fi; \
