@@ -1,0 +1,74 @@
+{
+  "branch": "os/v1-container",
+  "sessions": [
+    {
+      "id": "9d5c2f1e-4b9a-4b82-8a51-7a0c2e5f8c11",
+      "bot": "os",
+      "timestamp_start": "2026-04-23T19:26:00Z",
+      "timestamp_end": "2026-04-23T19:40:00Z",
+      "intent": "Produce the first plangOS container image: multi-arch, Alpine musl, self-contained PLang under tini, locked down, reproducible, signed, scanned.",
+      "before": {
+        "assumptions": "Repo is greenfield (only CLAUDE.md + README.md + characters/). User confirmed: PLang from public GitHub release, then revised to 'plang.zip will be in the repo, no download'. Base: Alpine musl. Arch: amd64 + arm64. Branch: os/v1-container.",
+        "risk": "PLang's standard release zip is built for glibc (linux-x64), not musl. User-supplied in-repo zip must be a musl self-contained publish for the image to run. Documented prominently in container/README.md. Also: no Docker available in this sandbox to run the build end-to-end; measurements and scan results noted as pending-user-run."
+      },
+      "plan": "plangOS v1 — first container image. Multi-arch (amd64+arm64) Alpine-musl image with PLang under tini, no shell, no apk, non-root UID 10001, digest-pinned bases, SOURCE_DATE_EPOCH reproducibility, SBOM + trivy + cosign hooks. Appliance, custom seccomp, NativeAOT deferred. Entrypoint model B (no shell; tini execs plang directly; integrity gates happen at build time, not runtime).",
+      "actions": [
+        {
+          "paths": ["container/Containerfile"],
+          "type": "create",
+          "category": "config",
+          "confidence": "high",
+          "context": "Two-stage build: alpine:3.23 staging (tini + unzip plang zip + mint /etc/passwd) and runtime-deps:10.0-alpine3.23 runtime. Final stage strips busybox, apk, all shells, login utilities, wget/ftp/telnet, and deletes /bin/busybox itself. USER 10001:10001. DOTNET_* env vars disable telemetry, diagnostics port, and enforce invariant globalization. ENTRYPOINT is tini -- /opt/plang/plang. Bases pinned via --build-arg from build.sh."
+        },
+        {
+          "paths": ["container/build.sh"],
+          "type": "create",
+          "category": "config",
+          "confidence": "high",
+          "context": "Reproducible wrapper: SOURCE_DATE_EPOCH from git, resolves base tags to digests via buildx imagetools, builds multi-arch OCI archive with --provenance=false --sbom=false (digest stability), then single-arch --load build + docker export + offline rootfs scan asserting no shell / no apk / no setuid / plang+tini present. Optional syft SBOM, trivy scan (fails on HIGH/CRITICAL), cosign signing gated by COSIGN_PUSH_REF. Writes build-record.json with all pins + input hashes."
+        },
+        {
+          "paths": ["container/.dockerignore", "container/README.md"],
+          "type": "create",
+          "category": "doc",
+          "confidence": "high",
+          "context": ".dockerignore restricts build context to just Containerfile + the two plang zips. README documents the linux-musl publish command the user must run (the public linux-x64 release zip is glibc and won't run on Alpine), the build command, and the recommended runtime flags (--read-only, --cap-drop=ALL, --security-opt=no-new-privileges, etc)."
+        },
+        {
+          "paths": [
+            ".bot/os-v1-container/os/v1/plan.md",
+            ".bot/os-v1-container/os/v1/lockdown.md",
+            ".bot/os-v1-container/os/v1/attack-surface.md",
+            ".bot/os-v1-container/os/v1/tradeoffs.md",
+            ".bot/os-v1-container/os/v1/measurements.md",
+            ".bot/os-v1-container/os/v1/summary.md",
+            ".bot/os-v1-container/os/summary.md"
+          ],
+          "type": "create",
+          "category": "doc",
+          "confidence": "high",
+          "context": "CLAUDE.md-mandated bot output. plan.md mirrors the approved plan; lockdown.md splits image-baked vs runtime-enforced controls with seccomp/AppArmor status; attack-surface.md is the filled checklist from CLAUDE.md; tradeoffs.md documents every decision (Alpine vs Debian, trimmed vs AOT, tini vs PID1-plang, shell-less vs hash-checking entrypoint, in-repo zip vs download, resolved-at-build vs committed base pins, provenance-off for reproducibility); measurements.md is a skeleton + measurement commands to fill on first real local build."
+        },
+        {
+          "paths": [".bot/os-v1-container/report.json", ".bot/os-v1-container/os-report.json"],
+          "type": "create",
+          "category": "doc",
+          "confidence": "high",
+          "context": "report.json follows the mandatory session-reporting schema from CLAUDE.md (before / plan / actions / after). os-report.json follows the os-bot-specific schema."
+        },
+        {
+          "paths": ["/workspace/plang"],
+          "type": "decision",
+          "category": "config",
+          "confidence": "medium",
+          "context": "Created feature branch os/v1-container from main (per user answer). Per CLAUDE.md the os bot's branches are 'os/<topic>'. Commit + push + PR to main happens after this report block is finalized."
+        }
+      ],
+      "after": {
+        "status": "Implementation complete for v1 scope. Build not yet executed — plan-mode sandbox has no Docker. First local build on a Docker-capable host will fill measurements.md and trivy counts.",
+        "health": "Files consistent; Containerfile + build.sh reviewed together for the no-shell model; all CLAUDE.md bot output files present.",
+        "notes": "User must produce container/plang-amd64.zip and container/plang-arm64.zip as linux-musl-x64 / linux-musl-arm64 self-contained publishes before first build (command in container/README.md). Public release zip is glibc and won't run on Alpine. Next version (v2) candidates: custom seccomp from strace, AppArmor profile, optional NativeAOT variant pending reflection-surface audit. Appliance artifact (ISO/UKI/dm-verity) is a v3+ track."
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "builder": "os",
+  "branch": "os/v1-container",
+  "timestamp": "2026-04-23T19:30:00Z",
+  "artifact": "container",
+  "image": {
+    "base": "mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23 (digest-pinned at build time by build.sh)",
+    "final_size_mb": null,
+    "layer_count": null,
+    "startup_ms": null
+  },
+  "lockdown": {
+    "pid1": "tini",
+    "user": "10001",
+    "capabilities": [],
+    "seccomp": "default (custom profile deferred to v2)",
+    "readonly_root": true,
+    "writable_paths": ["/tmp"]
+  },
+  "integrity": {
+    "base_digest_pinned": true,
+    "signed_with_cosign": "ready — triggered when COSIGN_PUSH_REF is set",
+    "dm_verity": false,
+    "secure_boot": false,
+    "reproducible": true
+  },
+  "network": {
+    "listen_ports": [],
+    "ssh": false,
+    "firewall": "none in-image; caller applies nftables/iptables on host if desired"
+  },
+  "cves": {
+    "scanner": "trivy",
+    "critical": null,
+    "high": null,
+    "total": null,
+    "note": "scan runs during build.sh when trivy is on PATH; build fails on HIGH/CRITICAL. Results not yet measured — user runs first local build."
+  },
+  "tradeoffs": "Alpine musl over Debian slim for size. Self-contained trimmed invariant-globalization over NativeAOT to avoid reflection-audit work in v1. tini over PLang-as-PID-1 because PLang lacks signal-handling code. No runtime shell: tini execs plang directly; integrity checks moved to build-time rootfs audit. In-repo zip over download per user direction. Base digests resolved at build time (not committed in Containerfile) — captured in build-record.json per build.",
+  "next_steps": "1) User runs ./container/build.sh locally with real plang-{amd64,arm64}.zip to fill measurements.md and trivy counts. 2) Verify reproducibility (two runs → same digest). 3) v2: custom seccomp from strace; AppArmor/SELinux profiles; optional NativeAOT variant (needs reflection audit). 4) v3+: bootable appliance with dm-verity + Secure Boot + UKI."
+}

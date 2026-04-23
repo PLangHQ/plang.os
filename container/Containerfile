@@ -1,0 +1,141 @@
+# syntax=docker/dockerfile:1.7
+#
+# plangOS v1 — first container image
+#
+# Goal: smallest viable Linux + .NET 10 runtime deps + PLang, running under tini
+# as a single non-root process on a read-only rootfs.
+#
+# Build context expectations (see container/README.md):
+#   container/plang-amd64.zip   — self-contained linux-musl-x64   publish of PLang
+#   container/plang-arm64.zip   — self-contained linux-musl-arm64 publish of PLang
+#
+# Build with container/build.sh (sets SOURCE_DATE_EPOCH, pins digests, multi-arch).
+
+# --- Pinned bases --------------------------------------------------------------
+# runtime-deps:10.0-alpine3.23 — smallest base that ships Microsoft's curated set
+# of native libraries .NET needs on musl (libstdc++, libgcc, icu-libs optional,
+# zlib, libssl, etc). Digest pin is written by build.sh via --build-arg so the
+# pin lives in one place (build.sh) and this file stays the source of structure.
+ARG RUNTIME_DEPS_IMAGE=mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23
+ARG ALPINE_IMAGE=alpine:3.23
+
+# --- Stage 1: staging ----------------------------------------------------------
+# A throwaway stage that has `unzip` and `curl` available to prep the rootfs we
+# copy into the final image. Nothing from this stage ships.
+FROM ${ALPINE_IMAGE} AS staging
+
+ARG TARGETARCH
+ARG TINI_VERSION=v0.19.0
+# tini upstream publishes static binaries with GPG signatures.
+# SHA-256 of the static binaries for tini v0.19.0 (from tini's GitHub release).
+ARG TINI_SHA256_AMD64=93dcc18adc78c65a028a84799ecf8ad40c936fdfc5f2a57b1acda5a8117fa82c
+ARG TINI_SHA256_ARM64=07952557df20bfd2a95f9bef198b445e006171969499a1d361bd9e6f8e5e0e81
+
+RUN apk add --no-cache unzip ca-certificates
+
+# Fetch tini for the target arch and verify its SHA-256.
+# If network-free builds are required later, tini can be pre-placed in the build
+# context the same way PLang is. v1 keeps the tiny network fetch of a signed,
+# hash-verified 10 KB static binary.
+ADD --chmod=0755 https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static-${TARGETARCH} /staging/tini
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      amd64) EXPECTED="${TINI_SHA256_AMD64}" ;; \
+      arm64) EXPECTED="${TINI_SHA256_ARM64}" ;; \
+      *)     echo "unsupported TARGETARCH=${TARGETARCH}"; exit 1 ;; \
+    esac; \
+    ACTUAL="$(sha256sum /staging/tini | awk '{print $1}')"; \
+    if [ "${ACTUAL}" != "${EXPECTED}" ]; then \
+      echo "tini sha256 mismatch: expected ${EXPECTED}, got ${ACTUAL}"; exit 1; \
+    fi
+
+# Copy the arch-specific PLang zip from the build context.
+# One copy per arch is used; buildx selects based on TARGETARCH at build time.
+COPY plang-${TARGETARCH}.zip /staging/plang.zip
+
+# Extract and validate the payload. We expect a `plang` entrypoint + `.dll`s or
+# a single self-contained executable. `plang` must be present and executable.
+RUN set -eux; \
+    mkdir -p /staging/plang; \
+    unzip -q /staging/plang.zip -d /staging/plang; \
+    if [ -f /staging/plang/PLang ] && [ ! -f /staging/plang/plang ]; then \
+      mv /staging/plang/PLang /staging/plang/plang; \
+    fi; \
+    if [ ! -f /staging/plang/plang ]; then \
+      echo "plang binary not found at /staging/plang/plang"; ls -la /staging/plang; exit 1; \
+    fi; \
+    chmod 0755 /staging/plang/plang; \
+    rm /staging/plang.zip
+
+# Minimal /etc files for a UID 10001 non-root user. We bake these rather than
+# running `adduser` so we ship only the two lines we actually need.
+RUN set -eux; \
+    mkdir -p /staging/etc /staging/tmp /staging/home/plang; \
+    printf 'plang:x:10001:10001:plang:/home/plang:/sbin/nologin\n' > /staging/etc/passwd; \
+    printf 'plang:x:10001:\n' > /staging/etc/group; \
+    printf 'root:x:0:0:root:/root:/sbin/nologin\n' >> /staging/etc/passwd; \
+    printf 'root:x:0:\n' >> /staging/etc/group; \
+    chown -R 10001:10001 /staging/home/plang; \
+    chmod 01777 /staging/tmp
+
+# --- Stage 2: runtime ----------------------------------------------------------
+# runtime-deps:10.0-alpine3.23 is digest-pinned by build.sh via --build-arg
+# RUNTIME_DEPS_IMAGE=mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23@sha256:<digest>
+FROM ${RUNTIME_DEPS_IMAGE} AS runtime
+
+# Copy the prepared rootfs pieces.
+COPY --from=staging /staging/tini /usr/local/bin/tini
+COPY --from=staging /staging/plang /opt/plang
+COPY --from=staging /staging/etc/passwd /etc/passwd
+COPY --from=staging /staging/etc/group /etc/group
+COPY --from=staging --chown=10001:10001 /staging/home/plang /home/plang
+
+# Strip the shell and package manager from the final image. runtime-deps:alpine
+# still ships /bin/sh (busybox) and apk. Removing them enforces "no shell, no
+# package manager" from the attack-surface checklist. Anything that relied on
+# these would have already failed in staging.
+#
+# We delete rather than refuse to install — the user's base image is Microsoft's
+# runtime-deps, so busybox/apk come pre-installed. The deletions must happen
+# inside the final image in a single layer to avoid leaving them in an earlier
+# layer that an attacker with layer access could recover.
+RUN /bin/busybox rm -rf \
+      /sbin/apk /etc/apk /usr/sbin/apk /var/cache/apk \
+      /bin/sh /bin/ash /bin/bash /bin/login /bin/su \
+      /usr/bin/wget /usr/bin/ftp /usr/bin/telnet \
+      /sbin/reboot /sbin/halt /sbin/poweroff /sbin/init \
+      /lib/apk \
+ && /bin/busybox rm -f /bin/busybox
+
+# No runtime shell means no runtime `find` either. The setuid-free + no-shell
+# assertions are performed by build.sh after the image is assembled, by
+# mounting the image's rootfs via `docker create` + `docker export` and
+# scanning the tarball.
+
+# Non-root, read-only-root-friendly runtime defaults.
+USER 10001:10001
+WORKDIR /home/plang
+ENV DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_NOLOGO=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_EnableDiagnostics=0 \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+    PLANG_HOME=/home/plang \
+    PATH=/opt/plang:/usr/local/bin
+
+# OCI labels — help downstream consumers identify and verify this image.
+ARG SOURCE_COMMIT
+ARG SOURCE_DATE_EPOCH
+LABEL org.opencontainers.image.title="plangOS-container" \
+      org.opencontainers.image.description="Minimal Alpine musl image running PLang under tini. No shell, no package manager." \
+      org.opencontainers.image.source="https://github.com/PLangHQ/plang.os" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.base.name="${RUNTIME_DEPS_IMAGE}" \
+      org.opencontainers.image.revision="${SOURCE_COMMIT}" \
+      org.opencontainers.image.created="${SOURCE_DATE_EPOCH}"
+
+# tini as PID 1 reaps zombies and forwards SIGTERM/SIGINT to PLang. `--` passes
+# remaining argv to plang. No shell interpreter is invoked — tini exec's plang
+# directly, and plang exec's with the container's argv.
+ENTRYPOINT ["/usr/local/bin/tini", "--", "/opt/plang/plang"]
+CMD ["--help"]

@@ -1,0 +1,8 @@
+# Minimal build context — only what the Containerfile needs.
+# Everything not listed here is excluded, to keep the build context small and
+# deterministic.
+
+*
+!Containerfile
+!plang-amd64.zip
+!plang-arm64.zip

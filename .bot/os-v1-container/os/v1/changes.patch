@@ -1,0 +1,513 @@
+diff --git a/container/.dockerignore b/container/.dockerignore
+new file mode 100644
+index 0000000..654685a
+--- /dev/null
++++ b/container/.dockerignore
+@@ -0,0 +1,8 @@
++# Minimal build context — only what the Containerfile needs.
++# Everything not listed here is excluded, to keep the build context small and
++# deterministic.
++
++*
++!Containerfile
++!plang-amd64.zip
++!plang-arm64.zip
+diff --git a/container/Containerfile b/container/Containerfile
+new file mode 100644
+index 0000000..f95dac7
+--- /dev/null
++++ b/container/Containerfile
+@@ -0,0 +1,141 @@
++# syntax=docker/dockerfile:1.7
++#
++# plangOS v1 — first container image
++#
++# Goal: smallest viable Linux + .NET 10 runtime deps + PLang, running under tini
++# as a single non-root process on a read-only rootfs.
++#
++# Build context expectations (see container/README.md):
++#   container/plang-amd64.zip   — self-contained linux-musl-x64   publish of PLang
++#   container/plang-arm64.zip   — self-contained linux-musl-arm64 publish of PLang
++#
++# Build with container/build.sh (sets SOURCE_DATE_EPOCH, pins digests, multi-arch).
++
++# --- Pinned bases --------------------------------------------------------------
++# runtime-deps:10.0-alpine3.23 — smallest base that ships Microsoft's curated set
++# of native libraries .NET needs on musl (libstdc++, libgcc, icu-libs optional,
++# zlib, libssl, etc). Digest pin is written by build.sh via --build-arg so the
++# pin lives in one place (build.sh) and this file stays the source of structure.
++ARG RUNTIME_DEPS_IMAGE=mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23
++ARG ALPINE_IMAGE=alpine:3.23
++
++# --- Stage 1: staging ----------------------------------------------------------
++# A throwaway stage that has `unzip` and `curl` available to prep the rootfs we
++# copy into the final image. Nothing from this stage ships.
++FROM ${ALPINE_IMAGE} AS staging
++
++ARG TARGETARCH
++ARG TINI_VERSION=v0.19.0
++# tini upstream publishes static binaries with GPG signatures.
++# SHA-256 of the static binaries for tini v0.19.0 (from tini's GitHub release).
++ARG TINI_SHA256_AMD64=93dcc18adc78c65a028a84799ecf8ad40c936fdfc5f2a57b1acda5a8117fa82c
++ARG TINI_SHA256_ARM64=07952557df20bfd2a95f9bef198b445e006171969499a1d361bd9e6f8e5e0e81
++
++RUN apk add --no-cache unzip ca-certificates
++
++# Fetch tini for the target arch and verify its SHA-256.
++# If network-free builds are required later, tini can be pre-placed in the build
++# context the same way PLang is. v1 keeps the tiny network fetch of a signed,
++# hash-verified 10 KB static binary.
++ADD --chmod=0755 https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static-${TARGETARCH} /staging/tini
++RUN set -eux; \
++    case "${TARGETARCH}" in \
++      amd64) EXPECTED="${TINI_SHA256_AMD64}" ;; \
++      arm64) EXPECTED="${TINI_SHA256_ARM64}" ;; \
++      *)     echo "unsupported TARGETARCH=${TARGETARCH}"; exit 1 ;; \
++    esac; \
++    ACTUAL="$(sha256sum /staging/tini | awk '{print $1}')"; \
++    if [ "${ACTUAL}" != "${EXPECTED}" ]; then \
++      echo "tini sha256 mismatch: expected ${EXPECTED}, got ${ACTUAL}"; exit 1; \
++    fi
++
++# Copy the arch-specific PLang zip from the build context.
++# One copy per arch is used; buildx selects based on TARGETARCH at build time.
++COPY plang-${TARGETARCH}.zip /staging/plang.zip
++
++# Extract and validate the payload. We expect a `plang` entrypoint + `.dll`s or
++# a single self-contained executable. `plang` must be present and executable.
++RUN set -eux; \
++    mkdir -p /staging/plang; \
++    unzip -q /staging/plang.zip -d /staging/plang; \
++    if [ -f /staging/plang/PLang ] && [ ! -f /staging/plang/plang ]; then \
++      mv /staging/plang/PLang /staging/plang/plang; \
++    fi; \
++    if [ ! -f /staging/plang/plang ]; then \
++      echo "plang binary not found at /staging/plang/plang"; ls -la /staging/plang; exit 1; \
++    fi; \
++    chmod 0755 /staging/plang/plang; \
++    rm /staging/plang.zip
++
++# Minimal /etc files for a UID 10001 non-root user. We bake these rather than
++# running `adduser` so we ship only the two lines we actually need.
++RUN set -eux; \
++    mkdir -p /staging/etc /staging/tmp /staging/home/plang; \
++    printf 'plang:x:10001:10001:plang:/home/plang:/sbin/nologin\n' > /staging/etc/passwd; \
++    printf 'plang:x:10001:\n' > /staging/etc/group; \
++    printf 'root:x:0:0:root:/root:/sbin/nologin\n' >> /staging/etc/passwd; \
++    printf 'root:x:0:\n' >> /staging/etc/group; \
++    chown -R 10001:10001 /staging/home/plang; \
++    chmod 01777 /staging/tmp
++
++# --- Stage 2: runtime ----------------------------------------------------------
++# runtime-deps:10.0-alpine3.23 is digest-pinned by build.sh via --build-arg
++# RUNTIME_DEPS_IMAGE=mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23@sha256:<digest>
++FROM ${RUNTIME_DEPS_IMAGE} AS runtime
++
++# Copy the prepared rootfs pieces.
++COPY --from=staging /staging/tini /usr/local/bin/tini
++COPY --from=staging /staging/plang /opt/plang
++COPY --from=staging /staging/etc/passwd /etc/passwd
++COPY --from=staging /staging/etc/group /etc/group
++COPY --from=staging --chown=10001:10001 /staging/home/plang /home/plang
++
++# Strip the shell and package manager from the final image. runtime-deps:alpine
++# still ships /bin/sh (busybox) and apk. Removing them enforces "no shell, no
++# package manager" from the attack-surface checklist. Anything that relied on
++# these would have already failed in staging.
++#
++# We delete rather than refuse to install — the user's base image is Microsoft's
++# runtime-deps, so busybox/apk come pre-installed. The deletions must happen
++# inside the final image in a single layer to avoid leaving them in an earlier
++# layer that an attacker with layer access could recover.
++RUN /bin/busybox rm -rf \
++      /sbin/apk /etc/apk /usr/sbin/apk /var/cache/apk \
++      /bin/sh /bin/ash /bin/bash /bin/login /bin/su \
++      /usr/bin/wget /usr/bin/ftp /usr/bin/telnet \
++      /sbin/reboot /sbin/halt /sbin/poweroff /sbin/init \
++      /lib/apk \
++ && /bin/busybox rm -f /bin/busybox
++
++# No runtime shell means no runtime `find` either. The setuid-free + no-shell
++# assertions are performed by build.sh after the image is assembled, by
++# mounting the image's rootfs via `docker create` + `docker export` and
++# scanning the tarball.
++
++# Non-root, read-only-root-friendly runtime defaults.
++USER 10001:10001
++WORKDIR /home/plang
++ENV DOTNET_RUNNING_IN_CONTAINER=true \
++    DOTNET_NOLOGO=1 \
++    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
++    DOTNET_EnableDiagnostics=0 \
++    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
++    PLANG_HOME=/home/plang \
++    PATH=/opt/plang:/usr/local/bin
++
++# OCI labels — help downstream consumers identify and verify this image.
++ARG SOURCE_COMMIT
++ARG SOURCE_DATE_EPOCH
++LABEL org.opencontainers.image.title="plangOS-container" \
++      org.opencontainers.image.description="Minimal Alpine musl image running PLang under tini. No shell, no package manager." \
++      org.opencontainers.image.source="https://github.com/PLangHQ/plang.os" \
++      org.opencontainers.image.licenses="MIT" \
++      org.opencontainers.image.base.name="${RUNTIME_DEPS_IMAGE}" \
++      org.opencontainers.image.revision="${SOURCE_COMMIT}" \
++      org.opencontainers.image.created="${SOURCE_DATE_EPOCH}"
++
++# tini as PID 1 reaps zombies and forwards SIGTERM/SIGINT to PLang. `--` passes
++# remaining argv to plang. No shell interpreter is invoked — tini exec's plang
++# directly, and plang exec's with the container's argv.
++ENTRYPOINT ["/usr/local/bin/tini", "--", "/opt/plang/plang"]
++CMD ["--help"]
+diff --git a/container/README.md b/container/README.md
+new file mode 100644
+index 0000000..ef79d85
+--- /dev/null
++++ b/container/README.md
+@@ -0,0 +1,97 @@
++# plangOS container
++
++Minimal Alpine-musl container image that runs PLang under tini as a non-root
++process on a read-only rootfs. The final image contains no shell, no package
++manager, and no setuid binaries.
++
++## Layout
++
++```
++container/
++├── Containerfile         # multi-stage, digest-pinned, no runtime shell
++├── build.sh              # reproducible wrapper (multi-arch, SBOM, scan, sign)
++├── .dockerignore         # restricts build context to Containerfile + zips
++├── plang-amd64.zip       # <-- YOU PROVIDE: linux-musl-x64   self-contained publish
++└── plang-arm64.zip       # <-- YOU PROVIDE: linux-musl-arm64 self-contained publish
++```
++
++## Required inputs
++
++**PLang must be published as a self-contained, musl-targeted .NET build.** The
++release zips on `github.com/PLangHQ/plang/releases` target glibc (`linux-x64`)
++and will segfault on Alpine. For this image you need:
++
++```sh
++# inside the PLang repo
++dotnet publish PLang/PLang.csproj \
++  -c Release \
++  -r linux-musl-x64 \
++  --self-contained true \
++  -p:PublishTrimmed=true \
++  -p:InvariantGlobalization=true \
++  -o out-musl-x64
++
++cd out-musl-x64 && zip -r ../plang-amd64.zip . && cd ..
++
++# same for arm64:
++dotnet publish PLang/PLang.csproj -c Release -r linux-musl-arm64 \
++  --self-contained true -p:PublishTrimmed=true -p:InvariantGlobalization=true \
++  -o out-musl-arm64
++cd out-musl-arm64 && zip -r ../plang-arm64.zip . && cd ..
++```
++
++Place the resulting zips at `container/plang-amd64.zip` and
++`container/plang-arm64.zip`. The Containerfile extracts them into `/opt/plang`
++and expects an executable named `plang` (or `PLang`, which is renamed to
++`plang` during staging).
++
++Why musl + trimmed + invariant-globalization:
++- **musl** is what Alpine ships; glibc builds won't run
++- **trimmed** drops unused framework assemblies (~50–100 MB saved)
++- **invariant-globalization** drops ICU (~30 MB) — if any PLang module needs
++  locale-aware string comparison, remove this flag and the image grows by ICU
++
++## Building
++
++```sh
++# from repo root
++./container/build.sh
++```
++
++Requires: `docker` (with `buildx`), `git`, `sha256sum`, `jq`.
++Optional (for full security posture): `syft`, `trivy`, `cosign`.
++
++Outputs land under `.bot/os-v1-container/os/v1/`:
++- `image.oci.tar` — deterministic multi-arch OCI archive
++- `sbom.spdx.json` — SBOM (if syft installed)
++- `trivy.json` — vuln scan (if trivy installed; build fails on HIGH/CRITICAL)
++- `build-record.json` — digests, inputs, and base image pins for this build
++
++Two back-to-back runs with the same git HEAD and the same zip digests produce
++the same OCI archive digest. If they don't, find the source of nondeterminism
++(usually a timestamp somewhere) and pin it.
++
++## Running
++
++The image is designed to run under strict runtime defaults:
++
++```sh
++docker run --rm \
++  --read-only \
++  --cap-drop=ALL \
++  --security-opt=no-new-privileges \
++  --tmpfs /tmp:rw,noexec,nosuid,size=64m \
++  --user 10001:10001 \
++  plang-os:<tag> --version
++```
++
++There is no shell to `exec` into. Debugging is done by building a separate
++debug variant (future work) — the shipped image is deliberately opaque.
++
++## What this image is not (yet)
++
++- Not a bootable appliance (no kernel, no initramfs, no dm-verity). See a
++  later version for ISO/UKI.
++- Not NativeAOT-compiled. PLang's reflection surface needs auditing first.
++- Not using a custom seccomp profile. v1 relies on runtime defaults; v2 adds
++  a strace-derived profile.
+diff --git a/container/build.sh b/container/build.sh
+new file mode 100755
+index 0000000..d258e05
+--- /dev/null
++++ b/container/build.sh
+@@ -0,0 +1,243 @@
++#!/usr/bin/env bash
++#
++# plangOS v1 container build wrapper.
++#
++# Reproducible: same git HEAD + same plang-*.zip digests -> same image digest.
++#
++# Produces:
++#   * multi-arch OCI image (linux/amd64 + linux/arm64)
++#   * SBOM (syft, SPDX JSON) under .bot/<branch-dashed>/os/v1/sbom.spdx.json
++#   * vuln scan (trivy JSON)        under .bot/<branch-dashed>/os/v1/trivy.json
++#   * optional cosign signature (keyless Fulcio by default; COSIGN_KEY overrides)
++#
++# Required on PATH: docker (with buildx), sha256sum, jq, git.
++# Optional on PATH: syft, trivy, cosign.
++
++set -euo pipefail
++
++# ---- Paths -------------------------------------------------------------------
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
++cd "${REPO_ROOT}"
++
++BRANCH="$(git rev-parse --abbrev-ref HEAD)"
++BRANCH_DASHED="${BRANCH//\//-}"
++BOT_OUT="${REPO_ROOT}/.bot/${BRANCH_DASHED}/os/v1"
++mkdir -p "${BOT_OUT}"
++
++# ---- Inputs ------------------------------------------------------------------
++IMAGE_NAME="${IMAGE_NAME:-plang-os}"
++IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
++IMAGE_REF="${IMAGE_NAME}:${IMAGE_TAG}"
++PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
++
++RUNTIME_DEPS_REF="${RUNTIME_DEPS_REF:-mcr.microsoft.com/dotnet/runtime-deps:10.0-alpine3.23}"
++ALPINE_REF="${ALPINE_REF:-alpine:3.23}"
++
++# ---- Pre-flight: required inputs present ------------------------------------
++for arch in amd64 arm64; do
++  zip="${SCRIPT_DIR}/plang-${arch}.zip"
++  if [[ ! -f "${zip}" ]]; then
++    echo "error: missing ${zip}" >&2
++    echo "  place a self-contained linux-musl-${arch/amd64/x64} publish of PLang there." >&2
++    echo "  see container/README.md." >&2
++    exit 1
++  fi
++done
++
++# ---- Reproducibility knobs ---------------------------------------------------
++# SOURCE_DATE_EPOCH anchors timestamps that would otherwise drift between builds.
++# We derive from the latest git commit so any change to the tree advances it.
++export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct)}"
++SOURCE_COMMIT="$(git rev-parse HEAD)"
++
++# Record the hashes of the zips we're shipping. If these change between runs
++# without a SOURCE_DATE_EPOCH bump, the image digest will differ — that's the
++# reproducibility contract.
++ZIP_AMD64_SHA="$(sha256sum "${SCRIPT_DIR}/plang-amd64.zip" | awk '{print $1}')"
++ZIP_ARM64_SHA="$(sha256sum "${SCRIPT_DIR}/plang-arm64.zip" | awk '{print $1}')"
++
++echo "==> plangOS build"
++echo "    branch:        ${BRANCH}"
++echo "    image ref:     ${IMAGE_REF}"
++echo "    platforms:     ${PLATFORMS}"
++echo "    source commit: ${SOURCE_COMMIT}"
++echo "    date epoch:    ${SOURCE_DATE_EPOCH}"
++echo "    plang-amd64:   sha256:${ZIP_AMD64_SHA}"
++echo "    plang-arm64:   sha256:${ZIP_ARM64_SHA}"
++
++# ---- Resolve digests for pinned bases ----------------------------------------
++# We resolve the tag -> digest at build time and bake the digest into the image
++# via --build-arg. The Containerfile never sees a floating tag.
++resolve_digest() {
++  local ref="$1"
++  # buildx imagetools prints "Name: ... Digest: sha256:..." — pluck the digest.
++  docker buildx imagetools inspect "${ref}" \
++    | awk '/^Digest:/ {print $2; exit}'
++}
++
++RUNTIME_DEPS_DIGEST="$(resolve_digest "${RUNTIME_DEPS_REF}")"
++ALPINE_DIGEST="$(resolve_digest "${ALPINE_REF}")"
++if [[ -z "${RUNTIME_DEPS_DIGEST:-}" || -z "${ALPINE_DIGEST:-}" ]]; then
++  echo "error: could not resolve base image digests" >&2; exit 1
++fi
++
++RUNTIME_DEPS_PINNED="${RUNTIME_DEPS_REF%:*}@${RUNTIME_DEPS_DIGEST}"
++ALPINE_PINNED="${ALPINE_REF%:*}@${ALPINE_DIGEST}"
++echo "    runtime-deps:  ${RUNTIME_DEPS_PINNED}"
++echo "    alpine:        ${ALPINE_PINNED}"
++
++# ---- Ensure a reproducible-friendly buildx builder ---------------------------
++BUILDER_NAME="plang-os-v1"
++if ! docker buildx inspect "${BUILDER_NAME}" >/dev/null 2>&1; then
++  docker buildx create --name "${BUILDER_NAME}" --driver docker-container \
++    --driver-opt image=moby/buildkit:v0.15.2 >/dev/null
++fi
++docker buildx use "${BUILDER_NAME}"
++
++# ---- Build -------------------------------------------------------------------
++# --provenance=false keeps the manifest digest stable across runs (provenance
++# attestations embed per-build timestamps).
++# --sbom=false — we run syft ourselves (output location under .bot/...).
++# --output type=oci,dest=... produces a deterministic OCI archive we can verify.
++OCI_TAR="${BOT_OUT}/image.oci.tar"
++docker buildx build \
++  --builder "${BUILDER_NAME}" \
++  --platform "${PLATFORMS}" \
++  --build-arg "RUNTIME_DEPS_IMAGE=${RUNTIME_DEPS_PINNED}" \
++  --build-arg "ALPINE_IMAGE=${ALPINE_PINNED}" \
++  --build-arg "SOURCE_COMMIT=${SOURCE_COMMIT}" \
++  --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
++  --provenance=false \
++  --sbom=false \
++  --output "type=oci,dest=${OCI_TAR},name=${IMAGE_REF}" \
++  --file "${SCRIPT_DIR}/Containerfile" \
++  "${SCRIPT_DIR}"
++
++OCI_SHA="$(sha256sum "${OCI_TAR}" | awk '{print $1}')"
++echo "    oci archive:   sha256:${OCI_SHA}"
++
++# ---- Load to local daemon for post-build audit -------------------------------
++# buildx oci output can't go to both `docker` and an archive in one pass for
++# multi-arch, so we do a second single-arch build loaded to the local daemon
++# for `find -perm -4000`, `ss -tulpn`, shell-absence checks. The archive above
++# is still the shippable artifact.
++HOST_ARCH="$(uname -m)"
++case "${HOST_ARCH}" in
++  x86_64)  AUDIT_PLATFORM="linux/amd64" ;;
++  aarch64) AUDIT_PLATFORM="linux/arm64" ;;
++  *) echo "warn: unsupported host arch ${HOST_ARCH}, skipping local audit" >&2
++     AUDIT_PLATFORM="" ;;
++esac
++
++if [[ -n "${AUDIT_PLATFORM}" ]]; then
++  docker buildx build \
++    --builder "${BUILDER_NAME}" \
++    --platform "${AUDIT_PLATFORM}" \
++    --build-arg "RUNTIME_DEPS_IMAGE=${RUNTIME_DEPS_PINNED}" \
++    --build-arg "ALPINE_IMAGE=${ALPINE_PINNED}" \
++    --build-arg "SOURCE_COMMIT=${SOURCE_COMMIT}" \
++    --build-arg "SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH}" \
++    --provenance=false --sbom=false \
++    --load \
++    --tag "${IMAGE_REF}" \
++    --file "${SCRIPT_DIR}/Containerfile" \
++    "${SCRIPT_DIR}"
++
++  # Export the local image's rootfs and audit it offline. We cannot `exec sh`
++  # because there is no shell in the image — export + scan the tarball.
++  AUDIT_DIR="${BOT_OUT}/audit"
++  rm -rf "${AUDIT_DIR}"; mkdir -p "${AUDIT_DIR}"
++  CID="$(docker create "${IMAGE_REF}")"
++  trap 'docker rm -f "${CID}" >/dev/null 2>&1 || true' EXIT
++  docker export "${CID}" | tar -xf - -C "${AUDIT_DIR}"
++
++  # Assertion 1: no shell.
++  for forbidden in bin/sh bin/bash bin/ash usr/bin/sh; do
++    if [[ -e "${AUDIT_DIR}/${forbidden}" ]]; then
++      echo "audit failed: ${forbidden} present in final image" >&2; exit 1
++    fi
++  done
++
++  # Assertion 2: no package manager.
++  for forbidden in sbin/apk usr/sbin/apk etc/apk bin/apt usr/bin/dpkg; do
++    if [[ -e "${AUDIT_DIR}/${forbidden}" ]]; then
++      echo "audit failed: ${forbidden} present in final image" >&2; exit 1
++    fi
++  done
++
++  # Assertion 3: no setuid/setgid binaries.
++  SUID_HITS="$(find "${AUDIT_DIR}" -xdev \( -perm -4000 -o -perm -2000 \) -type f -printf '%p\n' || true)"
++  if [[ -n "${SUID_HITS}" ]]; then
++    echo "audit failed: setuid/setgid files found:" >&2
++    echo "${SUID_HITS}" >&2
++    exit 1
++  fi
++
++  # Assertion 4: plang binary present and executable, tini present.
++  [[ -x "${AUDIT_DIR}/opt/plang/plang" ]] || { echo "audit: plang missing/not-exec" >&2; exit 1; }
++  [[ -x "${AUDIT_DIR}/usr/local/bin/tini" ]] || { echo "audit: tini missing/not-exec" >&2; exit 1; }
++
++  rm -rf "${AUDIT_DIR}"
++  docker rm -f "${CID}" >/dev/null
++  trap - EXIT
++  echo "    audit:         PASS (no shell, no apt/apk, no setuid, plang+tini ok)"
++fi
++
++# ---- SBOM --------------------------------------------------------------------
++if command -v syft >/dev/null 2>&1; then
++  syft "oci-archive:${OCI_TAR}" -o spdx-json > "${BOT_OUT}/sbom.spdx.json"
++  echo "    sbom:          ${BOT_OUT}/sbom.spdx.json"
++else
++  echo "warn: syft not installed; skipping SBOM" >&2
++fi
++
++# ---- Vuln scan ---------------------------------------------------------------
++if command -v trivy >/dev/null 2>&1; then
++  # Fail the build on HIGH/CRITICAL. Full results written to trivy.json.
++  trivy image --input "${OCI_TAR}" \
++    --format json --output "${BOT_OUT}/trivy.json" \
++    --severity HIGH,CRITICAL \
++    --exit-code 1 --ignore-unfixed
++  echo "    trivy:         ${BOT_OUT}/trivy.json (0 HIGH/CRITICAL)"
++else
++  echo "warn: trivy not installed; skipping vuln scan" >&2
++fi
++
++# ---- Sign --------------------------------------------------------------------
++# Only sign if we have a place to push to. Signing an oci-archive isn't useful;
++# cosign signs a reference in a registry. COSIGN_PUSH_REF controls this.
++if [[ -n "${COSIGN_PUSH_REF:-}" ]]; then
++  if command -v cosign >/dev/null 2>&1; then
++    # Requires the archive to be pushed first. Left as a user action for v1;
++    # the signing step below works once `docker push ${COSIGN_PUSH_REF}` is run.
++    echo "    cosign:        sign ${COSIGN_PUSH_REF} after pushing the archive"
++    echo "                   (cosign sign --yes ${COSIGN_PUSH_REF})"
++  else
++    echo "warn: cosign not installed; skipping signature" >&2
++  fi
++else
++  echo "    cosign:        skipped (set COSIGN_PUSH_REF to enable)"
++fi
++
++# ---- Record ------------------------------------------------------------------
++cat > "${BOT_OUT}/build-record.json" <<EOF
++{
++  "image_ref": "${IMAGE_REF}",
++  "source_commit": "${SOURCE_COMMIT}",
++  "source_date_epoch": ${SOURCE_DATE_EPOCH},
++  "bases": {
++    "runtime_deps": "${RUNTIME_DEPS_PINNED}",
++    "alpine": "${ALPINE_PINNED}"
++  },
++  "inputs": {
++    "plang_amd64_sha256": "${ZIP_AMD64_SHA}",
++    "plang_arm64_sha256": "${ZIP_ARM64_SHA}"
++  },
++  "oci_archive": "${OCI_TAR}",
++  "oci_archive_sha256": "${OCI_SHA}"
++}
++EOF
++
++echo "==> done."
++echo "    build record:  ${BOT_OUT}/build-record.json"
