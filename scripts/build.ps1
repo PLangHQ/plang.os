@@ -66,15 +66,11 @@ Write-Host "    plang zip:  $PlangZip"
 Write-Host "    WSL zip:    $wslZip"
 Write-Host ""
 
-# Build the bash command as a here-string to avoid PowerShell parsing issues.
-# 'set -e' makes any failing line abort the script, which replaces the need
-# for '&&' chaining (which is not supported in Windows PowerShell 5.1).
-$bashCmd = @"
-set -euo pipefail
-cd '$wslRepo'
-export PLANG_ZIP='$wslZip'
-./container/build.sh
-"@
+# Single-line bash with semicolons. Avoids two PS 5.1 pitfalls:
+#   - '&&' is PS 7+ only (PS 5.1 parses it as code even inside strings).
+#   - Here-strings carry CRLF line endings on Windows, which bash parses as
+#     trailing '\r' on every line ("invalid option namepefail" etc.).
+$bashCmd = "set -eu; cd '$wslRepo'; export PLANG_ZIP='$wslZip'; ./container/build.sh"
 
 & wsl @wslArgs bash -c $bashCmd
 if ($LASTEXITCODE -ne 0) {
