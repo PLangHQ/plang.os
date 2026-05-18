@@ -1,0 +1,47 @@
+{
+  "name": "Start",
+  "description": null,
+  "comment": null,
+  "steps": [
+    {
+      "index": 0,
+      "text": "write out \u0022hello plang world\u0022",
+      "lineNumber": 2,
+      "indent": 0,
+      "comment": null,
+      "actions": [
+        {
+          "module": "output",
+          "action": "write",
+          "parameters": [
+            {
+              "name": "Data",
+              "value": "hello plang world",
+              "type": "tstring"
+            }
+          ],
+          "defaults": null,
+          "modifiers": []
+        }
+      ],
+      "intent": null,
+      "guidance": "The step text \u0027write out\u0027 directs output to the actor\u0027s output channel, so use output.write with Data set to the provided string.",
+      "level": "high",
+      "confidence": 99,
+      "formal": null,
+      "source": null,
+      "waitForExecution": true
+    }
+  ],
+  "goals": [],
+  "visibility": 1,
+  "path": "/Start.goal",
+  "prPath": "/.build/start.pr",
+  "hash": "f8a4639ef52f022d883876ef2ac230d982b4e83f87f650c3fe6a7ae2a86e453b",
+  "builderVersion": "0.2.2",
+  "isSetup": false,
+  "isEvent": false,
+  "isSystem": false,
+  "isTest": false,
+  "inputParameters": null
+}
