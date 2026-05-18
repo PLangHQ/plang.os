@@ -1,0 +1,152 @@
+# syntax=docker/dockerfile:1.7
+#
+# plangOS desktop — rootfs that runs PLang with a windowed UI.
+#
+# Same rootfs ships as either:
+#   * an OCI container image (for servers / non-Windows hosts), or
+#   * a WSL distro tarball (registered on Windows via `wsl --import`).
+#
+# Architecture:
+#   - Debian slim base (glibc) — Photino.Native and WebKitGTK pin to glibc,
+#     so this image trades ~25 MB vs Alpine for compatibility we'd otherwise
+#     spend weeks fighting.
+#   - WebKitGTK + GTK runtime layered on top of dotnet/runtime-deps.
+#   - Photino-based plang binary at /opt/plang/plangd (the `d` is the
+#     desktop/Photino variant; the headless server image's binary is plang).
+#   - Same lockdown shape as the server image: no shell, no apt, no setuid,
+#     non-root UID 10001, read-only root at runtime.
+#
+# Build context expectations:
+#   container-desktop/plang-desktop-amd64.zip
+#     Self-contained linux-x64 publish of the Photino-based plang variant,
+#     plus os/ (PLang stdlib) and the user's app files (Start.goal + .build).
+#     Sourced by build.sh from /shared by default (configurable via
+#     PLANG_DESKTOP_ZIP env var).
+
+# --- Pinned bases --------------------------------------------------------------
+ARG RUNTIME_DEPS_IMAGE=mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim
+ARG DEBIAN_IMAGE=debian:12-slim
+
+# --- Stage 1: staging ----------------------------------------------------------
+FROM ${DEBIAN_IMAGE} AS staging
+
+ARG TARGETARCH=amd64
+
+RUN apt-get update -qq \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      unzip ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /staging
+
+COPY plang-desktop-${TARGETARCH}.zip /staging/plang.zip
+
+# Same sift logic as the server image: unzip, auto-flatten a single nested
+# top-level dir, normalise binary name (PLang -> plangd), sort *.goal +
+# .build/ into /staging/home/plang, leave /opt/plang holding the binary + os/.
+RUN set -eux; \
+    mkdir -p /staging/plang /staging/home/plang; \
+    unzip_rc=0; unzip -q /staging/plang.zip -d /staging/plang || unzip_rc=$?; \
+    if [ "${unzip_rc}" -gt 1 ]; then echo "unzip failed ${unzip_rc}"; exit "${unzip_rc}"; fi; \
+    rm /staging/plang.zip; \
+    top_count=$(ls -1A /staging/plang | wc -l); \
+    if [ "${top_count}" = "1" ]; then \
+      only=$(ls -1A /staging/plang); \
+      if [ -d "/staging/plang/${only}" ]; then \
+        mv "/staging/plang/${only}" /staging/plang.flat; \
+        rmdir /staging/plang; \
+        mv /staging/plang.flat /staging/plang; \
+      fi; \
+    fi; \
+    if [ -f /staging/plang/PLang ] && [ ! -f /staging/plang/plangd ]; then \
+      mv /staging/plang/PLang /staging/plang/plangd; \
+    fi; \
+    if [ -f /staging/plang/plang ] && [ ! -f /staging/plang/plangd ]; then \
+      mv /staging/plang/plang /staging/plang/plangd; \
+    fi; \
+    if [ ! -f /staging/plang/plangd ]; then \
+      echo "ERROR: plangd binary not found at /staging/plang/plangd"; \
+      find /staging/plang -maxdepth 3 -printf "%y %p\n" | head -80; \
+      exit 1; \
+    fi; \
+    chmod 0755 /staging/plang/plangd; \
+    for f in /staging/plang/*.goal; do \
+      [ -e "$f" ] && mv "$f" /staging/home/plang/; \
+    done; \
+    if [ -d /staging/plang/.build ]; then mv /staging/plang/.build /staging/home/plang/; fi
+
+RUN set -eux; \
+    mkdir -p /staging/etc; \
+    printf 'plang:x:10001:10001:plang:/home/plang:/sbin/nologin\n' > /staging/etc/passwd; \
+    printf 'plang:x:10001:\n' > /staging/etc/group; \
+    printf 'root:x:0:0:root:/root:/sbin/nologin\n' >> /staging/etc/passwd; \
+    printf 'root:x:0:\n' >> /staging/etc/group; \
+    chown -R 10001:10001 /staging/home/plang
+
+# --- Stage 2: runtime ----------------------------------------------------------
+FROM ${RUNTIME_DEPS_IMAGE} AS runtime
+
+# WebKitGTK + GTK + minimum support libs so Photino can render. We layer these
+# on top of dotnet/runtime-deps then strip apt and shells from the final image.
+#
+# Why each package:
+#   libwebkit2gtk-4.1-0   — the actual web renderer Photino drives
+#   libgtk-3-0            — WebKitGTK's parent toolkit (windows, events)
+#   libnotify4            — desktop notification surface (Photino API)
+#   libnss3 libnspr4      — TLS + JS engine internals WebKitGTK needs
+#   fonts-dejavu-core     — minimum sane font set (no fonts -> tofu boxes)
+#   ca-certificates       — HTTPS for whatever the app fetches
+RUN apt-get update -qq \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      libwebkit2gtk-4.1-0 \
+      libgtk-3-0 \
+      libnotify4 \
+      libnss3 \
+      libnspr4 \
+      fonts-dejavu-core \
+      ca-certificates \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /var/log/apt/* /var/log/dpkg.log
+
+COPY --from=staging /staging/plang /opt/plang
+COPY --from=staging /staging/etc/passwd /etc/passwd
+COPY --from=staging /staging/etc/group /etc/group
+COPY --from=staging --chown=10001:10001 /staging/home/plang /home/plang
+
+# WSL distro config: when the image is exported as a tarball and registered via
+# 'wsl --import', WSL reads this file at boot.
+COPY wsl.conf /etc/wsl.conf
+
+# Strip the shell and package manager from the final image. The server image
+# does the same; here the package list is different (apt + dpkg + bash).
+RUN /bin/sh -c 'rm -rf \
+      /usr/bin/apt /usr/bin/apt-get /usr/bin/apt-cache /usr/bin/apt-config \
+      /usr/bin/dpkg /usr/bin/dpkg-* /usr/sbin/dpkg* \
+      /usr/sbin/apt* /etc/apt /var/lib/apt /var/lib/dpkg /var/cache/apt \
+      /usr/bin/bash /bin/bash /bin/sh /bin/dash \
+      /usr/bin/login /bin/login /usr/bin/su /bin/su \
+      /usr/bin/wget /usr/bin/curl /usr/bin/ftp /usr/bin/telnet' \
+ && rm -f /usr/bin/sh /bin/dash || true
+
+USER 10001:10001
+WORKDIR /home/plang
+ENV DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_NOLOGO=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_EnableDiagnostics=0 \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+    PLANG_HOME=/home/plang \
+    PATH=/opt/plang:/usr/local/bin:/usr/bin
+
+ARG SOURCE_COMMIT
+ARG SOURCE_DATE_EPOCH
+LABEL org.opencontainers.image.title="plangOS-desktop" \
+      org.opencontainers.image.description="Debian slim + WebKitGTK + PLang (Photino). Runs windowed under WSLg on Windows or as a Linux desktop app." \
+      org.opencontainers.image.source="https://github.com/PLangHQ/plang.os" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.base.name="${RUNTIME_DEPS_IMAGE}" \
+      org.opencontainers.image.revision="${SOURCE_COMMIT}" \
+      org.opencontainers.image.created="${SOURCE_DATE_EPOCH}"
+
+ENTRYPOINT ["/opt/plang/plangd"]
+CMD []
