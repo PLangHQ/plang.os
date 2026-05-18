@@ -82,9 +82,12 @@ RUN set -eux; \
 # running `adduser` so we ship only the two lines we actually need.
 RUN set -eux; \
     mkdir -p /staging/etc /staging/tmp /staging/home/plang; \
-    printf 'plang:x:10001:10001:plang:/home/plang:/sbin/nologin\n' > /staging/etc/passwd; \
+    # /etc/passwd login shell points at plang itself. We ship no /bin/sh or \
+    # /sbin/nologin, so WSL (and anything else that spawns the user's shell) \
+    # ends up exec'ing plang. Matches "only PLang runs" - the shell IS plang. \
+    printf 'plang:x:10001:10001:plang:/home/plang:/opt/plang/plang\n' > /staging/etc/passwd; \
     printf 'plang:x:10001:\n' > /staging/etc/group; \
-    printf 'root:x:0:0:root:/root:/sbin/nologin\n' >> /staging/etc/passwd; \
+    printf 'root:x:0:0:root:/root:/opt/plang/plang\n' >> /staging/etc/passwd; \
     printf 'root:x:0:\n' >> /staging/etc/group; \
     chown -R 10001:10001 /staging/home/plang; \
     chmod 01777 /staging/tmp
