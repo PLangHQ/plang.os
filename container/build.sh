@@ -51,26 +51,27 @@ if [[ ${#missing_tools[@]} -gt 0 ]]; then
 fi
 
 # ---- Pre-flight: zip present -------------------------------------------------
-# The zip is too big for the repo (~260 MB for an untrimmed self-contained
-# publish). It lives outside the repo; build.sh copies it into the build
-# context just before the build and cleans up after. Source path is
-# ${PLANG_ZIP:-/shared/plang-amd64.zip}.
-zip="${SCRIPT_DIR}/plang-amd64.zip"
-zip_src="${PLANG_ZIP:-/shared/plang-amd64.zip}"
+# The zip is the linux-musl-x64 self-contained publish + os/ + Start.goal +
+# .build/, produced by scripts/build-plang-zip.ps1 (Windows) or by hand
+# on Linux. Lives at container/plang-amd64.zip in the build context.
+# Override the path with PLANG_ZIP=<absolute path> if needed.
+zip="${PLANG_ZIP:-${SCRIPT_DIR}/plang-amd64.zip}"
 staged_zip=0
+context_zip="${SCRIPT_DIR}/plang-amd64.zip"
 if [[ ! -f "${zip}" ]]; then
-  if [[ -f "${zip_src}" ]]; then
-    echo "==> staging ${zip_src} -> ${zip}"
-    cp "${zip_src}" "${zip}"
-    staged_zip=1
-  else
-    echo "error: missing ${zip} and source ${zip_src} not found" >&2
-    echo "  place a self-contained linux-musl-x64 publish of PLang at either" >&2
-    echo "  location, or set PLANG_ZIP=<path> to override the source." >&2
-    echo "  see container/README.md." >&2
-    exit 1
-  fi
+  echo "error: missing ${zip}" >&2
+  echo "  run scripts/build-plang-zip.ps1 (Windows) to produce it, or" >&2
+  echo "  place a linux-musl-x64 self-contained publish there yourself." >&2
+  echo "  see container/README.md." >&2
+  exit 1
 fi
+# Ensure the file is at the build-context location for the COPY in Containerfile.
+if [[ "${zip}" != "${context_zip}" ]]; then
+  echo "==> staging ${zip} -> ${context_zip}"
+  cp "${zip}" "${context_zip}"
+  staged_zip=1
+fi
+zip="${context_zip}"
 CID=""
 cleanup_on_exit() {
   if [[ -n "${CID}" ]]; then

@@ -1,63 +1,53 @@
 <#
 .SYNOPSIS
-  Build the plangOS container image via WSL.
+  Build the plangOS rootfs (OCI image + WSL tarball) via podman in WSL.
 
 .DESCRIPTION
-  Shells into WSL and runs container/build.sh with PLANG_ZIP pointed at a
-  Windows-side copy of the PLang self-contained publish zip. The zip lives
-  outside the repo because it is too big (about 260 MB).
+  Expects container\plang-amd64.zip to already exist (run
+  .\scripts\build-plang-zip.ps1 first).
 
-  Uses podman inside WSL (no Docker Desktop dependency). The image is stored
-  in the WSL distro's rootless podman store. To list images from Windows:
-    wsl podman images
-  To run:
-    .\scripts\run.ps1
+  Shells into WSL and runs container/build.sh, which:
+   - resolves base image digests via skopeo
+   - podman build (rootless, in the WSL distro's storage)
+   - podman save  -> .bot\<branch>\os\v1\image.oci.tar
+   - podman export -> .bot\<branch>\os\v1\plangos-wsl.tar
 
-  Prereq in the WSL distro:
-    sudo apt update && sudo apt install -y podman skopeo jq
-
-.PARAMETER PlangZip
-  Windows path to the PLang self-contained publish zip. Default:
-  C:\plang-amd64.zip
+  Auto-installs podman + skopeo + jq in the WSL distro if missing.
 
 .PARAMETER WslDistro
-  WSL distro to use. Default: the system default distro.
+  WSL distro to build inside. Default: the system default distro.
 
 .EXAMPLE
   .\scripts\build.ps1
 
 .EXAMPLE
-  .\scripts\build.ps1 -PlangZip "D:\builds\plang-amd64.zip"
+  .\scripts\build.ps1 -WslDistro Ubuntu
 #>
 [CmdletBinding()]
 param(
-  [string]$PlangZip = "C:\plang-amd64.zip",
   [string]$WslDistro = ""
 )
 
 $ErrorActionPreference = "Stop"
 
-if (-not (Test-Path -LiteralPath $PlangZip)) {
-  Write-Error "PLang zip not found at: $PlangZip. Pass -PlangZip <path> or place the zip at C:\plang-amd64.zip."
-  exit 1
-}
-
-# scripts\build.ps1 -> repo root
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-# Validate this is the plang.os repo.
 $buildSh = Join-Path $repoRoot "container\build.sh"
 if (-not (Test-Path -LiteralPath $buildSh)) {
   Write-Error "container\build.sh not found under $repoRoot. Is this the plang.os repo?"
   exit 1
 }
 
-# --- WSL arg plumbing --------------------------------------------------------
+$zip = Join-Path $repoRoot "container\plang-amd64.zip"
+if (-not (Test-Path -LiteralPath $zip)) {
+  Write-Error "container\plang-amd64.zip not found. Run .\scripts\build-plang-zip.ps1 first."
+  exit 1
+}
+
 $wslArgs = @()
 if ($WslDistro) { $wslArgs += @("-d", $WslDistro) }
 
 # --- WSL prereqs: podman + skopeo + jq ---------------------------------------
-# Check each tool, collect missing ones, apt-install them together.
 $tools   = @("podman", "skopeo", "jq")
 $missing = @()
 foreach ($t in $tools) {
@@ -76,26 +66,20 @@ if ($missing.Count -gt 0) {
   Write-Host ""
 }
 
-# Convert Windows paths to WSL paths. 'wsl --exec wslpath' bypasses the shell
-# so paths with spaces survive.
-$wslZip  = (& wsl @wslArgs --exec wslpath -a "$PlangZip").Trim()
-if (-not $wslZip)  { Write-Error "wslpath failed for $PlangZip"; exit 1 }
 $wslRepo = (& wsl @wslArgs --exec wslpath -a "$repoRoot").Trim()
 if (-not $wslRepo) { Write-Error "wslpath failed for $repoRoot"; exit 1 }
 
 Write-Host "==> plangOS build (via WSL)"
-Write-Host "    repo:       $repoRoot"
-Write-Host "    WSL repo:   $wslRepo"
-Write-Host "    plang zip:  $PlangZip"
-Write-Host "    WSL zip:    $wslZip"
+Write-Host "    repo:      $repoRoot"
+Write-Host "    WSL repo:  $wslRepo"
+Write-Host "    zip:       container\plang-amd64.zip"
 Write-Host ""
 
 # Single-line bash with semicolons. Avoids two PS 5.1 pitfalls:
 #   - '&&' is PS 7+ only (PS 5.1 parses it as code even inside strings).
-#   - Here-strings carry CRLF line endings on Windows, which bash parses as
-#     trailing '\r' on every line ("invalid option namepefail" etc.).
-$bashCmd = "set -eu; cd '$wslRepo'; export PLANG_ZIP='$wslZip'; ./container/build.sh"
-
+#   - Here-strings carry CRLF line endings; bash parses each line with a
+#     trailing '\r' ("invalid option namepefail" etc.).
+$bashCmd = "set -eu; cd '$wslRepo'; ./container/build.sh"
 & wsl @wslArgs bash -c $bashCmd
 if ($LASTEXITCODE -ne 0) {
   Write-Error "build.sh exited with code $LASTEXITCODE"

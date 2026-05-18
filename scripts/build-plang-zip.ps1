@@ -23,7 +23,8 @@
   Path to the PLang source checkout. Default: ..\plang next to plang.os.
 
 .PARAMETER OutputZipPath
-  Where the final zip goes. Default: C:\plang-amd64.zip.
+  Where the final zip goes. Default: <repo>\container\plang-amd64.zip
+  (the path build.sh picks up from the build context with no extra config).
 
 .PARAMETER IncludePlaywright
   Keep the bundled Playwright/Node payload.
@@ -37,13 +38,19 @@
 [CmdletBinding()]
 param(
   [string]$PlangRepoPath = "",
-  [string]$OutputZipPath = "C:\plang-amd64.zip",
+  [string]$OutputZipPath = "",
   [switch]$IncludePlaywright
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+
+# Default output: container/plang-amd64.zip inside this repo. build.sh finds
+# it there via its preflight, no PLANG_ZIP env var needed.
+if (-not $OutputZipPath) {
+  $OutputZipPath = Join-Path $repoRoot "container\plang-amd64.zip"
+}
 
 if (-not $PlangRepoPath) {
   $PlangRepoPath = Join-Path (Split-Path -Parent $repoRoot) "plang"
