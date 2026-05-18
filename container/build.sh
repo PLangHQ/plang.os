@@ -148,6 +148,18 @@ podman save --format oci-archive --output "${OCI_TAR}" "${IMAGE_REF}"
 OCI_SHA="$(sha256sum "${OCI_TAR}" | awk '{print $1}')"
 echo "    oci archive:   sha256:${OCI_SHA}"
 
+# ---- Export WSL distro tarball -----------------------------------------------
+# A WSL distro is a plain rootfs tarball. Created by exporting an uncommitted
+# container's filesystem. Same image, different packaging - same artifact
+# pattern as the desktop variant.
+WSL_TAR="${BOT_OUT}/plangos-wsl.tar"
+rm -f "${WSL_TAR}"
+WSL_CID="$(podman create "${IMAGE_REF}")"
+podman export "${WSL_CID}" -o "${WSL_TAR}"
+podman rm -f "${WSL_CID}" >/dev/null
+WSL_SHA="$(sha256sum "${WSL_TAR}" | awk '{print $1}')"
+echo "    wsl tarball:   sha256:${WSL_SHA} ($(du -h "${WSL_TAR}" | awk '{print $1}'))"
+
 # ---- Rootfs audit ------------------------------------------------------------
 # No shell in the final image -> can't 'podman exec sh' to inspect it.
 # Instead create + export the rootfs, then scan the tarball offline.

@@ -1,84 +1,37 @@
 <#
 .SYNOPSIS
-  Run the plangOS container with the recommended lockdown flags.
+  Run plangOS by entering the registered WSL distro.
 
 .DESCRIPTION
-  Invokes 'podman run' inside WSL with:
-    --read-only           immutable rootfs
-    --cap-drop=ALL        no Linux capabilities
-    --security-opt=no-new-privileges
-    --tmpfs /tmp          small writable scratch (noexec, nosuid)
-    --user 10001:10001    non-root
-    --pids-limit=64       fork-bomb cap
-    --rm                  clean up after exit
+  Just `wsl -d <DistroName>`. WSL reads /etc/wsl.conf inside the distro,
+  sees `[boot] command = /opt/plang/plang`, and runs plang directly.
+  No container engine at runtime; no Docker; no podman run.
 
-  Docker Desktop is NOT required. Podman must be installed in the WSL distro
-  (see scripts\build.ps1). Images built by scripts\build.ps1 live in the WSL
-  podman store; they are not visible to Windows 'docker' or 'podman.exe'.
+  Build first with .\scripts\build.ps1, then register with
+  .\scripts\install.ps1, then this script.
 
-  Any args after -- are passed to plang inside the container. With no args,
-  plang runs whatever Start.goal it finds in its working directory
-  (/home/plang, baked in from the zip).
-
-.PARAMETER Tag
-  Image tag to run. Defaults to the newest 'plang-os:*' tag in the WSL podman
-  store.
-
-.PARAMETER Interactive
-  Allocate a TTY and keep stdin open (-it). Needed if plang prompts.
-
-.PARAMETER WslDistro
-  WSL distro to use. Default: system default.
+.PARAMETER DistroName
+  Distro to run. Default: plangos.
 
 .EXAMPLE
   .\scripts\run.ps1
 
 .EXAMPLE
-  .\scripts\run.ps1 -Tag 60ceee1
-
-.EXAMPLE
-  .\scripts\run.ps1 -- --help
+  .\scripts\run.ps1 -DistroName plangos-dev
 #>
 [CmdletBinding()]
 param(
-  [string]$Tag = "",
-  [switch]$Interactive,
-  [string]$WslDistro = "",
-  [Parameter(ValueFromRemainingArguments=$true)]
-  [string[]]$PlangArgs
+  [string]$DistroName = "plangos"
 )
 
 $ErrorActionPreference = "Stop"
 
-$wslArgs = @()
-if ($WslDistro) { $wslArgs += @("-d", $WslDistro) }
-
-# Pick the newest plang-os tag if none given.
-if (-not $Tag) {
-  $Tag = (& wsl @wslArgs podman images plang-os --format "{{.Tag}}" | Select-Object -First 1)
-  if (-not $Tag) {
-    Write-Error "No plang-os image found in WSL podman store. Build first with .\scripts\build.ps1"
-    exit 1
-  }
+$existing = (& wsl -l -q) -replace "`0", "" | Where-Object { $_.Trim() -eq $DistroName }
+if (-not $existing) {
+  Write-Error "Distro '$DistroName' not registered. Run .\scripts\install.ps1 first."
+  exit 1
 }
 
-$image = "plang-os:$Tag"
-
-$podmanArgs = @(
-  "run", "--rm",
-  "--read-only",
-  "--cap-drop=ALL",
-  "--security-opt=no-new-privileges",
-  "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
-  "--user", "10001:10001",
-  "--pids-limit=64"
-)
-if ($Interactive) { $podmanArgs += "-it" }
-$podmanArgs += $image
-if ($PlangArgs) { $podmanArgs += $PlangArgs }
-
-Write-Host "==> wsl podman $($podmanArgs -join ' ')"
-Write-Host ""
-
-& wsl @wslArgs podman @podmanArgs
+Write-Host "==> wsl -d $DistroName"
+& wsl -d $DistroName
 exit $LASTEXITCODE
