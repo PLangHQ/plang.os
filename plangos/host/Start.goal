@@ -1,42 +1,54 @@
 Start
-/ Host plang on Windows: makes sure WSL and the PlangOS distro exist, then starts it.
-/ Run by start.ps1 (or `plang` in this folder). Needs the terminal module, which does not exist yet.
-/ `run terminal` runs a command line on the host and returns {exitCode, stdout, stderr}.
-- set %distro% = 'PlangOS'
-- set %distroDir% = '%!plang.rootPath%/distro'
-- run terminal 'wsl.exe --status', env WSL_UTF8=1, write to %wsl%
-- if %wsl.exitCode% is not 0, call InstallWsl, then end goal
-- run terminal 'wsl.exe --list --quiet', env WSL_UTF8=1, write to %distros%
-- if %distros.stdout% does not contain %distro%, call ImportImage
-- run terminal 'wsl.exe -d PlangOS', interactive, write to %session%
-- write out 'PlangOS exited with %session.exitCode%'
+/ Host plang on Windows: makes sure WSL and the PlangOS distro exist, then opens PlangOS.
+/ Runs in the PlangOS folder (image\, distro\). Programs start through the terminal module;
+/ each one outside the app root asks once: "Allow User to execute ...? (y/n/a)".
+/ start.ps1 checks the image's sha256 against the manifest before plang runs (for now: file.read
+/ returns a reference and crypto.hash doesn't give the file's hex sha256 yet on app-systems).
+- run terminal 'wsl.exe' with parameters '--status', env WSL_UTF8=1, write to %wsl%
+- if %wsl!exitCode% is not 0, call InstallWsl, then end goal
+- read 'image/manifest-amd64.json', write to %manifest%
+- run terminal 'wsl.exe' with parameters '--list', '--quiet', env WSL_UTF8=1, write to %distros%
+- if %distros% contains 'PlangOS', call CheckImage
+- if %distros% does not contain 'PlangOS', call ImportImage
+- call OpenPlangOS
+
+OpenPlangOS
+- run terminal 'wsl.exe' with parameters '-d', 'PlangOS', interactive, write to %session%
+
+CheckImage
+/ WSL keeps an imported distro's disk as distro\ext4.vhdx. distro\<sha256>.imported names the
+/ image that disk came from, so no value comparison is needed.
+- check if file 'distro/ext4.vhdx' exists, write to %ours%
+- if %ours% is false, call NotOurs
+- check if file 'distro/%manifest.sha256%.imported' exists, write to %current%
+- if %current% is false, call ReplaceImage
+
+NotOurs
+- throw error 'A WSL distro named PlangOS exists, but this folder did not import it (no distro/ext4.vhdx). Remove it with: wsl --unregister PlangOS, then run start.ps1 again.'
 
 InstallWsl
 / Needs administrator rights, and usually a reboot. RunOnce brings us back after login.
 - write out 'Installing WSL. Windows will ask for administrator rights.'
-- run terminal 'wsl.exe --install --no-distribution', as administrator, write to %install%
-- if %install.exitCode% is not 0, call InstallFailed, then end goal
-- run terminal 'reg.exe add HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce /v PlangOS /t REG_SZ /f /d "powershell.exe -ExecutionPolicy Bypass -File \"%!plang.rootPath%\start.ps1\""'
+- run terminal 'wsl.exe' with parameters '--install', '--no-distribution', as administrator, write to %install%
+- if %install!exitCode% is not 0, call InstallFailed, then end goal
+- run terminal 'reg.exe' with parameters 'add', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce', '/v', 'PlangOS', '/t', 'REG_SZ', '/f', '/d', 'powershell.exe -ExecutionPolicy Bypass -NoExit -File start.ps1', write to %runOnce%
 - write out 'Restart Windows. PlangOS continues when you log back in.'
 
 InstallFailed
-- write out 'WSL install failed (%install.exitCode%): %install.stderr%'
-- write out 'Error 0x80370102 means virtualization is turned off in BIOS/UEFI. WSL needs Windows 10 build 19041 or later.'
+- write out 'WSL install failed (exit %install!exitCode%).'
+- write out 'Error 0x80370102 means virtualization is off in BIOS/UEFI. WSL needs Windows 10 build 19041 or later.'
+
+ReplaceImage
+/ A new image: remove the old distro, then import. /home/plang is not carried over yet.
+- write out 'New PlangOS image %manifest.version%: replacing the installed one.'
+- run terminal 'wsl.exe' with parameters '--unregister', 'PlangOS', env WSL_UTF8=1, write to %removed%
+- call ImportImage
 
 ImportImage
-/ The image and its manifest ship in image/. Later: download both from plang.is, manifest signed with our key.
-- read 'image/manifest-amd64.json', write to %manifest%
-- read 'image/%manifest.file%', write to %image%
-- hash %image% with sha256, write to %imageHash%
-- if %imageHash% is not %manifest.sha256%, call ImageTampered, then end goal
-- write out 'Importing PlangOS %manifest.version% (%manifest.size% bytes, sha256 verified)'
-- run terminal 'wsl.exe --import PlangOS "%distroDir%" "%!plang.rootPath%\image\%manifest.file%" --version 2', env WSL_UTF8=1, write to %import%
-- if %import.exitCode% is not 0, call ImportFailed
-
-ImageTampered
-- write out 'Image hash does not match the manifest. Not importing.'
-- write out 'manifest: %manifest.sha256%'
-- write out 'file:     %imageHash%'
+- write out 'Importing PlangOS %manifest.version%'
+- run terminal 'wsl.exe' with parameters '--import', 'PlangOS', 'distro', 'image/%manifest.file%', '--version', '2', env WSL_UTF8=1, write to %import%
+- if %import!exitCode% is not 0, call ImportFailed, then end goal
+- save 'PlangOS %manifest.version%' to 'distro/%manifest.sha256%.imported'
 
 ImportFailed
-- write out 'wsl --import failed (%import.exitCode%): %import.stderr%'
+- write out 'wsl --import failed (exit %import!exitCode%): %import% %import!error%'
