@@ -40,6 +40,15 @@ Write-Host ("Virtual screen: {0}x{1} at ({2},{3}), {4} monitor(s)" -f `
 $image = $null
 if ($FromPlangOS) {
     $env:WSL_UTF8 = '1'
+    # The imported distro must be the current image (it needs /home/plang/.stdout.png).
+    $root = Split-Path $PSScriptRoot -Parent
+    $manifestPath = Join-Path $root 'image\manifest-amd64.json'
+    if (Test-Path $manifestPath) {
+        $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+        if (-not (Test-Path (Join-Path $root "distro\$($manifest.sha256).imported"))) {
+            throw "PlangOS in WSL is not the current image. Run ..\start.ps1 first (it re-imports), then this again."
+        }
+    }
     $primary = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
     $html = "data:text/html,<body style='margin:0;background:magenta;font-family:sans-serif'>" +
             "<div style='position:absolute;left:40px;top:40px;padding:24px 32px;background:%23102040;color:white;font-size:40px;border-radius:12px'>" +
