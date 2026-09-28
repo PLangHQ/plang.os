@@ -37,6 +37,28 @@ if (-not (Test-Path $Plang)) {
     Remove-Item $zip
 }
 
+# .goal files open with this plang (double-click runs the goal in its folder), with the plang
+# icon. Per user (HKCU\Software\Classes): no administrator rights. Written on every run, so a
+# moved folder fixes itself.
+function Set-Default([string]$key, [string]$value) {
+    if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+    Set-ItemProperty -Path $key -Name '(default)' -Value $value
+}
+$classes = 'HKCU:\Software\Classes'
+$runner  = Join-Path $Root 'run-goal.cmd'
+$icon    = Join-Path $Root 'plang.ico'
+Set-Default "$classes\.goal" 'PLang.Goal'
+Set-Default "$classes\PLang.Goal" 'PLang goal'
+Set-Default "$classes\PLang.Goal\DefaultIcon" "`"$icon`""
+Set-Default "$classes\PLang.Goal\shell\open\command" "`"$runner`" `"%1`""
+Set-Default "$classes\PLang.Goal\shell\edit" 'Edit'
+Set-Default "$classes\PLang.Goal\shell\edit\command" "notepad.exe `"%1`""
+# tell Explorer the association changed, so icons refresh without a restart
+if (-not ('PlangOS.Shell' -as [type])) {
+    Add-Type -Namespace PlangOS -Name Shell -MemberDefinition '[DllImport("shell32.dll")] public static extern void SHChangeNotify(int eventId, uint flags, IntPtr a, IntPtr b);'
+}
+[PlangOS.Shell]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)   # SHCNE_ASSOCCHANGED
+
 # The image must match its manifest before Start.goal may import it.
 $manifestPath = Join-Path $Root 'image\manifest-amd64.json'
 if (Test-Path $manifestPath) {
