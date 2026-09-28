@@ -36,6 +36,9 @@ pivot_root . run/oldroot
 "/run/oldroot$UMOUNT" -l /run/oldroot   # host's umount, reached through the old root
 
 # clean environment (no env binary in PlangOS, so bash does it)
+RUNLOCAL_ENV_KEEP="${RUNLOCAL_ENV:-}"
 for v in $(compgen -e); do unset "$v" 2>/dev/null || true; done
 export HOME=/home/plang PATH=/usr/bin USER=plang
+# RUNLOCAL_ENV="NAME=value NAME2=value2" passes extra variables in (read before the clean-up above)
+for kv in $RUNLOCAL_ENV_KEEP; do export "$kv"; done
 exec /run/unshare -U --map-user=10001 --map-group=10001 --wd=/home/plang "$@"

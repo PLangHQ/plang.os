@@ -183,6 +183,13 @@ cmd_image() {
   log "adding plang and /etc"
   mkdir -p "$ROOT/opt/plang"
   cp -a "$plang_dir/." "$ROOT/opt/plang/"
+  # plang-screen: PlangOS's display (a Wayland compositor Chromium draws into). Built from
+  # plangos/plang-screen with cargo; PLANGOS_SCREEN names the binary.
+  if [ -n "${PLANGOS_SCREEN:-}" ]; then
+    mkdir -p "$ROOT/opt/plang-screen"
+    cp "$PLANGOS_SCREEN" "$ROOT/opt/plang-screen/plang-screen"
+    chmod 0755 "$ROOT/opt/plang-screen/plang-screen"
+  fi
   find "$ROOT/opt/plang" -name '*.pdb' -delete
   # .NET's optional LTTng tracing provider: needs liblttng-ust, which PlangOS doesn't ship
   rm -f "$ROOT/opt/plang/libcoreclrtraceptprovider.so"
