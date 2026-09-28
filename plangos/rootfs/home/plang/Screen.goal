@@ -2,7 +2,9 @@ Screen
 / PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen) and reads
 / its stdout: every frame of the browser goes up as one line. Input from the host's screen
 / comes down on stdin, one line per event. Ends when the host closes the pipe.
-- start browser 'https://www.mbl.is', size 1920x1080, on frame call Frame, write to %browser%
+/ visir.is, not mbl.is: mbl.is is behind Cloudflare, which stops headless Chromium from some
+/ networks. The compositor route (non-headless Chromium in plang-screen) removes that limit.
+- start browser 'https://www.visir.is', size 1920x1080, on frame call Frame, write to %browser%
 - on input call Input
 - stop %browser%
 

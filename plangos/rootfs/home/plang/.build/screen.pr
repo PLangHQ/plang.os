@@ -3,11 +3,11 @@
   "step": [
     {
       "index": 0,
-      "text": "start browser 'https://www.mbl.is', size 1920x1080, on frame call Frame, write to %browser%",
+      "text": "start browser 'https://www.visir.is', size 1920x1080, on frame call Frame, write to %browser%",
       "line": {
-        "number": 5
+        "number": 7
       },
-      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen) and reads\nits stdout: every frame of the browser goes up as one line. Input from the host's screen\ncomes down on stdin, one line per event. Ends when the host closes the pipe.",
+      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen) and reads\nits stdout: every frame of the browser goes up as one line. Input from the host's screen\ncomes down on stdin, one line per event. Ends when the host closes the pipe.\nvisir.is, not mbl.is: mbl.is is behind Cloudflare, which stops headless Chromium from some\nnetworks. The compositor route (non-headless Chromium in plang-screen) removes that limit.",
       "code": [
         {
           "module": "browser",
@@ -18,7 +18,7 @@
               "type": {
                 "name": "text"
               },
-              "value": "https://www.mbl.is"
+              "value": "https://www.visir.is"
             },
             {
               "name": "OnFrame",
@@ -137,7 +137,7 @@
       "index": 1,
       "text": "on input call Input",
       "line": {
-        "number": 6
+        "number": 8
       },
       "code": [
         {
@@ -181,7 +181,7 @@
       "index": 2,
       "text": "stop %browser%",
       "line": {
-        "number": 7
+        "number": 9
       },
       "code": [
         {
@@ -220,7 +220,7 @@
           "index": 0,
           "text": "write out %!data%",
           "line": {
-            "number": 10
+            "number": 12
           },
           "code": [
             {
@@ -268,7 +268,7 @@
           "index": 0,
           "text": "send %!data% to %browser%",
           "line": {
-            "number": 13
+            "number": 15
           },
           "code": [
             {
@@ -331,7 +331,7 @@
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "16b7e2ecc3af17c90db2fd672878d686cf7c8fcb414446155fda63834ac4876d",
+  "hash": "226bd8e67335ac08b086dc37df0fe17e3558cb4166d7f3ec31e7ef8e31ffd351",
   "isSetup": false,
   "isEvent": false,
   "isSystem": false,
