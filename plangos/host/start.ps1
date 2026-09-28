@@ -21,7 +21,7 @@ function Fail($msg) { Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }
 
 # Run from a file: this folder is the install. Piped from the web: %LOCALAPPDATA%\PlangOS.
 $Root  = if ($PSScriptRoot) { $PSScriptRoot } else { Join-Path $env:LOCALAPPDATA 'PlangOS' }
-$Plang = Join-Path $Root 'plang\plang.exe'
+$Plang = Join-Path $Root 'runtime\plang.exe'   # plang.cmd next to this script runs the same one
 
 if (-not (Test-Path $Plang)) {
     if ($PSScriptRoot) { Fail "plang not found at $Plang. Is this folder complete?" }
@@ -33,7 +33,7 @@ if (-not (Test-Path $Plang)) {
         Remove-Item $zip
         Fail "Checksum mismatch on $file. Download removed; run again."
     }
-    Expand-Archive $zip -DestinationPath $Root -Force   # plang\, Start.goal, .build\
+    Expand-Archive $zip -DestinationPath $Root -Force   # runtime\, plang.cmd, Start.goal, .build\
     Remove-Item $zip
 }
 
