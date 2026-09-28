@@ -6,6 +6,8 @@
 //!
 //!   kind 1  one frame: [u16 count] then per rectangle [i32 x][i32 y][u32 w][u32 h][u32 n][n bytes QOI of BGRA]
 //!   kind 2  the pointer the client wants: its name, UTF-8 ("pointer", "text", …)
+//!   kind 3  [u64 t]: the "t" of the last input, sent right after the first frame that follows it
+//!           (the host times input → picture with it)
 //!
 //! stderr says {"ready":"wayland-plang"} when clients can connect (the socket name).
 //!
@@ -76,6 +78,7 @@ struct State {
     screen: Vec<u8>,      // what the host shows: base + popups
     popups: Vec<Popup>,
     pending: Vec<(i32, i32, u32, u32, Vec<u8>)>, // rectangles of the frame being built (x, y, w, h, QOI), sent by flush()
+    stamp: Option<u64>, // the host's time stamp of the last input, echoed after the next frame (latency)
     callbacks: Vec<smithay::reexports::wayland_server::protocol::wl_callback::WlCallback>,
     start: Instant,
     out: std::io::BufWriter<std::io::Stdout>,
@@ -188,6 +191,10 @@ impl State {
             payload.extend_from_slice(&qoi);
         }
         self.message(1, &payload);
+        // kind 3: the stamp of the input this frame follows, so the host can time input → picture
+        if let Some(t) = self.stamp.take() {
+            self.message(3, &t.to_le_bytes());
+        }
     }
 
     /// The surface under (x, y): the topmost popup there, else the toplevel.
@@ -202,6 +209,9 @@ impl State {
 
     fn input(&mut self, line: &str) {
         let Ok(e) = serde_json::from_str::<serde_json::Value>(line) else { return };
+        if let Some(t) = e.get("t").and_then(|v| v.as_u64()) {
+            self.stamp = Some(t);
+        }
         let num = |k: &str| e.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0);
         let serial = SERIAL_COUNTER.next_serial();
         let time = self.now();
@@ -215,6 +225,8 @@ impl State {
                     let button = match e.get("button").and_then(|v| v.as_str()) {
                         Some("right") => 0x111,
                         Some("middle") => 0x112,
+                        Some("back") => 0x113,    // BTN_SIDE: Chromium goes back
+                        Some("forward") => 0x114, // BTN_EXTRA: Chromium goes forward
                         _ => 0x110,
                     };
                     let state = if kind == "down" {
@@ -563,6 +575,7 @@ fn main() {
         screen: vec![0u8; (width * height * 4) as usize],
         popups: Vec::new(),
         pending: Vec::new(),
+        stamp: None,
         callbacks: Vec::new(),
         start: Instant::now(),
         out: std::io::BufWriter::with_capacity(1 << 20, std::io::stdout()),
