@@ -65,8 +65,16 @@ $tarPath  = Join-Path $ImageDir $manifest.file
 function Get-Distros {
     (wsl.exe --list --quiet) | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
+# WSL distro names are case-insensitive, and so is -contains: 'plangos' (the old v1
+# Alpine image) counts as 'PlangOS'.
 $installed = (Get-Distros) -contains $Distro
 $stampSha  = if (Test-Path $Stamp) { (Get-Content $Stamp -Raw).Trim() } else { '' }
+
+if ($installed -and -not $stampSha -and -not $Reset) {
+    Fail ("A WSL distro named '$Distro' exists, but this script didn't import it (no $Stamp).`n" +
+          "  It may be the old v1 image. Run .\start.ps1 -Reset to replace it (its disk is deleted),`n" +
+          "  or remove it yourself: wsl --unregister $Distro")
+}
 
 if ($installed -and ($Reset -or ($stampSha -and $stampSha -ne $manifest.sha256))) {
     if ($Reset) { Say "Reset: removing $Distro" }
@@ -112,9 +120,15 @@ if ($Check) {
         if ($detail) { Write-Host "      $detail" }
     }
     function Run-In([string[]]$argv) {
-        $out = & wsl.exe -d $Distro --exec @argv 2>&1 | Out-String
+        # ToString(): PS 5.1 wraps each stderr line in an ErrorRecord and prints it noisily
+        $out = & wsl.exe -d $Distro --exec @argv 2>&1 | ForEach-Object { $_.ToString() } | Out-String
         return @{ Code = $LASTEXITCODE; Out = $out.Trim() }
     }
+
+    $pkgs = Run-In @('/usr/lib/chromium/chromium', '--version')
+    $isNew = ($pkgs.Code -eq 0)
+    Record 'this distro is the Debian PlangOS image (Chromium present)' $isNew $pkgs.Out
+    if (-not $isNew) { Fail "wrong distro under the name $Distro. Run .\start.ps1 -Reset -Check" }
 
     wsl.exe --terminate $Distro | Out-Null
     $t = Measure-Command { $null = Run-In @('/opt/plang/plang') }
@@ -126,8 +140,9 @@ if ($Check) {
     $r = Run-In @('cmd.exe', '/c', 'echo interop')
     Record '1.4 interop off (cmd.exe must not run)' ($r.Code -ne 0) $r.Out
 
-    $r = Run-In @('/usr/lib/chromium/chromium', '--version')
-    Record 'Chromium runs' ($r.Code -eq 0) $r.Out
+    $r = Run-In @('/opt/plang/plang')
+    Record 'plang runs as user plang (expects "Not found: /.build/start.pr": app not built yet)' `
+        ($r.Out -match 'start\.pr') ($r.Out -split "`n" | Select-Object -Last 2)
 
     $r = Run-In @('/usr/lib/chromium/chromium', '--headless', '--disable-gpu',
                   '--user-data-dir=/home/plang/.chromium', '--dump-dom',
