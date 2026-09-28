@@ -13,9 +13,9 @@ Measured on the build of 2026-09-28 (`checks.py`: 14/14 passed).
 - [~] **Filesystem** — everything outside `/home/plang` is owned by root and not world-writable (`/tmp`, `/var/tmp` sticky). Not read-only: WSL mounts the distro disk read-write.
 - [x] **User** — `plang`, uid/gid 10001. No `/etc/shadow`, so no passwords exist.
 - [x] **Secrets** — none baked in. plang creates its identity on first run in `/home/plang/.db`.
-- [ ] **CVEs** — not scanned yet (no trivy/grype in this box). Next.
+- [x] **CVEs** — grype 0.119.0: 4 Critical, 78 High. Sources: Playwright's Node, PLang NuGet packages (fixable by bumps), and Debian (no fixes yet). See `cves.md`.
 - [ ] **Signature** — the manifest has sha256 + size. Signing waits on PLang's signature format being usable by host plang.
-- [ ] **SBOM** — `os-packages.txt` + `packages.lock` are the raw material; syft SPDX not generated yet.
+- [x] **SBOM** — syft 1.52.0 SPDX JSON (`plangos-amd64.spdx.json`, published next to the image): 189 deb, 117 .NET, 76 npm (Playwright's driver), 2 binaries.
 
 ## Seal (WSL)
 `/etc/wsl.conf`: `[interop] enabled=false, appendWindowsPath=false`, `[automount] enabled=false, mountFsTab=false`, `[user] default=plang`. The container can't start Windows programs or see `/mnt/c`.

@@ -151,6 +151,17 @@ cmd_image() {
     echo "$pkg $ver" >> "$WORK/unpacked.txt"
   done
 
+  # dpkg status database, metadata only: PlangOS has no dpkg, but CVE scanners and SBOM
+  # tools (grype, trivy, syft) find Debian packages through this file. Built from each
+  # unpacked package's control file, in lock order, so it is deterministic.
+  mkdir -p "$ROOT/var/lib/dpkg"
+  : > "$ROOT/var/lib/dpkg/status"
+  while read -r pkg _; do
+    dpkg-deb -f "$WORK/debs/$pkg.deb" \
+      | sed '/^Package:/a Status: install ok installed' >> "$ROOT/var/lib/dpkg/status"
+    echo >> "$ROOT/var/lib/dpkg/status"
+  done < "$WORK/unpacked.txt"
+
   log "generating caches with helpers"
   local h
   for h in $helper; do
