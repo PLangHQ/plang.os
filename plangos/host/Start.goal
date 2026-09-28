@@ -31,10 +31,13 @@ Close
 CheckImage
 / WSL keeps an imported distro's disk as distro\ext4.vhdx. distro\<sha256>.imported names the
 / image that disk came from, so no value comparison is needed.
+/ file.exists gives the path; the path's own truth is whether the file is there.
 - check if file 'distro/ext4.vhdx' exists, write to %ours%
-- if %ours% is false, call NotOurs
+- if %ours%, call CheckVersion, else call NotOurs
+
+CheckVersion
 - check if file 'distro/%manifest.sha256%.imported' exists, write to %current%
-- if %current% is false, call ReplaceImage
+- if %current%, write out 'PlangOS %manifest.version% is installed', else call ReplaceImage
 
 NotOurs
 - throw error 'A WSL distro named PlangOS exists, but this folder did not import it (no distro/ext4.vhdx). Remove it with: wsl --unregister PlangOS, then run start.ps1 again.'
