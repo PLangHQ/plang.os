@@ -50,3 +50,13 @@ Compressed shares (gzip, for comparison): Playwright Node ≈ 44 MB, plang `os/`
 
 ## Not measured yet
 Checks 1.1–1.3, 1.7 and 1.8: WSL install and reboot, tamper refusal by host plang, cold start in WSL, update keeping data. Idle RSS in WSL.
+
+## Screen proofs on Ingi's Windows (2026-09-28)
+| | |
+|---|---|
+| `screen/overlay.ps1` — draw anywhere | works over both monitors (virtual screen 5360×2088 at (-1920,0)), click-through, over all apps |
+| `\\wsl.localhost\PlangOS` from Windows | not reachable on Ingi's machine; pixels must come over a pipe/socket (the design anyway) |
+| Chromium `--screenshot` to `/proc/self/fd/1` under `wsl --exec` | permission denied: the relay pipe is root's, re-opening it by path is refused |
+| `screen/stream.ps1` v1 (PowerShell timer, full-screen layered window, scaled) | 3.9 fps — the ack waited behind painting |
+| `screen/stream.ps1` v2 (C# via Add-Type: receive+ack thread, 1:1 paint) | **received 45.5 fps, painted 39.3 fps, 1.61 MB/s** (JPEG q80, 1920×804, 690 frames / 15.2 s) |
+| same stream measured inside the image here (Linux client) | 47 fps, 1.71 MB/s |
