@@ -44,6 +44,10 @@ function Set-Default([string]$key, [string]$value) {
     if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
     Set-ItemProperty -Path $key -Name '(default)' -Value $value
 }
+# An earlier "Open with" choice for .goal (e.g. an older plang runtime) overrides any registration;
+# remove it so .goal files open with this plang.
+$choice = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\.goal\UserChoice'
+if (Test-Path $choice) { Remove-Item -Path $choice -Force -ErrorAction SilentlyContinue }
 $classes = 'HKCU:\Software\Classes'
 $runner  = Join-Path $Root 'run-goal.cmd'
 $icon    = Join-Path $Root 'plang.ico'
