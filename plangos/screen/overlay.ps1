@@ -49,24 +49,33 @@ if ($FromPlangOS) {
     Write-Host "Rendering a page with Chromium inside $Distro ($($primary.Width)x$($primary.Height))..."
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $ErrorActionPreference = 'Continue'   # Chromium writes dbus warnings to stderr
-    $chromium = & wsl.exe -d $Distro --exec /usr/lib/chromium/chromium --headless --disable-gpu `
-        --user-data-dir=/home/plang/.chromium --hide-scrollbars `
-        "--window-size=$($primary.Width),$($primary.Height)" `
-        --screenshot=/home/plang/screen.png $html 2>&1 | ForEach-Object { $_.ToString() }
-    $chromiumExit = $LASTEXITCODE
+    # The pixels come over the pipe, the way the real screen will: Chromium writes the PNG to
+    # its stdout (/home/plang/.stdout.png is a symlink to /proc/self/fd/1 — Chromium insists on
+    # a .png name) and this side reads wsl.exe's stdout as raw bytes. The host never reaches into
+    # the container's files. PowerShell's own pipeline would decode the bytes as text, so the
+    # process is read directly.
+    $info = New-Object System.Diagnostics.ProcessStartInfo 'wsl.exe'
+    $info.Arguments = "-d $Distro --exec /usr/lib/chromium/chromium --headless --disable-gpu " +
+        "--user-data-dir=/home/plang/.chromium --hide-scrollbars " +
+        "--window-size=$($primary.Width),$($primary.Height) --screenshot=/home/plang/.stdout.png `"$html`""
+    $info.UseShellExecute = $false
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $proc = [System.Diagnostics.Process]::Start($info)
+    $errTask = $proc.StandardError.ReadToEndAsync()
+    $bytes = New-Object System.IO.MemoryStream
+    $proc.StandardOutput.BaseStream.CopyTo($bytes)
+    $proc.WaitForExit()
     $ErrorActionPreference = 'Stop'
-    $png = "\\wsl.localhost\$Distro\home\plang\screen.png"
-    if (-not (Test-Path $png)) {
-        Write-Host "Chromium exit code: $chromiumExit" -ForegroundColor Yellow
-        Write-Host "Chromium said (dbus lines left out):" -ForegroundColor Yellow
-        $chromium | Where-Object { $_ -notmatch 'dbus' } | Select-Object -Last 15 | ForEach-Object { Write-Host "  $_" }
-        Write-Host "What Windows sees in \\wsl.localhost\$Distro\home\plang :" -ForegroundColor Yellow
-        Get-ChildItem -Force "\\wsl.localhost\$Distro\home\plang" -ErrorAction SilentlyContinue |
-            ForEach-Object { Write-Host "  $($_.Name)" }
-        if (-not (Test-Path "\\wsl.localhost\$Distro\")) { Write-Host "  (\\wsl.localhost\$Distro\ is not reachable)" }
-        throw "Chromium did not write $png"
+    $raw = $bytes.ToArray()
+    $isPng = $raw.Length -gt 8 -and $raw[0] -eq 0x89 -and $raw[1] -eq 0x50 -and $raw[2] -eq 0x4E -and $raw[3] -eq 0x47
+    if (-not $isPng) {
+        Write-Host "Chromium exit code: $($proc.ExitCode), $($raw.Length) bytes on stdout" -ForegroundColor Yellow
+        $errTask.Result -split "`n" | Where-Object { $_ -and $_ -notmatch 'dbus' } | Select-Object -Last 15 |
+            ForEach-Object { Write-Host "  $_" }
+        throw "No PNG came back from PlangOS. Is the image current (it needs /home/plang/.stdout.png)?"
     }
-    $image = [System.Drawing.Image]::FromStream([IO.MemoryStream]::new([IO.File]::ReadAllBytes($png)))
+    $image = [System.Drawing.Image]::FromStream([IO.MemoryStream]::new($raw))
     Write-Host ("Got {0}x{1} pixels from PlangOS in {2:N1} s" -f $image.Width, $image.Height, $watch.Elapsed.TotalSeconds)
 }
 
