@@ -7,7 +7,8 @@
 //!   kind 1  one frame: [u16 count] then per rectangle [i32 x][i32 y][u32 w][u32 h][u32 n][n bytes QOI of BGRA]
 //!   kind 2  the pointer the client wants: its name, UTF-8 ("pointer", "text", …)
 //!   kind 3  [u64 t]: the "t" of the last input, sent right after the first frame that follows it
-//!           (the host times input → picture with it)
+//!           within 300 ms (the host times input → picture with it)
+//!   kind 4  [u64 t]: the same "t", sent the moment the input arrives (the pipe's round trip)
 //!
 //! stderr says {"ready":"wayland-plang"} when clients can connect (the socket name).
 //!
@@ -78,7 +79,7 @@ struct State {
     screen: Vec<u8>,      // what the host shows: base + popups
     popups: Vec<Popup>,
     pending: Vec<(i32, i32, u32, u32, Vec<u8>)>, // rectangles of the frame being built (x, y, w, h, QOI), sent by flush()
-    stamp: Option<u64>, // the host's time stamp of the last input, echoed after the next frame (latency)
+    stamp: Option<(u64, Instant)>, // the host's stamp of the last input and when it came, echoed after the next frame
     callbacks: Vec<smithay::reexports::wayland_server::protocol::wl_callback::WlCallback>,
     start: Instant,
     out: std::io::BufWriter<std::io::Stdout>,
@@ -191,9 +192,13 @@ impl State {
             payload.extend_from_slice(&qoi);
         }
         self.message(1, &payload);
-        // kind 3: the stamp of the input this frame follows, so the host can time input → picture
-        if let Some(t) = self.stamp.take() {
-            self.message(3, &t.to_le_bytes());
+        // kind 3: the stamp of the input this frame follows, so the host can time input → picture.
+        // Only when the frame came soon after the input (300 ms): a later frame is something else
+        // changing (an ad), not the answer to this input.
+        if let Some((t, at)) = self.stamp.take() {
+            if at.elapsed() < Duration::from_millis(300) {
+                self.message(3, &t.to_le_bytes());
+            }
         }
     }
 
@@ -210,7 +215,9 @@ impl State {
     fn input(&mut self, line: &str) {
         let Ok(e) = serde_json::from_str::<serde_json::Value>(line) else { return };
         if let Some(t) = e.get("t").and_then(|v| v.as_u64()) {
-            self.stamp = Some(t);
+            // kind 4 at once: the pipe's own round trip (host → PlangOS → here → host), no browser in it
+            self.message(4, &t.to_le_bytes());
+            self.stamp = Some((t, Instant::now()));
         }
         let num = |k: &str| e.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0);
         let serial = SERIAL_COUNTER.next_serial();
