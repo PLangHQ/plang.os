@@ -32,6 +32,13 @@ This branch replaces the v2 Photino/WebKitGTK desktop idea (branch `os/v1-contai
   - `/home/plang` is the only user tree.
 - **Plan updated:** the `/shared/os/start.md` stage 1 results table.
 
+## Delivered to Ingi: `/shared/plangos/`
+- `start.ps1` runs `plang\plang.exe` in that folder.
+- `Start.goal` handles WSL (check, install, RunOnce resume), a sha256-verified import, and `wsl -d PlangOS`, all through `run terminal`.
+- `plang\` is a win-x64 self-contained runtime (295 MB) with `os\`.
+- `image\` holds `plangos-amd64.tar.xz` (sha256 `f5773f30…`) and its manifest.
+- A README states what works and what doesn't. **The terminal module doesn't exist yet**, so `Start.goal` can't be built or run. The image can be imported by hand.
+
 ## Next
 1. **Ingi on Windows:** build or copy `out/`, run `dev/import.ps1`, `wsl -d PlangOS` → checks 1.4 (WSL half) and 1.7.
 2. **A built `Start.goal` for the image.** The pre-built `.pr` files in `app-systems` are outdated (`PrFormatOutdated`), so it needs `plang build` with an LLM.
