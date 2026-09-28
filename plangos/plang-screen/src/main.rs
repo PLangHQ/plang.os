@@ -4,7 +4,7 @@
 //! into it with shared-memory buffers; plang-screen composes them into one framebuffer and writes
 //! only what changed to stdout, one JSON line per rectangle:
 //!
-//!   {"rect":[x,y,w,h],"qoi":"<base64 QOI of the BGRA rows>"}  pixels that changed
+//!   {"rects":[[x,y,w,h,"<base64 QOI of BGRA rows>"],…]}        what one frame changed
 //!   {"cursor":"pointer"}                                       the pointer the client wants
 //!   {"ready":"wayland-plang"}                                  the socket clients connect to
 //!
@@ -75,6 +75,7 @@ struct State {
     base: Vec<u8>,        // the toplevel's pixels
     screen: Vec<u8>,      // what the host shows: base + popups
     popups: Vec<Popup>,
+    pending: Vec<String>, // rectangles of the frame being built, sent together by flush()
     callbacks: Vec<smithay::reexports::wayland_server::protocol::wl_callback::WlCallback>,
     start: Instant,
     out: std::io::BufWriter<std::io::Stdout>,
@@ -146,7 +147,17 @@ impl State {
         // which channel is which, so they go in and come out in the same order.
         let packed = qoi::encode_to_vec(&rect, (x1 - x0) as u32, (y1 - y0) as u32).unwrap_or_default();
         let b64 = base64::engine::general_purpose::STANDARD.encode(packed);
-        let line = format!("{{\"rect\":[{},{},{},{}],\"qoi\":\"{}\"}}", x0, y0, x1 - x0, y1 - y0, b64);
+        self.pending.push(format!("[{},{},{},{},\"{}\"]", x0, y0, x1 - x0, y1 - y0, b64));
+    }
+
+    /// One line per frame: every rectangle this commit changed, together. Each line is one
+    /// message through plang on both sides, so fewer lines is less work per frame.
+    fn flush(&mut self) {
+        if self.pending.is_empty() {
+            return;
+        }
+        let line = format!("{{\"rects\":[{}]}}", self.pending.join(","));
+        self.pending.clear();
         self.emit(&line);
     }
 
@@ -312,6 +323,7 @@ impl CompositorHandler for State {
             for r in rects {
                 self.present(r);
             }
+            self.flush();
         } else if let Some(i) = popup {
             let loc = self.popups[i].surface.with_pending_state(|s| s.geometry.loc);
             let old = self.popups[i].rect;
@@ -320,6 +332,7 @@ impl CompositorHandler for State {
             let new = self.popups[i].rect;
             self.present(old);
             self.present(new);
+            self.flush();
         }
     }
 }
@@ -368,6 +381,7 @@ impl XdgShellHandler for State {
         if let Some(i) = self.popups.iter().position(|p| p.surface == surface) {
             let gone = self.popups.remove(i);
             self.present(gone.rect);   // what was under it shows again
+            self.flush();
         }
     }
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
@@ -509,6 +523,7 @@ fn main() {
         base: vec![0u8; (width * height * 4) as usize],
         screen: vec![0u8; (width * height * 4) as usize],
         popups: Vec::new(),
+        pending: Vec::new(),
         callbacks: Vec::new(),
         start: Instant::now(),
         out: std::io::BufWriter::with_capacity(1 << 20, std::io::stdout()),
