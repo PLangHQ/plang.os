@@ -49,13 +49,23 @@ if ($FromPlangOS) {
     Write-Host "Rendering a page with Chromium inside $Distro ($($primary.Width)x$($primary.Height))..."
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $ErrorActionPreference = 'Continue'   # Chromium writes dbus warnings to stderr
-    & wsl.exe -d $Distro --exec /usr/lib/chromium/chromium --headless --disable-gpu `
+    $chromium = & wsl.exe -d $Distro --exec /usr/lib/chromium/chromium --headless --disable-gpu `
         --user-data-dir=/home/plang/.chromium --hide-scrollbars `
         "--window-size=$($primary.Width),$($primary.Height)" `
-        --screenshot=/home/plang/screen.png $html 2>&1 | Out-Null
+        --screenshot=/home/plang/screen.png $html 2>&1 | ForEach-Object { $_.ToString() }
+    $chromiumExit = $LASTEXITCODE
     $ErrorActionPreference = 'Stop'
     $png = "\\wsl.localhost\$Distro\home\plang\screen.png"
-    if (-not (Test-Path $png)) { throw "Chromium did not write $png" }
+    if (-not (Test-Path $png)) {
+        Write-Host "Chromium exit code: $chromiumExit" -ForegroundColor Yellow
+        Write-Host "Chromium said (dbus lines left out):" -ForegroundColor Yellow
+        $chromium | Where-Object { $_ -notmatch 'dbus' } | Select-Object -Last 15 | ForEach-Object { Write-Host "  $_" }
+        Write-Host "What Windows sees in \\wsl.localhost\$Distro\home\plang :" -ForegroundColor Yellow
+        Get-ChildItem -Force "\\wsl.localhost\$Distro\home\plang" -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host "  $($_.Name)" }
+        if (-not (Test-Path "\\wsl.localhost\$Distro\")) { Write-Host "  (\\wsl.localhost\$Distro\ is not reachable)" }
+        throw "Chromium did not write $png"
+    }
     $image = [System.Drawing.Image]::FromStream([IO.MemoryStream]::new([IO.File]::ReadAllBytes($png)))
     Write-Host ("Got {0}x{1} pixels from PlangOS in {2:N1} s" -f $image.Width, $image.Height, $watch.Elapsed.TotalSeconds)
 }
