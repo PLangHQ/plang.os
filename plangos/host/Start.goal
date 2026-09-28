@@ -13,7 +13,20 @@ Start
 - call OpenPlangOS
 
 OpenPlangOS
-- run terminal 'wsl.exe' with parameters '-d', 'PlangOS', interactive, write to %session%
+/ PlangOS's Screen app runs a browser inside the container; its frames come up the pipe (stdout),
+/ our window's mouse and keyboard go down it (stdin). One JSON line per message.
+- open screen titled 'PlangOS desktop', size 1920x1080, on input call Input, on close call Close, write to %screen%
+- run terminal 'wsl.exe' with parameters '-d', 'PlangOS', '--cd', '/home/plang', '--exec', '/opt/plang/plang', 'Screen', keep running, on output call Frame, write to %container%
+- wait for %container%
+
+Frame
+- draw %!data% on %screen%
+
+Input
+- send %!data% to %container%
+
+Close
+- stop %container%
 
 CheckImage
 / WSL keeps an imported distro's disk as distro\ext4.vhdx. distro\<sha256>.imported names the
