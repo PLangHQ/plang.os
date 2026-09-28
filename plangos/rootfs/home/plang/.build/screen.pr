@@ -3,11 +3,11 @@
   "step": [
     {
       "index": 0,
-      "text": "start browser 'https://www.visir.is', size 1920x1080, on frame call Frame, write to %browser%",
+      "text": "start browser 'https://www.visir.is', size 1920x1080, frames to output, write to %browser%",
       "line": {
-        "number": 7
+        "number": 6
       },
-      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen) and reads\nits stdout: every frame of the browser goes up as one line. Input from the host's screen\ncomes down on stdin, one line per event. Ends when the host closes the pipe.\nvisir.is, not mbl.is: mbl.is is behind Cloudflare, which stops headless Chromium from some\nnetworks. The compositor route (non-headless Chromium in plang-screen) removes that limit.",
+      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The\nbrowser draws into plang-screen, whose binary frames go straight to this app's output — the\npipe to host plang — untouched. Input from the host's screen comes down on stdin, one line\nper event. Ends when the host closes the pipe.",
       "code": [
         {
           "module": "browser",
@@ -21,32 +21,11 @@
               "value": "https://www.visir.is"
             },
             {
-              "name": "OnFrame",
+              "name": "ToOutput",
               "type": {
-                "name": "action"
+                "name": "bool"
               },
-              "value": {
-                "module": "goal",
-                "name": "call",
-                "property": [
-                  {
-                    "name": "Name",
-                    "type": {
-                      "name": "text"
-                    },
-                    "value": "Frame"
-                  }
-                ],
-                "default": [
-                  {
-                    "name": "parallel",
-                    "type": {
-                      "name": "bool"
-                    },
-                    "value": false
-                  }
-                ]
-              }
+              "value": true
             }
           ],
           "default": [
@@ -137,7 +116,7 @@
       "index": 1,
       "text": "on input call Input",
       "line": {
-        "number": 8
+        "number": 7
       },
       "code": [
         {
@@ -181,7 +160,7 @@
       "index": 2,
       "text": "stop %browser%",
       "line": {
-        "number": 9
+        "number": 8
       },
       "code": [
         {
@@ -214,61 +193,13 @@
   ],
   "child": [
     {
-      "name": "Frame",
-      "step": [
-        {
-          "index": 0,
-          "text": "write out %!data%",
-          "line": {
-            "number": 12
-          },
-          "code": [
-            {
-              "module": "output",
-              "name": "write",
-              "property": [
-                {
-                  "name": "Data",
-                  "type": {
-                    "name": "item",
-                    "template": "plang"
-                  },
-                  "value": "%!data%",
-                  "variable": [
-                    {
-                      "text": "%!data%",
-                      "code": [
-                        {
-                          "variable": "!data"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ],
-          "waitForExecution": true
-        }
-      ],
-      "child": [],
-      "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
-      "hash": "719e9c04075b8691e7628610ec9b3ce7e42ada8b0ac945d1b40e8611139d6dee",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": false,
-      "isTest": false
-    },
-    {
       "name": "Input",
       "step": [
         {
           "index": 0,
           "text": "send %!data% to %browser%",
           "line": {
-            "number": 15
+            "number": 11
           },
           "code": [
             {
@@ -331,7 +262,7 @@
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "226bd8e67335ac08b086dc37df0fe17e3558cb4166d7f3ec31e7ef8e31ffd351",
+  "hash": "e4062dcf32ccba039e602d974daf865abc7c56a1ca6bf5e9738fa155369e25ce",
   "isSetup": false,
   "isEvent": false,
   "isSystem": false,

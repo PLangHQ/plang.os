@@ -2,11 +2,12 @@
 //!
 //! A minimal headless Wayland compositor. A client (Chromium, `--ozone-platform=wayland`) draws
 //! into it with shared-memory buffers; plang-screen composes them into one framebuffer and writes
-//! only what changed to stdout, one JSON line per rectangle:
+//! only what changed to stdout, as binary messages [u32 length][u8 kind][payload], little-endian:
 //!
-//!   {"rects":[[x,y,w,h,"<base64 QOI of BGRA rows>"],…]}        what one frame changed
-//!   {"cursor":"pointer"}                                       the pointer the client wants
-//!   {"ready":"wayland-plang"}                                  the socket clients connect to
+//!   kind 1  one frame: [u16 count] then per rectangle [i32 x][i32 y][u32 w][u32 h][u32 n][n bytes QOI of BGRA]
+//!   kind 2  the pointer the client wants: its name, UTF-8 ("pointer", "text", …)
+//!
+//! stderr says {"ready":"wayland-plang"} when clients can connect (the socket name).
 //!
 //! stdin takes one JSON input event per line (the same lines screen.open gives):
 //!   {"mouse":"move|down|up|wheel","x","y","button","dx","dy"}
@@ -18,7 +19,6 @@ use std::io::{BufRead, Write};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use base64::Engine;
 use smithay::delegate_compositor;
 use smithay::delegate_cursor_shape;
 use smithay::delegate_output;
@@ -75,7 +75,7 @@ struct State {
     base: Vec<u8>,        // the toplevel's pixels
     screen: Vec<u8>,      // what the host shows: base + popups
     popups: Vec<Popup>,
-    pending: Vec<String>, // rectangles of the frame being built, sent together by flush()
+    pending: Vec<(i32, i32, u32, u32, Vec<u8>)>, // rectangles of the frame being built (x, y, w, h, QOI), sent by flush()
     callbacks: Vec<smithay::reexports::wayland_server::protocol::wl_callback::WlCallback>,
     start: Instant,
     out: std::io::BufWriter<std::io::Stdout>,
@@ -95,9 +95,11 @@ impl State {
         self.start.elapsed().as_millis() as u32
     }
 
-    fn emit(&mut self, line: &str) {
-        let _ = self.out.write_all(line.as_bytes());
-        let _ = self.out.write_all(b"\n");
+    /// One binary message on stdout: [u32 length][u8 kind][payload], little-endian.
+    fn message(&mut self, kind: u8, payload: &[u8]) {
+        let _ = self.out.write_all(&((payload.len() + 1) as u32).to_le_bytes());
+        let _ = self.out.write_all(&[kind]);
+        let _ = self.out.write_all(payload);
         let _ = self.out.flush();
     }
 
@@ -145,20 +147,47 @@ impl State {
         }
         // QOI: fast lossless, simple to decode anywhere. The bytes are BGRA; QOI doesn't care
         // which channel is which, so they go in and come out in the same order.
-        let packed = qoi::encode_to_vec(&rect, (x1 - x0) as u32, (y1 - y0) as u32).unwrap_or_default();
-        let b64 = base64::engine::general_purpose::STANDARD.encode(packed);
-        self.pending.push(format!("[{},{},{},{},\"{}\"]", x0, y0, x1 - x0, y1 - y0, b64));
+        // A big area is cut into horizontal bands, encoded on all cores at once; the host decodes
+        // the bands in parallel too.
+        let w = (x1 - x0) as usize;
+        let h = (y1 - y0) as usize;
+        let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1).min(8);
+        let bands = if w * h >= 256 * 256 && cores > 1 { cores } else { 1 };
+        let rows_per_band = h.div_ceil(bands);
+        let encoded: Vec<(usize, usize, Vec<u8>)> = std::thread::scope(|s| {
+            let jobs: Vec<_> = (0..h)
+                .step_by(rows_per_band)
+                .map(|top| {
+                    let rows = rows_per_band.min(h - top);
+                    let band = &rect[top * w * 4..(top + rows) * w * 4];
+                    s.spawn(move || (top, rows, qoi::encode_to_vec(band, w as u32, rows as u32).unwrap_or_default()))
+                })
+                .collect();
+            jobs.into_iter().map(|j| j.join().unwrap()).collect()
+        });
+        for (top, rows, qoi) in encoded {
+            self.pending.push((x0, y0 + top as i32, w as u32, rows as u32, qoi));
+        }
     }
 
-    /// One line per frame: every rectangle this commit changed, together. Each line is one
-    /// message through plang on both sides, so fewer lines is less work per frame.
+    /// One message per frame, kind 1: [u16 count] then per rectangle
+    /// [i32 x][i32 y][u32 w][u32 h][u32 n][n bytes QOI]. Binary all the way: no base64, no JSON.
     fn flush(&mut self) {
         if self.pending.is_empty() {
             return;
         }
-        let line = format!("{{\"rects\":[{}]}}", self.pending.join(","));
-        self.pending.clear();
-        self.emit(&line);
+        let size: usize = 2 + self.pending.iter().map(|p| 20 + p.4.len()).sum::<usize>();
+        let mut payload = Vec::with_capacity(size);
+        payload.extend_from_slice(&(self.pending.len() as u16).to_le_bytes());
+        for (x, y, w, h, qoi) in self.pending.drain(..) {
+            payload.extend_from_slice(&x.to_le_bytes());
+            payload.extend_from_slice(&y.to_le_bytes());
+            payload.extend_from_slice(&w.to_le_bytes());
+            payload.extend_from_slice(&h.to_le_bytes());
+            payload.extend_from_slice(&(qoi.len() as u32).to_le_bytes());
+            payload.extend_from_slice(&qoi);
+        }
+        self.message(1, &payload);
     }
 
     /// The surface under (x, y): the topmost popup there, else the toplevel.
@@ -275,12 +304,18 @@ impl CompositorHandler for State {
             let attrs = guard.current();
             (attrs.buffer.take(), std::mem::take(&mut attrs.damage), std::mem::take(&mut attrs.frame_callbacks))
         });
-        self.callbacks.extend(callbacks);
-        let Some(BufferAssignment::NewBuffer(buffer)) = buffer else { return };
+        let Some(BufferAssignment::NewBuffer(buffer)) = buffer else {
+            self.callbacks.extend(callbacks);   // nothing new to show: answered on the 60 Hz tick
+            return;
+        };
         if !is_top && popup.is_none() {
             buffer.release();
+            self.callbacks.extend(callbacks);
             return;
         }
+        // Answered as soon as this update is on its way (see the end of commit), not on the next
+        // tick: the client starts its next frame up to 16 ms sooner.
+        let answer_now = callbacks;
 
         let mut pixels = Vec::new();
         let mut size = (0, 0);
@@ -333,6 +368,10 @@ impl CompositorHandler for State {
             self.present(old);
             self.present(new);
             self.flush();
+        }
+        let t = self.now();
+        for cb in answer_now {
+            cb.done(t);
         }
     }
 }
@@ -404,7 +443,7 @@ impl SeatHandler for State {
             CursorImageStatus::Hidden => "none".to_string(),
             _ => "default".to_string(),
         };
-        self.emit(&format!("{{\"cursor\":\"{}\"}}", name));
+        self.message(2, name.as_bytes());   // kind 2: the pointer's name, UTF-8
     }
 }
 impl TabletSeatHandler for State {}
@@ -528,7 +567,8 @@ fn main() {
         start: Instant::now(),
         out: std::io::BufWriter::with_capacity(1 << 20, std::io::stdout()),
     };
-    state.emit(&format!("{{\"ready\":\"{}\"}}", SOCKET));
+    // stdout carries only frames; readiness goes to stderr
+    eprintln!("{{\"ready\":\"{}\"}}", SOCKET);
 
     loop {
         if event_loop.dispatch(Some(Duration::from_millis(16)), &mut state).is_err() {
