@@ -1,0 +1,66 @@
+{
+  "branch": "os/plangos",
+  "sessions": [
+    {
+      "id": "3f6e2a9c-7d41-4c0b-9a8e-5b1d2c7f4e60",
+      "bot": "os",
+      "timestamp_start": "2026-09-28T16:26:00Z",
+      "timestamp_end": "2026-09-28T18:05:00Z",
+      "intent": "Build the PlangOS stage-1 image (Debian + plang + Chromium, sealed WSL rootfs tarball) and run the checks that can run without Windows.",
+      "before": {
+        "assumptions": "Plan in /shared/os/start.md agreed with Ingi. Rootless podman is broken in this box (newuidmap); buildah with chroot isolation inside unshare -rm works. dpkg install scripts fail under a single-uid userns, so the rootfs is assembled with dpkg-deb -x.",
+        "risk": "Image size vs 300 MB limit; Chromium running without its install scripts; no Windows to test WSL."
+      },
+      "plan": ".bot/os-plangos/os/v1/plan.md",
+      "actions": [
+        {
+          "paths": ["plangos/build.sh", "plangos/packages.conf", "plangos/packages.lock", "plangos/keys/debian-archive-keyring.gpg", "plangos/mktar.py"],
+          "type": "create",
+          "category": "config",
+          "confidence": "high",
+          "context": "Rootfs assembled from sha256-locked Debian snapshot packages with dpkg-deb -x, with no container runtime, no root and no maintainer scripts. Tried buildah+apt first; dbus/systemd postinst scripts fail unprivileged, and skipping them also keeps systemd/dbus/PAM/shells out. Deny-list is justified per line."
+        },
+        {
+          "paths": ["plangos/packages.conf", "plangos/build.sh"],
+          "type": "decision",
+          "category": "config",
+          "confidence": "high",
+          "context": "First image was 398 MB gzip. Denied Mesa (LLVM/gallium/z3, 192 MB uncompressed; libgbm doesn't link it, Chromium uses its own SwiftShader with --disable-gpu), removed the Vulkan validation layer, and switched to xz (fixed block size, so deterministic): 224 MB."
+        },
+        {
+          "paths": ["plangos/checks.py", "plangos/run-local.sh", "plangos/tardiff.py"],
+          "type": "create",
+          "category": "test",
+          "confidence": "high",
+          "context": "checks.py covers checks 1.4 and 1.6 plus ELF NEEDED resolution (caught dri_gbm.so and the .NET LTTng provider needing denied libs). run-local.sh uses pivot_root because the kernel refuses user namespaces inside a chroot, which blocks Chromium's sandbox. tardiff.py found the one reproducibility leak (ldconfig aux-cache)."
+        },
+        {
+          "paths": ["plangos/rootfs/etc/wsl.conf", "plangos/rootfs/etc/passwd", "plangos/rootfs/etc/group", "plangos/rootfs/etc/nsswitch.conf"],
+          "type": "create",
+          "category": "config",
+          "confidence": "high",
+          "context": "Seal: interop off, automount off, default user plang, no [boot] command (would run plang as root). passwd shell = plang for both users."
+        },
+        {
+          "paths": ["plangos/host/start.ps1", "plangos/dev/import.ps1", "plangos/README.md", ".gitignore"],
+          "type": "create",
+          "category": "doc",
+          "confidence": "medium",
+          "context": "start.ps1 copied from the /shared/os draft. dev/import.ps1 is a stand-in for start.goal until host plang has terminal/container modules; untested (no Windows here)."
+        },
+        {
+          "paths": [".bot/os-plangos/os/v1/measurements.md", ".bot/os-plangos/os/v1/attack-surface.md", ".bot/os-plangos/os/v1/tradeoffs.md", ".bot/os-plangos/os/summary.md"],
+          "type": "create",
+          "category": "doc",
+          "confidence": "high",
+          "context": "Measured: 224.3 MB xz; two clean builds identical (d148f01b…); plang publish byte-identical; plang starts 1.4-2.5 s; Chromium renders as uid 10001 with sandbox."
+        }
+      ],
+      "after": {
+        "status": "Stage-1 image builds; checks 1.4 (Linux half), 1.5 and 1.6 pass. WSL checks pending on Windows.",
+        "health": "good",
+        "notes": "Blocked for a full console run: pre-built .pr files in app-systems are outdated (PrFormatOutdated), so a Start.goal needs plang build with an LLM. Host start.goal needs PLang-side terminal/container/Service/channel work."
+      }
+    }
+  ]
+}

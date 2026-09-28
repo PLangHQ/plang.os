@@ -13,3 +13,7 @@ container/plang-*.zip
 
 # Bot output lives on feature branches, not main — but tracked in PRs per
 # CLAUDE.md. Don't ignore .bot/.
+
+# PlangOS build work dir and outputs (tarball is ~225 MB; published, not committed)
+plangos/.work/
+plangos/out/
