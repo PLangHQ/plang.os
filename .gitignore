@@ -17,3 +17,6 @@ container/plang-*.zip
 # PlangOS build work dir and outputs (tarball is ~225 MB; published, not committed)
 plangos/.work/
 plangos/out/
+# the PlangOS in-container app ships pre-built (built with plang build, see plangos/README.md)
+!plangos/rootfs/home/plang/.build/
+!plangos/rootfs/home/plang/.build/*.pr

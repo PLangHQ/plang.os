@@ -1,0 +1,38 @@
+{
+  "name": "Start",
+  "step": [
+    {
+      "index": 0,
+      "text": "write out 'PlangOS is running.'",
+      "line": {
+        "number": 3
+      },
+      "comment": "The PlangOS app: what plang runs when the container starts (`wsl -d PlangOS`).",
+      "code": [
+        {
+          "module": "output",
+          "name": "write",
+          "property": [
+            {
+              "name": "Data",
+              "type": {
+                "name": "text"
+              },
+              "value": "PlangOS is running."
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    }
+  ],
+  "child": [],
+  "visibility": "Public",
+  "path": "/Start.goal",
+  "prPath": "/.build/start.pr",
+  "hash": "f057085bbc94f26b9d45cb8eb9feedf08978cc52522f354ede774147f8fcc72f",
+  "isSetup": false,
+  "isEvent": false,
+  "isSystem": false,
+  "isTest": false
+}

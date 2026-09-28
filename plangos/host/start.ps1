@@ -141,8 +141,8 @@ if ($Check) {
     Record '1.4 interop off (cmd.exe must not run)' ($r.Code -ne 0) $r.Out
 
     $r = Run-In @('/opt/plang/plang')
-    Record 'plang runs as user plang (expects "Not found: /.build/start.pr": app not built yet)' `
-        ($r.Out -match 'start\.pr') (($r.Out -split "`n") | Where-Object { $_ -match 'start\.pr' } | Select-Object -First 1)
+    $detail = (($r.Out -split "`n") | Select-Object -First 2) -join ' | '
+    Record 'plang runs the PlangOS app as user plang' ($r.Out -match 'PlangOS is running') $detail
 
     $r = Run-In @('/usr/lib/chromium/chromium', '--headless', '--disable-gpu',
                   '--user-data-dir=/home/plang/.chromium', '--dump-dom',
