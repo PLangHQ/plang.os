@@ -37,7 +37,7 @@ $ErrorActionPreference = 'Stop'
 $env:WSL_UTF8 = '1'
 
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @'
+$source = @'
 using System;
 using System.Drawing;
 using System.IO;
@@ -252,8 +252,17 @@ namespace PlangOS
     }
 }
 '@
+# A PowerShell session can load a class only once. The namespace carries a hash of the source,
+# so an edited script loads its new class and an unchanged one reuses what is loaded.
+$sha = [Security.Cryptography.SHA256]::Create()
+$hash = -join ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($source))[0..5] | ForEach-Object { $_.ToString('x2') })
+$ns = "PlangOS_$hash"
+if (-not ("$ns.StreamWindow" -as [type])) {
+    Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition ($source -replace 'namespace PlangOS', "namespace $ns")
+}
+$StreamWindow = "$ns.StreamWindow" -as [type]
 
-[PlangOS.StreamWindow]::DpiAware()
+$StreamWindow::DpiAware()
 $primary = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
 $w = [Math]::Min($primary.Width - 40, $Width)
 $h = [int]($w * $primary.Height / $primary.Width)
@@ -316,7 +325,7 @@ Write-Host "Connected to $($target.webSocketDebuggerUrl). Close the window to st
 
 # --- the window: 1:1 pixels, centred on the primary monitor --------------------------
 $bounds = New-Object System.Drawing.Rectangle ($primary.X + [int](($primary.Width - $w) / 2)), ($primary.Y + [int](($primary.Height - $h) / 2)), $w, $h
-$stream = New-Object PlangOS.StreamWindow $bounds, $Seconds
+$stream = New-Object "$ns.StreamWindow" $bounds, $Seconds
 try { $stream.Connect($target.webSocketDebuggerUrl, $script, $Format, $Quality, $w, $h) }
 catch {
     wsl.exe --terminate $Distro | Out-Null
