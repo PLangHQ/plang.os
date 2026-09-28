@@ -37,5 +37,16 @@ Compressed shares (gzip, for comparison): Playwright Node ≈ 44 MB, plang `os/`
 ## Build time
 ~5.5 min per image (xz -9 on 4 threads is most of it); `lock` ~1 min; plang publish ~2 min.
 
-## Not measured here (needs Windows)
+## On Ingi's Windows (2026-09-28, `start.ps1 -Reset -Check`, 6/6)
+| | |
+|---|---|
+| `wsl --import` of the `.tar.xz` | worked directly (no tar.exe fallback) |
+| 1.7 cold start, `wsl --terminate` → plang running | **1.9 s** |
+| `/bin/sh` | `execvpe(/bin/sh) failed: No such file or directory` |
+| `cmd.exe` | `execvpe(cmd.exe) failed: No such file or directory` |
+| plang as user plang | `NotFound (404): Not found: /.build/start.pr` (expected; the app isn't built) |
+| Chromium 154.0.8037.57, headless, sandbox on | `<html><head></head><body><h1>hello plangos</h1></body></html>` |
+| `mount -a` warning (seen with the old v1 image) | gone (`mountFsTab = false`) |
+
+## Not measured yet
 Checks 1.1–1.3, 1.7 and 1.8: WSL install and reboot, tamper refusal by host plang, cold start in WSL, update keeping data. Idle RSS in WSL.

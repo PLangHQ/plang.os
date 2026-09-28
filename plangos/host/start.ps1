@@ -142,7 +142,7 @@ if ($Check) {
 
     $r = Run-In @('/opt/plang/plang')
     Record 'plang runs as user plang (expects "Not found: /.build/start.pr": app not built yet)' `
-        ($r.Out -match 'start\.pr') ($r.Out -split "`n" | Select-Object -Last 2)
+        ($r.Out -match 'start\.pr') (($r.Out -split "`n") | Where-Object { $_ -match 'start\.pr' } | Select-Object -First 1)
 
     $r = Run-In @('/usr/lib/chromium/chromium', '--headless', '--disable-gpu',
                   '--user-data-dir=/home/plang/.chromium', '--dump-dom',
