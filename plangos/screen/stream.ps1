@@ -1,30 +1,32 @@
 <#
 .SYNOPSIS
-  Proof: a live stream of Chromium frames from PlangOS drawn on the screen.
+  Proof: Chromium inside PlangOS, live on the Windows screen, with mouse and keyboard.
 
 .DESCRIPTION
-  Starts headless Chromium inside PlangOS with an animated page and a DevTools port bound to
-  localhost, connects from Windows (WSL forwards localhost), starts Page.startScreencast and
-  shows the frames in a borderless top-most window at 1:1 pixels on the primary monitor.
+  Starts headless Chromium inside PlangOS with a test page and a DevTools port bound to
+  localhost, connects from Windows (WSL forwards localhost), streams the page with
+  Page.startScreencast into a window at 1:1 pixels, and sends your mouse and keyboard back
+  with Input.dispatchMouseEvent / dispatchKeyEvent / insertText.
 
   Receiving is separate from painting: a background thread receives each frame and acks it at
   once (Chromium sends the next frame only after the ack); the window paints the newest frame.
-  Two rates are reported: frames RECEIVED per second (Chromium + the pipe) and frames PAINTED
-  per second (this side). The work is a small C# class compiled here by Add-Type.
+  The title bar shows frames RECEIVED per second (Chromium + the pipe) and PAINTED per second.
+  The work is a small C# class compiled here by Add-Type.
 
+  The window stays until you close it (X or Alt+F4), unless -Seconds is given.
   It runs `wsl --terminate PlangOS` before and after, which stops everything inside PlangOS.
 
   PROOF ONLY: a DevTools port gives full control of that browser to anything on this machine
   that connects to it. The real path is Chromium drawing into plang-screen (a compositor).
 
-    .\stream.ps1                 15 seconds, JPEG frames at 1920 wide
-    .\stream.ps1 -Seconds 30 -Format png -Quality 80 -Width 1280 -Port 9222
+    .\stream.ps1                          until closed, JPEG frames at 1920 wide
+    .\stream.ps1 -Seconds 15 -Format png -Quality 80 -Width 1280 -Port 9222
 
   Windows PowerShell 5.1 compatible. No install. Needs the PlangOS distro imported (..\start.ps1).
 #>
 [CmdletBinding()]
 param(
-    [int]$Seconds = 15,
+    [int]$Seconds = 0,
     [ValidateSet('jpeg', 'png')] [string]$Format = 'jpeg',
     [int]$Quality = 80,
     [int]$Width = 1920,
@@ -61,9 +63,9 @@ namespace PlangOS
         readonly object gate = new object();
         readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
         int msgId;
-        string latest;             // newest frame, base64; painted frames skip older ones
+        string latest;             // newest frame, base64; painting skips older ones
         Image image;
-        DateTime first, end;
+        DateTime first, end, lastMove, lastTitle;
         public int Received, Painted;
         public long Bytes;
         public string Error;
@@ -71,23 +73,25 @@ namespace PlangOS
 
         public StreamWindow(Rectangle bounds, int seconds)
         {
-            FormBorderStyle = FormBorderStyle.None;
+            Text = "PlangOS - Chromium";
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
             StartPosition = FormStartPosition.Manual;
-            Bounds = bounds;
-            TopMost = true;
-            ShowInTaskbar = false;
+            ClientSize = bounds.Size;
+            Location = new Point(bounds.X, bounds.Y);
             BackColor = Color.Black;
             DoubleBuffered = true;
-            end = DateTime.UtcNow.AddSeconds(seconds);
+            KeyPreview = true;
+            end = seconds > 0 ? DateTime.UtcNow.AddSeconds(seconds) : DateTime.MaxValue;
             timer.Interval = 5;
             timer.Tick += delegate { Tick(); };
         }
 
-        public void Connect(string url, string animation, string format, int quality, int w, int h)
+        public void Connect(string url, string script, string format, int quality, int w, int h)
         {
             ws.ConnectAsync(new Uri(url), CancellationToken.None).Wait();
             Send("Page.enable", "{}");
-            Send("Runtime.evaluate", "{\"expression\":\"" + animation + "\"}");
+            Send("Runtime.evaluate", "{\"expression\":\"" + script + "\"}");
             Send("Page.startScreencast", "{\"format\":\"" + format + "\",\"quality\":" + quality +
                  ",\"maxWidth\":" + w + ",\"maxHeight\":" + h + ",\"everyNthFrame\":1}");
             var t = new Thread(ReceiveLoop);
@@ -100,7 +104,8 @@ namespace PlangOS
         {
             var json = "{\"id\":" + Interlocked.Increment(ref msgId) + ",\"method\":\"" + method + "\",\"params\":" + parameters + "}";
             var bytes = Encoding.UTF8.GetBytes(json);
-            lock (ws) ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+            try { lock (ws) ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None).Wait(); }
+            catch (Exception e) { Error = e.GetBaseException().Message; }
         }
 
         void ReceiveLoop()
@@ -135,6 +140,13 @@ namespace PlangOS
         void Tick()
         {
             if (DateTime.UtcNow >= end) { Close(); return; }
+            if ((DateTime.UtcNow - lastTitle).TotalMilliseconds > 500)
+            {
+                lastTitle = DateTime.UtcNow;
+                var s = Elapsed;
+                Text = string.Format("PlangOS - Chromium   received {0:N1} fps   painted {1:N1} fps   {2:N2} MB/s",
+                    s > 0 ? Received / s : 0, s > 0 ? Painted / s : 0, s > 0 ? Bytes / 1048576.0 / s : 0);
+            }
             string data;
             lock (gate) { data = latest; latest = null; }
             if (data == null) return;
@@ -148,17 +160,94 @@ namespace PlangOS
         protected override void OnPaint(PaintEventArgs e)
         {
             if (image != null) e.Graphics.DrawImageUnscaled(image, 0, 0);
-            var elapsed = Elapsed;
-            var text = string.Format("PlangOS stream  received {0:N1} fps  painted {1:N1} fps  {2:N2} MB/s",
-                elapsed > 0 ? Received / elapsed : 0, elapsed > 0 ? Painted / elapsed : 0, elapsed > 0 ? Bytes / 1048576.0 / elapsed : 0);
-            e.Graphics.FillRectangle(Brushes.Black, 10, 10, 620, 30);
-            using (var font = new Font("Segoe UI", 13, FontStyle.Bold))
-                e.Graphics.DrawString(text, font, Brushes.White, 16, 14);
+        }
+
+        // ---- input: window pixels are page pixels (the frame is shown 1:1) --------------
+
+        static int Modifiers()
+        {
+            var m = Control.ModifierKeys; int bits = 0;
+            if ((m & Keys.Alt) != 0) bits |= 1;
+            if ((m & Keys.Control) != 0) bits |= 2;
+            if ((m & Keys.Shift) != 0) bits |= 8;
+            return bits;
+        }
+
+        static string ButtonName(MouseButtons b)
+        {
+            if ((b & MouseButtons.Left) != 0) return "left";
+            if ((b & MouseButtons.Right) != 0) return "right";
+            if ((b & MouseButtons.Middle) != 0) return "middle";
+            return "none";
+        }
+
+        void Mouse(string type, MouseEventArgs e, string button, int clicks)
+        {
+            Send("Input.dispatchMouseEvent", "{\"type\":\"" + type + "\",\"x\":" + e.X + ",\"y\":" + e.Y +
+                 ",\"button\":\"" + button + "\",\"clickCount\":" + clicks + ",\"modifiers\":" + Modifiers() + "}");
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            // moves are many: send at most one per 8 ms, except while dragging
+            if (e.Button == MouseButtons.None && (DateTime.UtcNow - lastMove).TotalMilliseconds < 8) return;
+            lastMove = DateTime.UtcNow;
+            Mouse("mouseMoved", e, ButtonName(e.Button), 0);
+        }
+        protected override void OnMouseDown(MouseEventArgs e) { Mouse("mousePressed", e, ButtonName(e.Button), e.Clicks); }
+        protected override void OnMouseUp(MouseEventArgs e) { Mouse("mouseReleased", e, ButtonName(e.Button), e.Clicks); }
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            Send("Input.dispatchMouseEvent", "{\"type\":\"mouseWheel\",\"x\":" + e.X + ",\"y\":" + e.Y +
+                 ",\"deltaX\":0,\"deltaY\":" + (-e.Delta) + ",\"modifiers\":" + Modifiers() + "}");
+        }
+
+        // every key is ours: no dialog navigation (Tab, arrows) in this window
+        protected override bool IsInputKey(Keys keyData) { return true; }
+        protected override bool ProcessDialogKey(Keys keyData) { return false; }
+
+        static string KeyName(Keys k)
+        {
+            switch (k)
+            {
+                case Keys.Enter: return "Enter";      case Keys.Back: return "Backspace";
+                case Keys.Tab: return "Tab";          case Keys.Delete: return "Delete";
+                case Keys.Escape: return "Escape";    case Keys.Home: return "Home";
+                case Keys.End: return "End";          case Keys.PageUp: return "PageUp";
+                case Keys.PageDown: return "PageDown";
+                case Keys.Left: return "ArrowLeft";   case Keys.Right: return "ArrowRight";
+                case Keys.Up: return "ArrowUp";       case Keys.Down: return "ArrowDown";
+            }
+            return null;
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            var name = KeyName(e.KeyCode);
+            var ctrlLetter = e.Control && !e.Alt && e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z;
+            if (name == null && !ctrlLetter) return;              // ordinary characters come as KeyPress
+            if (ctrlLetter) name = ((char)('a' + (e.KeyCode - Keys.A))).ToString();
+            var vk = (int)e.KeyCode;
+            // Enter needs its text to act (submit, new line); the rest are raw keys
+            var down = e.KeyCode == Keys.Enter
+                ? "{\"type\":\"keyDown\",\"key\":\"Enter\",\"code\":\"Enter\",\"text\":\"\\r\",\"windowsVirtualKeyCode\":13,\"modifiers\":" + Modifiers() + "}"
+                : "{\"type\":\"rawKeyDown\",\"key\":\"" + name + "\",\"windowsVirtualKeyCode\":" + vk + ",\"modifiers\":" + Modifiers() + "}";
+            Send("Input.dispatchKeyEvent", down);
+            Send("Input.dispatchKeyEvent", "{\"type\":\"keyUp\",\"key\":\"" + name + "\",\"windowsVirtualKeyCode\":" + vk + ",\"modifiers\":" + Modifiers() + "}");
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+
+        protected override void OnKeyPress(KeyPressEventArgs e)
+        {
+            if (e.KeyChar < ' ') return;                         // control characters went as keys
+            Send("Input.insertText", "{\"text\":\"\\u" + ((int)e.KeyChar).ToString("x4") + "\"}");
+            e.Handled = true;
         }
 
         public void Stop()
         {
-            try { Send("Browser.close", "{}"); } catch { }
+            Send("Browser.close", "{}");
         }
     }
 }
@@ -166,24 +255,37 @@ namespace PlangOS
 
 [PlangOS.StreamWindow]::DpiAware()
 $primary = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-$w = [Math]::Min($primary.Width, $Width)
+$w = [Math]::Min($primary.Width - 40, $Width)
 $h = [int]($w * $primary.Height / $primary.Width)
 
-# --- the page, and its animation ----------------------------------------------------
+# --- the page ------------------------------------------------------------------------
 $page = @"
-<html><body style='margin:0;background:%23102030;color:white;font-family:sans-serif;overflow:hidden'>
-<div style='position:absolute;left:40px;top:50px;font-size:42px'>Live from Chromium inside PlangOS</div>
-<div id=clock style='position:absolute;left:40px;top:120px;font-size:64px'></div>
-<div id=box style='position:absolute;top:240px;width:160px;height:160px;border-radius:20px;background:linear-gradient(135deg,%23ff5a36,%23ffd23f)'></div>
+<html><body style='margin:0;background:%23102030;color:white;font-family:sans-serif;font-size:26px;overflow:hidden'>
+<div style='position:absolute;left:40px;top:24px;font-size:40px'>Chromium inside PlangOS &mdash; click, type, press</div>
+<div id=clock style='position:absolute;right:40px;top:30px;font-size:34px;color:%2388ccff'></div>
+<div style='position:absolute;left:40px;top:110px'>
+ Your name: <input id=nm style='font-size:26px;padding:8px;width:340px' placeholder='type here'>
+ <button id=hello style='font-size:26px;padding:8px 22px;margin-left:12px'>Say hello</button>
+ <div id=out style='margin-top:16px;font-size:34px;color:%23ffd23f'>&nbsp;</div>
+ <textarea id=notes style='margin-top:18px;font-size:22px;width:640px;height:170px' placeholder='Notes: Enter, Backspace, arrows, Ctrl+A work'></textarea><br>
+ <label style='display:inline-block;margin-top:16px'><input type=checkbox id=chk style='width:26px;height:26px'> Check me</label>
+ <span id=chkout style='margin-left:16px;color:%2388ccff'>not checked</span>
+</div>
+<div id=clk style='position:absolute;right:40px;top:110px;font-size:26px;color:%2388ccff'>clicks on the page: 0</div>
+<div id=box style='position:absolute;bottom:60px;width:90px;height:90px;border-radius:14px;background:linear-gradient(135deg,%23ff5a36,%23ffd23f)'></div>
 <div style='position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(90deg,red,orange,yellow,lime,cyan,blue,violet)'></div>
 </body></html>
 "@ -replace "`r?`n", ''
-# Headless Chromium doesn't run the inline script of a data: page opened from the command line,
-# so the animation is sent over DevTools once connected (single quotes only: it goes into JSON).
-$animation = "let t0=performance.now();function f(t){const x=(t-t0)/4%(innerWidth-160);box.style.left=x+'px';" +
-    "box.style.transform='rotate('+(t/10%360)+'deg)';" +
+# Headless Chromium doesn't run a command-line data: page's own scripts, so behaviour is sent
+# over DevTools once connected. Single quotes only: it goes into a JSON string.
+$script = "let t0=performance.now(),clicks=0,hellos=0;" +
+    "function f(t){const x=(t-t0)/4%(innerWidth-90);box.style.left=x+'px';box.style.transform='rotate('+(t/10%360)+'deg)';" +
     "clock.textContent=new Date().toLocaleTimeString()+'.'+String(Math.floor(t%1000)).padStart(3,'0')}" +
-    "setInterval(()=>f(performance.now()),16);"
+    "setInterval(()=>f(performance.now()),16);" +
+    "hello.onclick=function(){hellos++;out.textContent='Hello, '+(nm.value||'nobody')+'! ('+hellos+')'};" +
+    "nm.onkeydown=function(e){if(e.key==='Enter')hello.click()};" +
+    "chk.onchange=function(){chkout.textContent=chk.checked?'checked':'not checked'};" +
+    "document.addEventListener('mousedown',function(){clicks++;clk.textContent='clicks on the page: '+clicks});"
 
 # --- start Chromium in PlangOS -------------------------------------------------------
 # Stopping wsl.exe on Windows doesn't stop the Linux process behind it, so a Chromium from an
@@ -207,14 +309,15 @@ for ($i = 0; $i -lt 60 -and -not $target; $i++) {
 }
 if (-not $target) {
     $chrome | Stop-Process -ErrorAction SilentlyContinue
+    wsl.exe --terminate $Distro | Out-Null
     throw "DevTools didn't answer on http://127.0.0.1:$Port. Is WSL localhost forwarding on (.wslconfig localhostForwarding)?"
 }
-Write-Host "Connected to $($target.webSocketDebuggerUrl)"
+Write-Host "Connected to $($target.webSocketDebuggerUrl). Close the window to stop."
 
-# --- stream: 1:1 pixels, centred on the primary monitor ------------------------------
+# --- the window: 1:1 pixels, centred on the primary monitor --------------------------
 $bounds = New-Object System.Drawing.Rectangle ($primary.X + [int](($primary.Width - $w) / 2)), ($primary.Y + [int](($primary.Height - $h) / 2)), $w, $h
 $stream = New-Object PlangOS.StreamWindow $bounds, $Seconds
-try { $stream.Connect($target.webSocketDebuggerUrl, $animation, $Format, $Quality, $w, $h) }
+try { $stream.Connect($target.webSocketDebuggerUrl, $script, $Format, $Quality, $w, $h) }
 catch {
     wsl.exe --terminate $Distro | Out-Null
     throw "Could not connect to $($target.webSocketDebuggerUrl): $($_.Exception.GetBaseException().Message)"
@@ -226,7 +329,6 @@ Start-Sleep -Milliseconds 500
 $chrome | Stop-Process -ErrorAction SilentlyContinue
 wsl.exe --terminate $Distro | Out-Null   # make sure Chromium is gone inside PlangOS too
 $e = $stream.Elapsed
-if ($stream.Error) { Write-Host "Receive stopped: $($stream.Error)" -ForegroundColor Yellow }
 Write-Host ("Done: {0:N1} s, received {1} frames = {2:N1} fps, painted {3} = {4:N1} fps, {5:N1} MB = {6:N2} MB/s ({7}, {8}x{9})" -f `
     $e, $stream.Received, $(if ($e) { $stream.Received / $e } else { 0 }), $stream.Painted, $(if ($e) { $stream.Painted / $e } else { 0 }),
     ($stream.Bytes / 1MB), $(if ($e) { $stream.Bytes / 1MB / $e } else { 0 }), $Format, $w, $h)
