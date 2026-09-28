@@ -19,7 +19,9 @@
   PROOF ONLY: a DevTools port gives full control of that browser to anything on this machine
   that connects to it. The real path is Chromium drawing into plang-screen (a compositor).
 
-    .\stream.ps1                          until closed, JPEG frames at 1920 wide
+    .\stream.ps1                          test page, until closed, JPEG frames at 1920 wide
+    .\stream.ps1 -Url mbl.is              a real site: click, scroll, type
+                                          Alt+Left/Right back/forward, F5 reload, Ctrl+L go to address
     .\stream.ps1 -Seconds 15 -Format png -Quality 80 -Width 1280 -Port 9222
 
   Windows PowerShell 5.1 compatible. No install. Needs the PlangOS distro imported (..\start.ps1).
@@ -31,7 +33,8 @@ param(
     [int]$Quality = 80,
     [int]$Width = 1920,
     [int]$Port = 9222,
-    [string]$Distro = 'PlangOS'
+    [string]$Distro = 'PlangOS',
+    [string]$Url = ''              # a site to open instead of the test page, e.g. https://www.mbl.is
 )
 $ErrorActionPreference = 'Stop'
 $env:WSL_UTF8 = '1'
@@ -91,7 +94,7 @@ namespace PlangOS
         {
             ws.ConnectAsync(new Uri(url), CancellationToken.None).Wait();
             Send("Page.enable", "{}");
-            Send("Runtime.evaluate", "{\"expression\":\"" + script + "\"}");
+            if (!string.IsNullOrEmpty(script)) Send("Runtime.evaluate", "{\"expression\":\"" + script + "\"}");
             Send("Page.startScreencast", "{\"format\":\"" + format + "\",\"quality\":" + quality +
                  ",\"maxWidth\":" + w + ",\"maxHeight\":" + h + ",\"everyNthFrame\":1}");
             var t = new Thread(ReceiveLoop);
@@ -221,8 +224,37 @@ namespace PlangOS
             return null;
         }
 
+        static string Json(string s)
+        {
+            var b = new StringBuilder();
+            foreach (var c in s)
+                if (c == '"' || c == '\\' || c < ' ' || c > '~') b.Append("\\u").Append(((int)c).ToString("x4"));
+                else b.Append(c);
+            return b.ToString();
+        }
+
+        // browser keys, handled here rather than sent to the page
+        bool BrowserKey(KeyEventArgs e)
+        {
+            if (e.Alt && e.KeyCode == Keys.Left) { Send("Runtime.evaluate", "{\"expression\":\"history.back()\"}"); return true; }
+            if (e.Alt && e.KeyCode == Keys.Right) { Send("Runtime.evaluate", "{\"expression\":\"history.forward()\"}"); return true; }
+            if (e.KeyCode == Keys.F5) { Send("Page.reload", "{}"); return true; }
+            if (e.Control && e.KeyCode == Keys.L)
+            {
+                var url = Microsoft.VisualBasic.Interaction.InputBox("Go to address:", "PlangOS - Chromium", "https://");
+                if (url.Length > 0 && url != "https://")
+                {
+                    if (!url.Contains("://")) url = "https://" + url;
+                    Send("Page.navigate", "{\"url\":\"" + Json(url) + "\"}");
+                }
+                return true;
+            }
+            return false;
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
+            if (BrowserKey(e)) { e.Handled = true; e.SuppressKeyPress = true; return; }
             var name = KeyName(e.KeyCode);
             var ctrlLetter = e.Control && !e.Alt && e.KeyCode >= Keys.A && e.KeyCode <= Keys.Z;
             if (name == null && !ctrlLetter) return;              // ordinary characters come as KeyPress
@@ -258,7 +290,7 @@ $sha = [Security.Cryptography.SHA256]::Create()
 $hash = -join ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($source))[0..5] | ForEach-Object { $_.ToString('x2') })
 $ns = "PlangOS_$hash"
 if (-not ("$ns.StreamWindow" -as [type])) {
-    Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition ($source -replace 'namespace PlangOS', "namespace $ns")
+    Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing, Microsoft.VisualBasic -TypeDefinition ($source -replace 'namespace PlangOS', "namespace $ns")
 }
 $StreamWindow = "$ns.StreamWindow" -as [type]
 
@@ -296,6 +328,14 @@ $script = "let t0=performance.now(),clicks=0,hellos=0;" +
     "chk.onchange=function(){chkout.textContent=chk.checked?'checked':'not checked'};" +
     "document.addEventListener('mousedown',function(){clicks++;clk.textContent='clicks on the page: '+clicks});"
 
+# A real site runs its own scripts; the test page needs ours.
+if ($Url) {
+    if ($Url -notmatch '://') { $Url = "https://$Url" }
+    $start = $Url; $script = ''
+} else {
+    $start = "data:text/html,$page"
+}
+
 # --- start Chromium in PlangOS -------------------------------------------------------
 # Stopping wsl.exe on Windows doesn't stop the Linux process behind it, so a Chromium from an
 # earlier run can still hold the port and the profile. Start from a clean distro.
@@ -304,7 +344,10 @@ wsl.exe --terminate $Distro | Out-Null
 Write-Host "Starting Chromium in $Distro (${w}x${h}, DevTools on localhost:$Port)..."
 $chromeArgs = "-d $Distro --exec /usr/lib/chromium/chromium --headless --disable-gpu " +
     "--user-data-dir=/home/plang/.chromium-stream --hide-scrollbars --window-size=$w,$h " +
-    "--remote-debugging-address=127.0.0.1 --remote-debugging-port=$Port --remote-allow-origins=* `"data:text/html,$page`""
+    # headless Chromium says "HeadlessChrome" in its user agent, and bot checks (Cloudflare on
+    # mbl.is) stop at "Verify you are human". A normal Chrome user agent passes.
+    "`"--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36`" " +
+    "--remote-debugging-address=127.0.0.1 --remote-debugging-port=$Port --remote-allow-origins=* `"$start`""
 $chrome = Start-Process wsl.exe -ArgumentList $chromeArgs -WindowStyle Hidden -PassThru
 
 $target = $null
