@@ -12,6 +12,8 @@
   Two rates are reported: frames RECEIVED per second (Chromium + the pipe) and frames PAINTED
   per second (this side). The work is a small C# class compiled here by Add-Type.
 
+  It runs `wsl --terminate PlangOS` before and after, which stops everything inside PlangOS.
+
   PROOF ONLY: a DevTools port gives full control of that browser to anything on this machine
   that connects to it. The real path is Chromium drawing into plang-screen (a compositor).
 
@@ -184,6 +186,10 @@ $animation = "let t0=performance.now();function f(t){const x=(t-t0)/4%(innerWidt
     "setInterval(()=>f(performance.now()),16);"
 
 # --- start Chromium in PlangOS -------------------------------------------------------
+# Stopping wsl.exe on Windows doesn't stop the Linux process behind it, so a Chromium from an
+# earlier run can still hold the port and the profile. Start from a clean distro.
+Write-Host "Stopping anything still running in $Distro (wsl --terminate)..."
+wsl.exe --terminate $Distro | Out-Null
 Write-Host "Starting Chromium in $Distro (${w}x${h}, DevTools on localhost:$Port)..."
 $chromeArgs = "-d $Distro --exec /usr/lib/chromium/chromium --headless --disable-gpu " +
     "--user-data-dir=/home/plang/.chromium-stream --hide-scrollbars --window-size=$w,$h " +
@@ -194,8 +200,9 @@ $target = $null
 for ($i = 0; $i -lt 60 -and -not $target; $i++) {
     Start-Sleep -Milliseconds 250
     try {
-        $target = Invoke-RestMethod "http://127.0.0.1:$Port/json/list" -TimeoutSec 2 |
-            Where-Object { $_.type -eq 'page' } | Select-Object -First 1
+        # PS 5.1 passes a JSON array down the pipeline as ONE object: enumerate it explicitly
+        $pages = @(Invoke-RestMethod "http://127.0.0.1:$Port/json/list" -TimeoutSec 2)
+        $target = @($pages | ForEach-Object { $_ } | Where-Object { $_.type -eq 'page' })[0]
     } catch { }
 }
 if (-not $target) {
@@ -207,12 +214,17 @@ Write-Host "Connected to $($target.webSocketDebuggerUrl)"
 # --- stream: 1:1 pixels, centred on the primary monitor ------------------------------
 $bounds = New-Object System.Drawing.Rectangle ($primary.X + [int](($primary.Width - $w) / 2)), ($primary.Y + [int](($primary.Height - $h) / 2)), $w, $h
 $stream = New-Object PlangOS.StreamWindow $bounds, $Seconds
-$stream.Connect($target.webSocketDebuggerUrl, $animation, $Format, $Quality, $w, $h)
+try { $stream.Connect($target.webSocketDebuggerUrl, $animation, $Format, $Quality, $w, $h) }
+catch {
+    wsl.exe --terminate $Distro | Out-Null
+    throw "Could not connect to $($target.webSocketDebuggerUrl): $($_.Exception.GetBaseException().Message)"
+}
 [System.Windows.Forms.Application]::Run($stream)
 
 $stream.Stop()
 Start-Sleep -Milliseconds 500
 $chrome | Stop-Process -ErrorAction SilentlyContinue
+wsl.exe --terminate $Distro | Out-Null   # make sure Chromium is gone inside PlangOS too
 $e = $stream.Elapsed
 if ($stream.Error) { Write-Host "Receive stopped: $($stream.Error)" -ForegroundColor Yellow }
 Write-Host ("Done: {0:N1} s, received {1} frames = {2:N1} fps, painted {3} = {4:N1} fps, {5:N1} MB = {6:N2} MB/s ({7}, {8}x{9})" -f `
