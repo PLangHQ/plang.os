@@ -1,0 +1,3 @@
+Start
+/ The PlangOS app: what plang runs when the container starts (`wsl -d PlangOS`).
+- write out 'PlangOS is running. App in %!plang.rootPath%, runtime in %!plang.osPath%'

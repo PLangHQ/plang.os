@@ -1,0 +1,42 @@
+Start
+/ Host plang on Windows: makes sure WSL and the PlangOS distro exist, then starts it.
+/ Run by start.ps1 (or `plang` in this folder). Needs the terminal module, which does not exist yet.
+/ `run terminal` runs a command line on the host and returns {exitCode, stdout, stderr}.
+- set %distro% = 'PlangOS'
+- set %distroDir% = '%!plang.rootPath%/distro'
+- run terminal 'wsl.exe --status', env WSL_UTF8=1, write to %wsl%
+- if %wsl.exitCode% is not 0, call InstallWsl, then end goal
+- run terminal 'wsl.exe --list --quiet', env WSL_UTF8=1, write to %distros%
+- if %distros.stdout% does not contain %distro%, call ImportImage
+- run terminal 'wsl.exe -d PlangOS', interactive, write to %session%
+- write out 'PlangOS exited with %session.exitCode%'
+
+InstallWsl
+/ Needs administrator rights, and usually a reboot. RunOnce brings us back after login.
+- write out 'Installing WSL. Windows will ask for administrator rights.'
+- run terminal 'wsl.exe --install --no-distribution', as administrator, write to %install%
+- if %install.exitCode% is not 0, call InstallFailed, then end goal
+- run terminal 'reg.exe add HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce /v PlangOS /t REG_SZ /f /d "powershell.exe -ExecutionPolicy Bypass -File \"%!plang.rootPath%\start.ps1\""'
+- write out 'Restart Windows. PlangOS continues when you log back in.'
+
+InstallFailed
+- write out 'WSL install failed (%install.exitCode%): %install.stderr%'
+- write out 'Error 0x80370102 means virtualization is turned off in BIOS/UEFI. WSL needs Windows 10 build 19041 or later.'
+
+ImportImage
+/ The image and its manifest ship in image/. Later: download both from plang.is, manifest signed with our key.
+- read 'image/manifest-amd64.json', write to %manifest%
+- read 'image/%manifest.file%', write to %image%
+- hash %image% with sha256, write to %imageHash%
+- if %imageHash% is not %manifest.sha256%, call ImageTampered, then end goal
+- write out 'Importing PlangOS %manifest.version% (%manifest.size% bytes, sha256 verified)'
+- run terminal 'wsl.exe --import PlangOS "%distroDir%" "%!plang.rootPath%\image\%manifest.file%" --version 2', env WSL_UTF8=1, write to %import%
+- if %import.exitCode% is not 0, call ImportFailed
+
+ImageTampered
+- write out 'Image hash does not match the manifest. Not importing.'
+- write out 'manifest: %manifest.sha256%'
+- write out 'file:     %imageHash%'
+
+ImportFailed
+- write out 'wsl --import failed (%import.exitCode%): %import.stderr%'
