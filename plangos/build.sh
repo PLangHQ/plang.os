@@ -204,11 +204,10 @@ cmd_image() {
   local version="${PLANGOS_VERSION:-0.0.0-dev}"
   log "writing tarball (SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH)"
   python3 "$HERE/mktar.py" "$ROOT" "$OUT/plangos-$ARCH.tar"
-  # xz, not gzip: 223 MB vs 326 MB for the same tar. Host plang downloads and verifies
-  # the file, so it can decompress before `wsl --import`.
-  # Multi-threaded xz output depends only on the block size, never on the thread count,
-  # so the bytes are the same on any machine.
-  xz -9 --threads=4 --block-size=64MiB -f "$OUT/plangos-$ARCH.tar"
+  # Fast compression: the image is built and imported locally, so build time matters more than
+  # file size (Ingi, 2026-09-28); -9 took most of the build. Multi-threaded xz output depends only
+  # on the block size, never on the thread count, so the bytes are the same on any machine.
+  xz -1 --threads=4 --block-size=64MiB -f "$OUT/plangos-$ARCH.tar"
   write_manifest "$version"
   log "done: $OUT/plangos-$ARCH.tar.xz"
 }
