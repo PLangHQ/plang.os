@@ -1,7 +1,6 @@
 <!doctype html>
-<!-- PlangOS's desktop, first version. Chromium draws it with no toolbar (kiosk): this page is
-     everything the user sees. Opening an app goes to its page; back (mouse back button or
-     Alt+Left) returns here. -->
+<!-- PlangOS's desktop, first version. Chromium draws it as an app window (no tabs, no toolbar)
+     the size of the screen, under every other window. Opening an app opens a window of its own. -->
 <html lang="is">
 <head>
 <meta charset="utf-8">
@@ -108,6 +107,21 @@
   .menu .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .menu .about { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; gap: 12px; align-items: center; color: var(--dim); font-size: 13px; }
   .menu .about img { width: 40px; height: 40px; }
+
+  /* right-click menu */
+  .menu.context { bottom: auto; width: 250px; padding: 6px; border-radius: 10px; }
+  .context button {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px;
+    border: 0; border-radius: 6px; background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left;
+  }
+  .context button:hover { background: var(--glass); }
+  .context button i { width: 18px; font-style: normal; text-align: center; color: var(--dim); }
+  .context hr { border: 0; border-top: 1px solid var(--line); margin: 5px 4px; }
+  .context .swatches { display: flex; gap: 8px; padding: 2px 10px 8px 38px; }
+  .context .swatches span { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; box-shadow: 0 0 0 1px var(--line); }
+  .context .swatches span:hover { border-color: var(--dim); }
+  .context .swatches span.on { border-color: var(--text); }
+  .icons.gone { visibility: hidden; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -142,6 +156,8 @@
   <div class="about"><img src="plang.png" alt=""><div><b style="color:var(--text)">PlangOS</b><br>Only PLang runs here.</div></div>
 </div>
 
+<div class="menu context" id="context" hidden></div>
+
 <div class="bar">
   <button class="start" id="start"><img src="plang.png" alt=""><b>PlangOS</b></button>
   <div id="pins" style="display:flex;gap:2px"></div>
@@ -170,29 +186,38 @@
   const ask = message => window.plang ? window.plang(JSON.stringify(message)) : console.warn('no plang', message);
   const open = url => { if (!menu.hidden) showMenu(false); ask({ open: url }); };   // a window of its own
 
+  // what the user chose (wallpaper, pins, icons hidden) is kept in this browser's storage
+  const kept = (key, fallback) => { try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } };
+  const keep = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { } };
+
   const icons = document.getElementById('icons');
   const menuApps = document.getElementById('apps');
   const pins = document.getElementById('pins');
+  let pinned = new Set(kept('pinned', apps.filter(a => a.pin).map(a => a.name)));
   for (const a of apps) {
     const icon = document.createElement('div');
     icon.className = 'icon';
     icon.innerHTML = tile(a) + `<span>${a.name}</span>`;
     icon.ondblclick = () => open(a.url);      // desktop: double-click opens
+    icon.oncontextmenu = e => iconMenu(e, a);
     icons.append(icon);
 
     const item = icon.cloneNode(true);
     item.onclick = () => open(a.url);         // start menu: one click
     menuApps.append(item);
-
-    if (a.pin) {
+  }
+  function showPins() {
+    pins.replaceChildren(...apps.filter(a => pinned.has(a.name)).map(a => {
       const pin = document.createElement('button');
       pin.className = 'pin';
       pin.title = a.name;
       pin.innerHTML = tile(a);
       pin.onclick = () => open(a.url);
-      pins.append(pin);
-    }
+      pin.oncontextmenu = e => iconMenu(e, a);
+      return pin;
+    }));
   }
+  showPins();
 
   // Panels that open from the taskbar: the start menu, the screen's numbers. The desktop is under
   // every window; while a panel is open the screen shows that part of the desktop above them (the
@@ -220,6 +245,86 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
   window.addEventListener('blur', closePanel);   // a window was clicked
   const showMenu = open => open ? showPanel(menu) : closePanel();
+
+  // Right-click: PlangOS's own menu, not Chromium's (the search field keeps Chromium's: cut, copy,
+  // paste). On the desktop: what the desktop can do; on an app: open it, pin it to the taskbar.
+  const context = document.getElementById('context');
+  const wallpapers = [
+    { name: 'Kvöld', css: getComputedStyle(document.body).backgroundImage, swatch: 'linear-gradient(135deg, #13293d 30%, #f2a33a)' },
+    { name: 'Norðurljós', css: 'radial-gradient(1100px 600px at 30% 18%, rgba(74, 222, 128, .24), transparent 60%), radial-gradient(900px 600px at 80% 70%, rgba(168, 85, 247, .22), transparent 60%), linear-gradient(170deg, #06121f 0%, #0b2233 60%, #050b14 100%)', swatch: 'linear-gradient(135deg, #0b2233, #4ade80 55%, #a855f7)' },
+    { name: 'Haf', css: 'radial-gradient(1000px 700px at 70% 25%, rgba(56, 189, 248, .26), transparent 60%), linear-gradient(180deg, #0a2540 0%, #0e3a5c 55%, #06182b 100%)', swatch: 'linear-gradient(135deg, #0a2540 30%, #38bdf8)' },
+    { name: 'Sandur', css: 'radial-gradient(1000px 600px at 22% 25%, rgba(242, 163, 58, .30), transparent 60%), linear-gradient(160deg, #2b1d14 0%, #3d2a1c 55%, #1a120c 100%)', swatch: 'linear-gradient(135deg, #3d2a1c 30%, #f2a33a)' },
+  ];
+  let wallpaper = kept('wallpaper', 'Kvöld');
+  const paper = () => document.body.style.backgroundImage = (wallpapers.find(w => w.name === wallpaper) ?? wallpapers[0]).css;
+  paper();
+  let iconsHidden = kept('iconsHidden', false);
+  icons.classList.toggle('gone', iconsHidden);
+
+  function item(glyph, label, act) {
+    const b = document.createElement('button');
+    b.innerHTML = `<i>${glyph}</i><span></span>`;
+    b.lastChild.textContent = label;
+    b.onclick = e => { e.stopPropagation(); closePanel(); act(); };
+    return b;
+  }
+  const line = () => document.createElement('hr');
+  function swatches() {
+    const row = document.createElement('div');
+    row.className = 'swatches';
+    for (const w of wallpapers) {
+      const s = document.createElement('span');
+      s.title = w.name;
+      s.style.backgroundImage = w.swatch;
+      s.classList.toggle('on', w.name === wallpaper);
+      s.onclick = e => {
+        e.stopPropagation();
+        wallpaper = w.name; keep('wallpaper', wallpaper); paper();
+        row.querySelectorAll('span').forEach(x => x.classList.toggle('on', x === s));
+      };
+      row.append(s);
+    }
+    return row;
+  }
+  // the menu where the pointer is, kept on the screen above the taskbar
+  function popUp(e, ...entries) {
+    e.preventDefault();
+    e.stopPropagation();
+    context.replaceChildren(...entries);
+    context.hidden = false;
+    const w = context.offsetWidth, h = context.offsetHeight;
+    context.style.left = Math.max(8, Math.min(e.clientX, innerWidth - w - 8)) + 'px';
+    context.style.top = Math.max(8, Math.min(e.clientY, innerHeight - 56 - h - 8)) + 'px';
+    showPanel(context);
+  }
+  document.addEventListener('contextmenu', e => {
+    if (e.target.closest('input') || context.contains(e.target)) return;
+    const where = document.getElementById('where');
+    const showing = [...windows].filter(([, w]) => !w.minimized);
+    const label = document.createElement('div');
+    label.style.cssText = 'padding:4px 10px 2px 38px;font-size:12px;color:var(--dim)';
+    label.textContent = 'Veggfóður';
+    popUp(e,
+      item('⚲', 'Leita eða opna vefsíðu', () => { where.focus(); where.select(); }),
+      item('▭', 'Sýna skjáborðið', () => showing.forEach(([id]) => ask({ window: 'minimize', id }))),
+      line(),
+      label, swatches(),
+      item('▦', iconsHidden ? 'Sýna táknin' : 'Fela táknin', () => { iconsHidden = !iconsHidden; keep('iconsHidden', iconsHidden); icons.classList.toggle('gone', iconsHidden); }),
+      line(),
+      item('◔', 'Skjárinn: mælingar', () => showPanel(stats)),
+      item('↻', 'Endurhlaða skjáborðið', () => location.reload()),
+      item('ℹ', 'Um PlangOS', () => showPanel(menu)));
+  });
+  function iconMenu(e, a) {
+    const on = pinned.has(a.name);
+    popUp(e,
+      item('↗', `Opna ${a.name}`, () => open(a.url)),
+      item('★', on ? 'Losa af verkstikunni' : 'Festa á verkstikuna', () => {
+        if (on) pinned.delete(a.name); else pinned.add(a.name);
+        keep('pinned', [...pinned]);
+        showPins();
+      }));
+  }
 
   // the screen's numbers, from the host once a second: input → picture (the taskbar shows its p50),
   // the pipe's round trip, updates/s, MB/s, time to draw
