@@ -3,11 +3,11 @@
   "step": [
     {
       "index": 0,
-      "text": "browser.start Url='file:///home/plang/desktop.html', Width=1920, Height=1080, ToOutput=true, write to %browser%",
+      "text": "browser.start(Url=\"file:///home/plang/desktop.html\", Width=1920, Height=1080, ToOutput=true, OnWindow=goal.call(Name=\"Window\"), OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)",
       "line": {
-        "number": 6
+        "number": 7
       },
-      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The\nbrowser draws into plang-screen, whose binary frames go straight to this app's output — the\npipe to host plang — untouched. Input from the host's screen comes down on stdin, one line\nper event. Ends when the host closes the pipe.",
+      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The\nbrowser draws into plang-screen, whose binary frames go straight to this app's output — the\npipe to host plang — untouched. Input from the host's screen comes down on stdin, one line\nper event. Ends when the host closes the pipe.\nThe first page is the desktop; every app opens in a window of its own.",
       "code": [
         {
           "module": "browser",
@@ -26,6 +26,62 @@
                 "name": "bool"
               },
               "value": true
+            },
+            {
+              "name": "OnWindow",
+              "type": {
+                "name": "action"
+              },
+              "value": {
+                "module": "goal",
+                "name": "call",
+                "property": [
+                  {
+                    "name": "Name",
+                    "type": {
+                      "name": "text"
+                    },
+                    "value": "Window"
+                  }
+                ],
+                "default": [
+                  {
+                    "name": "parallel",
+                    "type": {
+                      "name": "bool"
+                    },
+                    "value": false
+                  }
+                ]
+              }
+            },
+            {
+              "name": "OnMessage",
+              "type": {
+                "name": "action"
+              },
+              "value": {
+                "module": "goal",
+                "name": "call",
+                "property": [
+                  {
+                    "name": "Name",
+                    "type": {
+                      "name": "text"
+                    },
+                    "value": "Desktop"
+                  }
+                ],
+                "default": [
+                  {
+                    "name": "parallel",
+                    "type": {
+                      "name": "bool"
+                    },
+                    "value": false
+                  }
+                ]
+              }
             }
           ],
           "default": [
@@ -116,7 +172,7 @@
       "index": 1,
       "text": "on input call Input",
       "line": {
-        "number": 7
+        "number": 8
       },
       "code": [
         {
@@ -160,7 +216,7 @@
       "index": 2,
       "text": "stop %browser%",
       "line": {
-        "number": 8
+        "number": 9
       },
       "code": [
         {
@@ -199,7 +255,7 @@
           "index": 0,
           "text": "send %!data% to %browser%",
           "line": {
-            "number": 11
+            "number": 12
           },
           "code": [
             {
@@ -257,12 +313,431 @@
       "isEvent": false,
       "isSystem": false,
       "isTest": false
+    },
+    {
+      "name": "Desktop",
+      "step": [
+        {
+          "index": 0,
+          "text": "set %asked% to %!data%",
+          "line": {
+            "number": 17
+          },
+          "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen.",
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%asked%",
+                  "variable": [
+                    {
+                      "text": "%asked%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "if %asked.open%, call Open",
+          "line": {
+            "number": 18
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.open%",
+                  "variable": [
+                    {
+                      "text": "%asked.open%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "open"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Open\")",
+                  "line": {
+                    "number": 18
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "text"
+                          },
+                          "value": "Open"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 2,
+          "text": "if %asked.window%, call Command",
+          "line": {
+            "number": 19
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.window%",
+                  "variable": [
+                    {
+                      "text": "%asked.window%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "window"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Command\")",
+                  "line": {
+                    "number": 19
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "text"
+                          },
+                          "value": "Command"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "3dc98a6a3fcdb9d17b9e223313716d448e133922d588e82f01dff308153bfbb4",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
+    },
+    {
+      "name": "Open",
+      "step": [
+        {
+          "index": 0,
+          "text": "open window %asked.open% in %browser%",
+          "line": {
+            "number": 22
+          },
+          "code": [
+            {
+              "module": "browser",
+              "name": "open",
+              "property": [
+                {
+                  "name": "Url",
+                  "type": {
+                    "name": "text",
+                    "template": "plang"
+                  },
+                  "value": "%asked.open%",
+                  "variable": [
+                    {
+                      "text": "%asked.open%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "open"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "0f4ca79325ff286a4e5eb3aa287cbb10df5fd39d7c968f8e20d8faef1a70cfac",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
+    },
+    {
+      "name": "Command",
+      "step": [
+        {
+          "index": 0,
+          "text": "send %asked% to %browser%",
+          "line": {
+            "number": 25
+          },
+          "code": [
+            {
+              "module": "browser",
+              "name": "send",
+              "property": [
+                {
+                  "name": "Data",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked%",
+                  "variable": [
+                    {
+                      "text": "%asked%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "8410396c796e07ea487a9b2767feecc0e2c0984932f0417b93c2a3521e643c85",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
+    },
+    {
+      "name": "Window",
+      "step": [
+        {
+          "index": 0,
+          "text": "post %!data% to the page of %browser%",
+          "line": {
+            "number": 29
+          },
+          "comment": "The screen says what happened to a window: the desktop's taskbar shows it.",
+          "code": [
+            {
+              "module": "browser",
+              "name": "post",
+              "property": [
+                {
+                  "name": "Data",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "f1b1e7b12a06246c9af25bf539c9a137c4073dfa273ee8e3f7ea7735405d66ee",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
     }
   ],
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "a72bb0c2f5e6b1fc8014a1ea944dfe948261c2adb357274cc6d5ab8a7e4f148f",
+  "hash": "37e14c0855bbf87f3118904d18f2efed5511088b05dc0d2132cbf71c308eac20",
   "isSetup": false,
   "isEvent": false,
   "isSystem": false,

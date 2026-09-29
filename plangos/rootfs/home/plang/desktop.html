@@ -79,6 +79,13 @@
   .bar .start b { font-weight: 600; letter-spacing: .3px; }
   .bar .pin .tile { width: 28px; height: 28px; border-radius: 7px; font-size: 13px; box-shadow: none; }
   .spacer { flex: 1; }
+  /* one button per open window */
+  .windows { display: flex; gap: 4px; margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--line); overflow: hidden; }
+  .windows button { max-width: 220px; min-width: 120px; justify-content: flex-start; background: rgba(255, 255, 255, .05); position: relative; }
+  .windows button span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+  .windows button.active { background: rgba(255, 255, 255, .16); }
+  .windows button.active::after { content: ""; position: absolute; left: 30%; right: 30%; bottom: 2px; height: 3px; border-radius: 2px; background: var(--accent); }
+  .windows button.minimized span { color: var(--dim); }
   .tray { text-align: right; font-size: 13px; line-height: 1.25; padding: 0 8px; }
   .tray small { color: var(--dim); }
 
@@ -114,6 +121,7 @@
 <div class="bar">
   <button class="start" id="start"><img src="plang.png" alt=""><b>PlangOS</b></button>
   <div id="pins" style="display:flex;gap:2px"></div>
+  <div class="windows" id="windows"></div>
   <div class="spacer"></div>
   <div class="tray"><div id="clock"></div><small id="day"></small></div>
 </div>
@@ -133,7 +141,9 @@
   const tile = a => a.logo
     ? `<div class="tile" style="background:#fff"><img src="plang.png" alt=""></div>`
     : `<div class="tile" style="background:${a.color}">${a.mark}</div>`;
-  const open = url => { location.href = url; };
+  // The desktop talks to PlangOS's plang: plang(text) asks, a 'message' event from origin 'plang' tells.
+  const ask = message => window.plang ? window.plang(JSON.stringify(message)) : console.warn('no plang', message);
+  const open = url => { menu.hidden = true; ask({ open: url }); };   // a window of its own
 
   const icons = document.getElementById('icons');
   const menuApps = document.getElementById('apps');
@@ -174,6 +184,38 @@
     open(looksLikeUrl ? (/^[a-z]+:\/\//i.test(q) ? q : 'https://' + q)
                       : 'https://duckduckgo.com/?q=' + encodeURIComponent(q));
   };
+
+  // the open windows, as the screen reports them: {"window":"opened|titled|focused|minimized|
+  // maximized|restored|closed","id",…}. id 0 is this desktop.
+  const windows = new Map();   // id → { title, minimized }
+  let active = 0;
+  const bar = document.getElementById('windows');
+  function show() {
+    bar.replaceChildren(...[...windows].map(([id, w]) => {
+      const b = document.createElement('button');
+      b.className = (id === active && !w.minimized ? 'active' : '') + (w.minimized ? ' minimized' : '');
+      b.title = w.title;
+      b.innerHTML = '<span></span>';
+      b.firstChild.textContent = w.title || 'Gluggi';
+      // like Windows: the active window minimizes, any other comes forward
+      b.onclick = () => ask({ window: id === active && !w.minimized ? 'minimize' : 'focus', id });
+      return b;
+    }));
+  }
+  window.addEventListener('message', e => {
+    if (e.origin !== 'plang') return;
+    const m = JSON.parse(e.data);
+    const w = windows.get(m.id);
+    switch (m.window) {
+      case 'opened': windows.set(m.id, { title: m.title || '', minimized: false }); break;
+      case 'titled': if (w) w.title = m.title; break;
+      case 'focused': active = m.id; if (w) w.minimized = false; break;
+      case 'minimized': if (w) w.minimized = true; if (active === m.id) active = 0; break;
+      case 'restored': if (w) w.minimized = false; break;
+      case 'closed': windows.delete(m.id); if (active === m.id) active = 0; break;
+    }
+    show();
+  });
 
   // clock
   const time = document.getElementById('time'), date = document.getElementById('date');

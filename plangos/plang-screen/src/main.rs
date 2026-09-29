@@ -274,9 +274,11 @@ impl State {
             if let Some(keyboard) = self.seat.get_keyboard() {
                 keyboard.set_focus(self, Some(surface), SERIAL_COUNTER.next_serial());
             }
-            event(json!({"window": if was_minimized { "restored" } else { "focused" }, "id": id}));
-            if was_minimized {
-                event(json!({"window": "focused", "id": id}));
+            if !self.windows.get(i).desktop {
+                event(json!({"window": if was_minimized { "restored" } else { "focused" }, "id": id}));
+                if was_minimized {
+                    event(json!({"window": "focused", "id": id}));
+                }
             }
         }
         let r = self.windows.get(i).picture.rect;
