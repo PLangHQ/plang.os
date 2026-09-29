@@ -55,6 +55,8 @@ InstallFailed
 ReplaceImage
 / A new image: remove the old distro, then import. /home/plang is not carried over yet.
 - write out 'New PlangOS image %manifest.version%: replacing the installed one.'
+/ A PlangOS still running (an earlier window) can make --unregister hang: stop it first.
+- run terminal 'wsl.exe' with parameters '--terminate', 'PlangOS', env WSL_UTF8=1, write to %stopped%
 - run terminal 'wsl.exe' with parameters '--unregister', 'PlangOS', env WSL_UTF8=1, write to %removed%
 - call ImportImage
 
