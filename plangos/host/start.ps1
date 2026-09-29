@@ -23,6 +23,22 @@ function Fail($msg) { Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }
 $Root  = if ($PSScriptRoot) { $PSScriptRoot } else { Join-Path $env:LOCALAPPDATA 'PlangOS' }
 $Plang = Join-Path $Root 'runtime\plang.exe'   # plang.cmd next to this script runs the same one
 
+# A new runtime staged while the old one was running (runtime.new) takes its place now.
+$staged = Join-Path $Root 'runtime.new'
+if (Test-Path $staged) {
+    $old = Join-Path $Root 'runtime.old'
+    if (Test-Path $old) { Remove-Item $old -Recurse -Force -ErrorAction SilentlyContinue }
+    $current = Join-Path $Root 'runtime'
+    try {
+        if (Test-Path $current) { Rename-Item $current 'runtime.old' -ErrorAction Stop }
+        Rename-Item $staged 'runtime' -ErrorAction Stop
+        Write-Host '==> Using the new plang runtime' -ForegroundColor Cyan
+        Remove-Item $old -Recurse -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Host "The new runtime waits in runtime.new: close PlangOS (plang is still running) and start again." -ForegroundColor Yellow
+    }
+}
+
 if (-not (Test-Path $Plang)) {
     if ($PSScriptRoot) { Fail "plang not found at $Plang. Is this folder complete?" }
     New-Item -ItemType Directory -Force -Path $Root | Out-Null
