@@ -9,12 +9,14 @@
 //!   kind 3  [u64 t]: the "t" of the last input, sent right after the first frame that follows it
 //!           within 300 ms (the host times input → picture with it)
 //!   kind 4  [u64 t]: the same "t", sent the moment the input arrives (the pipe's round trip)
+//!   kind 5  the clipboard's new text, UTF-8, when the client copies something
 //!
 //! stderr says {"ready":"wayland-plang"} when clients can connect (the socket name).
 //!
 //! stdin takes one JSON input event per line (the same lines screen.open gives):
 //!   {"mouse":"move|down|up|wheel","x","y","button","dx","dy"}
 //!   {"key":"down|up","sc":<scancode>,"ext":<extended>}
+//!   {"clipboard":"text"}   the host's clipboard; the client pastes it
 //!
 //! usage: plang-screen <width> <height> [xkb-layout]      (socket in $XDG_RUNTIME_DIR)
 
@@ -24,6 +26,7 @@ use std::time::{Duration, Instant};
 
 use smithay::delegate_compositor;
 use smithay::delegate_cursor_shape;
+use smithay::delegate_data_device;
 use smithay::delegate_output;
 use smithay::delegate_seat;
 use smithay::delegate_shm;
@@ -39,7 +42,7 @@ use smithay::reexports::calloop::{EventLoop, Interest, Mode as CMode, PostAction
 use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel;
 use smithay::reexports::wayland_server::backend::{ClientData, ClientId, DisconnectReason};
 use smithay::reexports::wayland_server::protocol::{wl_buffer, wl_seat, wl_surface::WlSurface};
-use smithay::reexports::wayland_server::{Client, Display, DisplayHandle};
+use smithay::reexports::wayland_server::{Client, Display, DisplayHandle, Resource};
 use smithay::utils::{Rectangle, Serial, Transform, SERIAL_COUNTER};
 use smithay::wayland::buffer::BufferHandler;
 use smithay::wayland::compositor::{
@@ -48,6 +51,11 @@ use smithay::wayland::compositor::{
 };
 use smithay::wayland::cursor_shape::CursorShapeManagerState;
 use smithay::wayland::output::{OutputHandler, OutputManagerState};
+use smithay::wayland::selection::data_device::{
+    request_data_device_client_selection, set_data_device_focus, set_data_device_selection, ClientDndGrabHandler,
+    DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
+};
+use smithay::wayland::selection::{SelectionHandler, SelectionSource, SelectionTarget};
 use smithay::wayland::shell::xdg::{
     PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler, XdgShellState,
 };
@@ -56,6 +64,8 @@ use smithay::wayland::socket::ListeningSocketSource;
 use smithay::wayland::tablet_manager::TabletSeatHandler;
 
 const SOCKET: &str = "wayland-plang";
+/// The text types the clipboard offers and asks for, best first.
+const TEXT: [&str; 4] = ["text/plain;charset=utf-8", "UTF8_STRING", "text/plain", "STRING"];
 
 struct Popup {
     surface: PopupSurface,
@@ -72,6 +82,9 @@ struct State {
     seat: Seat<State>,
     _outputs: OutputManagerState,
     _cursor_shape: CursorShapeManagerState,
+    data_device: DataDeviceState,
+    copied: smithay::reexports::calloop::channel::Sender<String>, // text read from the client's clipboard, to stdout as kind 5
+    copy: Option<&'static str>, // the client copied: the type to read, once smithay has stored the selection
     width: i32,
     height: i32,
     toplevel: Option<ToplevelSurface>,
@@ -212,6 +225,23 @@ impl State {
         self.toplevel.as_ref().map(|t| (t.wl_surface().clone(), (0.0, 0.0).into()))
     }
 
+    /// Reads what the client copied through a pipe, on a thread (the client writes it while the
+    /// loop keeps running), then kind 5.
+    fn read_copy(&mut self) {
+        let Some(mime) = self.copy.take() else { return };
+        let Ok((read, write)) = std::io::pipe() else { return };
+        if request_data_device_client_selection(&self.seat, mime.to_string(), write.into()).is_err() {
+            return;
+        }
+        let copied = self.copied.clone();
+        std::thread::spawn(move || {
+            use std::io::Read;
+            let mut bytes = Vec::new();
+            let _ = read.take(16 << 20).read_to_end(&mut bytes);
+            let _ = copied.send(String::from_utf8_lossy(&bytes).into_owned());
+        });
+    }
+
     fn input(&mut self, line: &str) {
         let Ok(e) = serde_json::from_str::<serde_json::Value>(line) else { return };
         if let Some(t) = e.get("t").and_then(|v| v.as_u64()) {
@@ -269,6 +299,10 @@ impl State {
                 smithay::backend::input::KeyState::Released
             };
             keyboard.input::<(), _>(self, Keycode::new(evdev + 8), state, serial, time, |_, _, _| FilterResult::Forward);
+        } else if let Some(text) = e.get("clipboard").and_then(|v| v.as_str()) {
+            // the host copied: that text is now the clipboard here; the client reads it on paste
+            let types = TEXT.iter().map(|t| t.to_string()).collect();
+            set_data_device_selection(&self.dh, &self.seat, types, Arc::new(text.to_string()));
         }
     }
 }
@@ -464,7 +498,41 @@ impl SeatHandler for State {
         };
         self.message(2, name.as_bytes());   // kind 2: the pointer's name, UTF-8
     }
+    fn focus_changed(&mut self, seat: &Seat<Self>, focused: Option<&WlSurface>) {
+        // the clipboard goes to the client that has the keyboard
+        let client = focused.and_then(|s| self.dh.get_client(s.id()).ok());
+        set_data_device_focus(&self.dh, seat, client);
+    }
 }
+
+impl SelectionHandler for State {
+    type SelectionUserData = Arc<String>;
+
+    /// The client copied. smithay stores the selection after this returns, so it's read just
+    /// after (State::read_copy).
+    fn new_selection(&mut self, ty: SelectionTarget, source: Option<SelectionSource>, _seat: Seat<Self>) {
+        if ty != SelectionTarget::Clipboard {
+            return;
+        }
+        let offered = source.map(|s| s.mime_types()).unwrap_or_default();
+        self.copy = TEXT.iter().find(|t| offered.iter().any(|o| o == *t)).copied();
+    }
+
+    /// The client pastes what the host copied: write the text into its pipe.
+    fn send_selection(&mut self, _ty: SelectionTarget, _mime: String, fd: std::os::fd::OwnedFd, _seat: Seat<Self>, text: &Arc<String>) {
+        let text = text.clone();
+        std::thread::spawn(move || {
+            let _ = std::fs::File::from(fd).write_all(text.as_bytes());
+        });
+    }
+}
+impl DataDeviceHandler for State {
+    fn data_device_state(&self) -> &DataDeviceState {
+        &self.data_device
+    }
+}
+impl ClientDndGrabHandler for State {}
+impl ServerDndGrabHandler for State {}
 impl TabletSeatHandler for State {}
 impl OutputHandler for State {}
 
@@ -474,6 +542,7 @@ delegate_xdg_shell!(State);
 delegate_seat!(State);
 delegate_output!(State);
 delegate_cursor_shape!(State);
+delegate_data_device!(State);
 
 // ---- main --------------------------------------------------------------------------------------
 
@@ -503,6 +572,7 @@ fn main() {
     seat.add_pointer();
     let outputs = OutputManagerState::new_with_xdg_output::<State>(&dh);
     let cursor_shape = CursorShapeManagerState::new::<State>(&dh);
+    let data_device = DataDeviceState::new::<State>(&dh);
 
     let output = Output::new(
         "plang-screen".into(),
@@ -554,6 +624,17 @@ fn main() {
         })
         .expect("input source");
 
+    // the client's copied text, read on a thread, out as kind 5
+    let (copied, texts) = channel::<String>();
+    event_loop
+        .handle()
+        .insert_source(texts, |event, _, state| {
+            if let ChannelEvent::Msg(text) = event {
+                state.message(5, text.as_bytes());
+            }
+        })
+        .expect("clipboard source");
+
     // frame pacing: tell clients a frame was shown, 60 times a second
     event_loop
         .handle()
@@ -575,6 +656,9 @@ fn main() {
         seat,
         _outputs: outputs,
         _cursor_shape: cursor_shape,
+        data_device,
+        copied,
+        copy: None,
         width,
         height,
         toplevel: None,
@@ -594,6 +678,7 @@ fn main() {
         if event_loop.dispatch(Some(Duration::from_millis(16)), &mut state).is_err() {
             break;
         }
+        state.read_copy();
         let _ = state.dh.flush_clients();
     }
 }
