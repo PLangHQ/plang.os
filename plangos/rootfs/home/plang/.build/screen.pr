@@ -3,23 +3,16 @@
   "step": [
     {
       "index": 0,
-      "text": "browser.start(Url=\"file:///home/plang/desktop.html\", Width=1920, Height=1080, ToOutput=true, OnWindow=goal.call(Name=\"Window\"), OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)",
+      "text": "screen.open(Width=1920, Height=1080, ToOutput=true, OnWindow=goal.call(Name=\"Window\")); variable.set(Name=%screen%, Value=%!data%)",
       "line": {
         "number": 7
       },
-      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The\nbrowser draws into plang-screen, whose binary frames go straight to this app's output — the\npipe to host plang — untouched. Input from the host's screen comes down on stdin, one line\nper event. Ends when the host closes the pipe.\nThe first page is the desktop; every app opens in a window of its own.",
+      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The\nscreen is PlangOS's display: programs draw onto it, and its frames go to this app's output —\nthe pipe to host plang. Input from the host comes down on stdin, one line per event, and goes\nto the screen. Ends when the host closes the pipe.\nThe first page is the desktop; every app opens in a window of its own.",
       "code": [
         {
-          "module": "browser",
-          "name": "start",
+          "module": "screen",
+          "name": "open",
           "property": [
-            {
-              "name": "Url",
-              "type": {
-                "name": "text"
-              },
-              "value": "file:///home/plang/desktop.html"
-            },
             {
               "name": "ToOutput",
               "type": {
@@ -54,6 +47,120 @@
                   }
                 ]
               }
+            }
+          ],
+          "default": [
+            {
+              "name": "title",
+              "type": {
+                "name": "text"
+              },
+              "value": "PlangOS"
+            },
+            {
+              "name": "width",
+              "type": {
+                "name": "number"
+              },
+              "value": 1920
+            },
+            {
+              "name": "height",
+              "type": {
+                "name": "number"
+              },
+              "value": 1080
+            }
+          ]
+        },
+        {
+          "module": "variable",
+          "name": "set",
+          "property": [
+            {
+              "name": "Name",
+              "type": {
+                "name": "variable"
+              },
+              "value": "%screen%",
+              "variable": [
+                {
+                  "text": "%screen%",
+                  "code": [
+                    {
+                      "variable": "screen"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Value",
+              "type": {
+                "name": "item",
+                "template": "plang"
+              },
+              "value": "%!data%",
+              "variable": [
+                {
+                  "text": "%!data%",
+                  "code": [
+                    {
+                      "variable": "!data"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "asdefault",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    },
+    {
+      "index": 1,
+      "text": "browser.start(Url=\"file:///home/plang/desktop.html\", Screen=%screen%, OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)",
+      "line": {
+        "number": 8
+      },
+      "code": [
+        {
+          "module": "browser",
+          "name": "start",
+          "property": [
+            {
+              "name": "Url",
+              "type": {
+                "name": "text"
+              },
+              "value": "file:///home/plang/desktop.html"
+            },
+            {
+              "name": "Screen",
+              "type": {
+                "name": "screen",
+                "template": "plang"
+              },
+              "value": "%screen%",
+              "variable": [
+                {
+                  "text": "%screen%",
+                  "code": [
+                    {
+                      "variable": "screen"
+                    }
+                  ]
+                }
+              ]
             },
             {
               "name": "OnMessage",
@@ -169,10 +276,10 @@
       "waitForExecution": true
     },
     {
-      "index": 1,
+      "index": 2,
       "text": "on input call Input",
       "line": {
-        "number": 8
+        "number": 9
       },
       "code": [
         {
@@ -213,10 +320,10 @@
       "waitForExecution": true
     },
     {
-      "index": 2,
+      "index": 3,
       "text": "stop %browser%",
       "line": {
-        "number": 9
+        "number": 10
       },
       "code": [
         {
@@ -253,13 +360,13 @@
       "step": [
         {
           "index": 0,
-          "text": "send %!data% to %browser%",
+          "text": "send %!data% to %screen%",
           "line": {
-            "number": 12
+            "number": 13
           },
           "code": [
             {
-              "module": "browser",
+              "module": "screen",
               "name": "send",
               "property": [
                 {
@@ -281,18 +388,18 @@
                   ]
                 },
                 {
-                  "name": "Browser",
+                  "name": "Screen",
                   "type": {
-                    "name": "browser",
+                    "name": "screen",
                     "template": "plang"
                   },
-                  "value": "%browser%",
+                  "value": "%screen%",
                   "variable": [
                     {
-                      "text": "%browser%",
+                      "text": "%screen%",
                       "code": [
                         {
-                          "variable": "browser"
+                          "variable": "screen"
                         }
                       ]
                     }
@@ -308,7 +415,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "c0f86ffc8e332eb5ba540e3b22c2b579973694aaa15c89ecd245bc43a76e8a54",
+      "hash": "8bd295246c7a7d304433359caf77122345d2f41c2c0dff7f8a97423d426093d2",
       "isSetup": false,
       "isEvent": false,
       "isSystem": false,
@@ -321,7 +428,7 @@
           "index": 0,
           "text": "set %asked% to %!data%",
           "line": {
-            "number": 17
+            "number": 18
           },
           "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen.",
           "code": [
@@ -382,7 +489,7 @@
           "index": 1,
           "text": "if %asked.open%, call Open",
           "line": {
-            "number": 18
+            "number": 19
           },
           "code": [
             {
@@ -416,7 +523,7 @@
                   "index": 0,
                   "text": "goal.call(Name=\"Open\")",
                   "line": {
-                    "number": 18
+                    "number": 19
                   },
                   "code": [
                     {
@@ -453,7 +560,7 @@
           "index": 2,
           "text": "if %asked.window%, call Command",
           "line": {
-            "number": 19
+            "number": 20
           },
           "code": [
             {
@@ -487,7 +594,7 @@
                   "index": 0,
                   "text": "goal.call(Name=\"Command\")",
                   "line": {
-                    "number": 19
+                    "number": 20
                   },
                   "code": [
                     {
@@ -538,7 +645,7 @@
           "index": 0,
           "text": "open window %asked.open% in %browser%",
           "line": {
-            "number": 22
+            "number": 23
           },
           "code": [
             {
@@ -605,13 +712,13 @@
       "step": [
         {
           "index": 0,
-          "text": "send %asked% to %browser%",
+          "text": "send %asked% to %screen%",
           "line": {
-            "number": 25
+            "number": 26
           },
           "code": [
             {
-              "module": "browser",
+              "module": "screen",
               "name": "send",
               "property": [
                 {
@@ -633,18 +740,18 @@
                   ]
                 },
                 {
-                  "name": "Browser",
+                  "name": "Screen",
                   "type": {
-                    "name": "browser",
+                    "name": "screen",
                     "template": "plang"
                   },
-                  "value": "%browser%",
+                  "value": "%screen%",
                   "variable": [
                     {
-                      "text": "%browser%",
+                      "text": "%screen%",
                       "code": [
                         {
-                          "variable": "browser"
+                          "variable": "screen"
                         }
                       ]
                     }
@@ -660,7 +767,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "8410396c796e07ea487a9b2767feecc0e2c0984932f0417b93c2a3521e643c85",
+      "hash": "762988d1c2ab3ef923cd4ceb9ff07af432bfa8337ea10106a38adf1c54e92084",
       "isSetup": false,
       "isEvent": false,
       "isSystem": false,
@@ -673,9 +780,9 @@
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 31
+            "number": 32
           },
-          "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, History, Downloads, Settings ({\"open\": url, \"id\"}) open a window.",
+          "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
             {
               "module": "variable",
@@ -734,7 +841,7 @@
           "index": 1,
           "text": "post %event% to the page of %browser%",
           "line": {
-            "number": 32
+            "number": 33
           },
           "code": [
             {
@@ -786,7 +893,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 33
+            "number": 34
           },
           "code": [
             {
@@ -820,7 +927,7 @@
                   "index": 0,
                   "text": "goal.call(Name=\"Navigate\")",
                   "line": {
-                    "number": 32
+                    "number": 34
                   },
                   "code": [
                     {
@@ -857,7 +964,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 34
+            "number": 35
           },
           "code": [
             {
@@ -891,7 +998,7 @@
                   "index": 0,
                   "text": "goal.call(Name=\"OpenPage\")",
                   "line": {
-                    "number": 34
+                    "number": 35
                   },
                   "code": [
                     {
@@ -929,7 +1036,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "a08ebbbce86e0cb349ed6ee1640a66b3f57665f8bbeefb014e7a66c48e33cde8",
+      "hash": "7c2c2ac8f168a20271e3b2dfda8d3b2b9c1f7ff7cf670d2a9dec311ba2fa6474",
       "isSetup": false,
       "isEvent": false,
       "isSystem": false,
@@ -942,7 +1049,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 37
+            "number": 38
           },
           "code": [
             {
@@ -1032,7 +1139,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 40
+            "number": 41
           },
           "code": [
             {
@@ -1098,7 +1205,7 @@
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "37e14c0855bbf87f3118904d18f2efed5511088b05dc0d2132cbf71c308eac20",
+  "hash": "57eac93f99123130f299fe31bd1c2a415be654701965f05069d8050e6a8e7f5f",
   "isSetup": false,
   "isEvent": false,
   "isSystem": false,

@@ -1,15 +1,16 @@
 Screen
 / PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The
-/ browser draws into plang-screen, whose binary frames go straight to this app's output — the
-/ pipe to host plang — untouched. Input from the host's screen comes down on stdin, one line
-/ per event. Ends when the host closes the pipe.
+/ screen is PlangOS's display: programs draw onto it, and its frames go to this app's output —
+/ the pipe to host plang. Input from the host comes down on stdin, one line per event, and goes
+/ to the screen. Ends when the host closes the pipe.
 / The first page is the desktop; every app opens in a window of its own.
-- browser.start(Url="file:///home/plang/desktop.html", Width=1920, Height=1080, ToOutput=true, OnWindow=goal.call(Name="Window"), OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
+- screen.open(Width=1920, Height=1080, ToOutput=true, OnWindow=goal.call(Name="Window")); variable.set(Name=%screen%, Value=%!data%)
+- browser.start(Url="file:///home/plang/desktop.html", Screen=%screen%, OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
 - on input call Input
 - stop %browser%
 
 Input
-- send %!data% to %browser%
+- send %!data% to %screen%
 
 Desktop
 / The desktop page asks: {"open": url} opens a window; {"window": "focus|minimize|…", "id"}
@@ -22,12 +23,12 @@ Open
 - open window %asked.open% in %browser%
 
 Command
-- send %asked% to %browser%
+- send %asked% to %screen%
 
 Window
 / The screen says what happened to a window: the desktop's taskbar shows it. Enter in a
 / window's address field ({"navigate": what was typed, "id"}) sends that window there; its
-/ menu's New window, History, Downloads, Settings ({"open": url, "id"}) open a window.
+/ menu's New window, and links opened as tabs ({"open": url}), open a window.
 - set %event% to %!data%
 - post %event% to the page of %browser%
 - if %event.navigate%, call Navigate
