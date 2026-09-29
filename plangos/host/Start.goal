@@ -13,14 +13,12 @@ Start
 - call OpenPlangOS
 
 OpenPlangOS
-/ PlangOS's Screen app runs a browser inside the container; its frames come up the pipe (stdout),
-/ our window's mouse and keyboard go down it (stdin). One JSON line per message.
+/ PlangOS's Screen app runs a browser inside the container; its frames come up the pipe (stdout)
+/ straight to our window — no goal per frame; our window's mouse and keyboard go down it (stdin),
+/ one JSON line per event.
 - open screen titled 'PlangOS desktop', size 1920x1080, on input call Input, on close call Close, write to %screen%
-- run terminal 'wsl.exe' with parameters '-d', 'PlangOS', '--cd', '/home/plang', '--exec', '/opt/plang/plang', 'Screen', keep running, binary output, on output call Frame, write to %container%
+- run terminal 'wsl.exe' with parameters '-d', 'PlangOS', '--cd', '/home/plang', '--exec', '/opt/plang/plang', 'Screen', keep running, binary output to %screen%, write to %container%
 - wait for %container%
-
-Frame
-- draw %!data% on %screen%
 
 Input
 - send %!data% to %container%
