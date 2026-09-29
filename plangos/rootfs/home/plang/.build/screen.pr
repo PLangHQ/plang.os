@@ -671,18 +671,35 @@
       "step": [
         {
           "index": 0,
-          "text": "post %!data% to the page of %browser%",
+          "text": "set %event% to %!data%",
           "line": {
-            "number": 29
+            "number": 30
           },
-          "comment": "The screen says what happened to a window: the desktop's taskbar shows it.",
+          "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there.",
           "code": [
             {
-              "module": "browser",
-              "name": "post",
+              "module": "variable",
+              "name": "set",
               "property": [
                 {
-                  "name": "Data",
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%event%",
+                  "variable": [
+                    {
+                      "text": "%event%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
                   "type": {
                     "name": "item",
                     "template": "plang"
@@ -694,6 +711,210 @@
                       "code": [
                         {
                           "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "post %event% to the page of %browser%",
+          "line": {
+            "number": 31
+          },
+          "code": [
+            {
+              "module": "browser",
+              "name": "post",
+              "property": [
+                {
+                  "name": "Data",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%event%",
+                  "variable": [
+                    {
+                      "text": "%event%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 2,
+          "text": "if %event.navigate%, call Navigate",
+          "line": {
+            "number": 32
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%event.navigate%",
+                  "variable": [
+                    {
+                      "text": "%event.navigate%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        },
+                        {
+                          "property": "navigate"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Navigate\")",
+                  "line": {
+                    "number": 32
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "text"
+                          },
+                          "value": "Navigate"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "e6e8ff95a5765344f0309344c75ae23b352ced7187b60d2c80e162e59df0c7f9",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
+    },
+    {
+      "name": "Navigate",
+      "step": [
+        {
+          "index": 0,
+          "text": "navigate window %event.id% to %event.navigate% in %browser%",
+          "line": {
+            "number": 35
+          },
+          "code": [
+            {
+              "module": "browser",
+              "name": "navigate",
+              "property": [
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "number",
+                    "template": "plang"
+                  },
+                  "value": "%event.id%",
+                  "variable": [
+                    {
+                      "text": "%event.id%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        },
+                        {
+                          "property": "id"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Url",
+                  "type": {
+                    "name": "text",
+                    "template": "plang"
+                  },
+                  "value": "%event.navigate%",
+                  "variable": [
+                    {
+                      "text": "%event.navigate%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        },
+                        {
+                          "property": "navigate"
                         }
                       ]
                     }
@@ -727,7 +948,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "f1b1e7b12a06246c9af25bf539c9a137c4073dfa273ee8e3f7ea7735405d66ee",
+      "hash": "134256ebf502ad5d8fbae4fcc57a17e07b23158c15a57039c7e788c235e7fe23",
       "isSetup": false,
       "isEvent": false,
       "isSystem": false,

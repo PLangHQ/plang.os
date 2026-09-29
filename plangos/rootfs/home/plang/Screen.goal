@@ -25,5 +25,11 @@ Command
 - send %asked% to %browser%
 
 Window
-/ The screen says what happened to a window: the desktop's taskbar shows it.
-- post %!data% to the page of %browser%
+/ The screen says what happened to a window: the desktop's taskbar shows it. Enter in a
+/ window's address field ({"navigate": what was typed, "id"}) sends that window there.
+- set %event% to %!data%
+- post %event% to the page of %browser%
+- if %event.navigate%, call Navigate
+
+Navigate
+- navigate window %event.id% to %event.navigate% in %browser%

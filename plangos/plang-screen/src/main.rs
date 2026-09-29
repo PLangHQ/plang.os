@@ -5,30 +5,34 @@
 //! only what changed to stdout, as binary messages [u32 length][u8 kind][payload], little-endian:
 //!
 //!   kind 1  one frame: [u16 count] then per rectangle [i32 x][i32 y][u32 w][u32 h][u32 n][n bytes QOI of BGRA]
-//!   kind 2  the pointer the client wants: its name, UTF-8 ("pointer", "text", …)
+//!   kind 2  the pointer to show: its CSS name, UTF-8 ("pointer", "text", "ew-resize", …)
 //!   kind 3  [u64 t]: the "t" of the last input, sent right after the first frame that follows it
 //!           within 300 ms (the host times input → picture with it)
 //!   kind 4  [u64 t]: the same "t", sent the moment the input arrives (the pipe's round trip)
-//!   kind 5  the clipboard's new text, UTF-8, when a client copies something
+//!   kind 5  the clipboard's new text, UTF-8, when a client (or the address field) copies something
 //!
 //! The screen, bottom to top: the desktop (the first window: full screen), the windows, the
-//! desktop's taskbar (its bottom BAR pixels, always on top), then menus (popups).
-//! Windows draw their own title bars (Chromium does); plang-screen moves, resizes, maximizes and
-//! minimizes them when they ask.
+//! desktop's taskbar (its bottom BAR pixels, always on top), menus (popups), the address field.
+//! plang-screen draws every window's title bar itself (server-side decorations): back, forward,
+//! address; the title; minimize, maximize, close. It moves and resizes windows from their title
+//! bar and edges.
 //!
-//! stderr, one JSON line each: {"ready":"wayland-plang"} when clients can connect, then what
-//! happens to windows (the desktop is id 0):
+//! stderr, one JSON line each: {"ready":"wayland-plang"} when clients can connect, then:
 //!   {"window":"opened","id","title","app"}  {"window":"titled","id","title"}
 //!   {"window":"focused|minimized|maximized|restored|closed","id"}
+//!   {"navigate":"what was typed","id"}      the address field's Enter
 //!
 //! stdin takes one JSON line each (input events are the same lines screen.open gives):
-//!   {"mouse":"move|down|up|wheel","x","y","button","dx","dy"}
-//!   {"key":"down|up","sc":<scancode>,"ext":<extended>}
+//!   {"mouse":"move|down|up|wheel","x","y","button","clicks","dx","dy"}
+//!   {"key":"down|up","sc":<scancode>,"ext":<extended>,"mods":<alt 1, ctrl 2, shift 8>}
+//!   {"text":"a"}           a typed character (the address field uses it)
 //!   {"clipboard":"text"}   the host's clipboard; a client pastes it
 //!   {"window":"focus|minimize|maximize|restore|close","id"}
+//!   {"window":"url","id","url"}   the page a window shows (for its address field)
 //!
 //! usage: plang-screen <width> <height> [xkb-layout]      (socket in $XDG_RUNTIME_DIR)
 
+mod frame;
 mod window;
 
 use std::io::{BufRead, Write};
@@ -42,6 +46,7 @@ use smithay::delegate_data_device;
 use smithay::delegate_output;
 use smithay::delegate_seat;
 use smithay::delegate_shm;
+use smithay::delegate_xdg_decoration;
 use smithay::delegate_xdg_shell;
 use smithay::input::keyboard::{FilterResult, Keycode, XkbConfig};
 use smithay::input::pointer::{AxisFrame, ButtonEvent, CursorImageStatus, MotionEvent};
@@ -51,6 +56,7 @@ use smithay::reexports::calloop::channel::{channel, Event as ChannelEvent};
 use smithay::reexports::calloop::generic::Generic;
 use smithay::reexports::calloop::timer::{TimeoutAction, Timer};
 use smithay::reexports::calloop::{EventLoop, Interest, Mode as CMode, PostAction};
+use smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode as Decoration;
 use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel;
 use smithay::reexports::wayland_server::backend::{ClientData, ClientId, DisconnectReason};
 use smithay::reexports::wayland_server::protocol::{wl_buffer, wl_output, wl_seat, wl_shm, wl_surface::WlSurface};
@@ -68,12 +74,14 @@ use smithay::wayland::selection::data_device::{
     DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
 };
 use smithay::wayland::selection::{SelectionHandler, SelectionSource, SelectionTarget};
+use smithay::wayland::shell::xdg::decoration::{XdgDecorationHandler, XdgDecorationState};
 use smithay::wayland::shell::xdg::{PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler, XdgShellState};
 use smithay::wayland::shm::{with_buffer_contents, ShmHandler, ShmState};
 use smithay::wayland::socket::ListeningSocketSource;
 use smithay::wayland::tablet_manager::TabletSeatHandler;
 
-use window::{geometry, Picture, Popup, Rect, Shown, Windows};
+use frame::{Address, Button, TITLE};
+use window::{geometry, Part, Picture, Popup, Rect, Shown, Windows};
 
 const SOCKET: &str = "wayland-plang";
 /// The text types the clipboard offers and asks for, best first.
@@ -83,8 +91,10 @@ const TEXT: [&str; 4] = ["text/plain;charset=utf-8", "UTF8_STRING", "text/plain"
 const BAR: i32 = 56;
 /// The smallest a window can be resized to.
 const MIN: (i32, i32) = (240, 160);
+/// The title bar's text.
+const FONT: &str = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
 
-/// The pointer is moving or resizing a window (the window asked, from its title bar or edge).
+/// The pointer is moving or resizing a window (its title bar or edge was pressed).
 enum Grab {
     Move { id: u32, from: Point<f64, Logical>, at: Point<i32, Logical> },
     Resize { id: u32, edges: u32, from: Point<f64, Logical>, frame: Rect },
@@ -95,6 +105,7 @@ struct State {
     compositor: CompositorState,
     shm: ShmState,
     xdg: XdgShellState,
+    _decorations: XdgDecorationState,
     seat_state: SeatState<State>,
     seat: Seat<State>,
     _outputs: OutputManagerState,
@@ -102,13 +113,20 @@ struct State {
     data_device: DataDeviceState,
     copied: smithay::reexports::calloop::channel::Sender<String>, // text read from a client's clipboard, to stdout as kind 5
     copy: Option<&'static str>, // a client copied: the type to read, once smithay has stored the selection
+    clip: String,               // the host's clipboard, for pasting into the address field
     width: i32,
     height: i32,
+    font: Option<fontdue::Font>,
     windows: Windows,
     popups: Vec<Popup>,
     focused: Option<u32>, // the window with the keyboard
     grab: Option<Grab>,
-    pressed: Point<f64, Logical>, // where the last button went down
+    pressed: Point<f64, Logical>,    // where the last button went down
+    press: Option<(u32, Button)>,    // a title bar button went down; it acts when the button comes up on it
+    hover: Option<(u32, Button)>,    // the title bar button under the pointer
+    cursor: Option<&'static str>,    // the pointer plang-screen shows over its own parts (None: the client's)
+    address: Option<Address>,        // the address field, when open
+    address_picture: Picture,
     screen: Vec<u8>, // what the host shows
     pending: Vec<(i32, i32, u32, u32, Vec<u8>)>, // rectangles of the frame being built (x, y, w, h, QOI), sent by flush()
     stamp: Option<(u64, Instant)>, // the host's stamp of the last input and when it came, echoed after the next frame
@@ -126,7 +144,7 @@ impl ClientData for ClientState {
     fn disconnected(&self, _: ClientId, _: DisconnectReason) {}
 }
 
-/// What happened to a window, one JSON line on stderr (PlangOS's plang reads it).
+/// What happened, one JSON line on stderr (PlangOS's plang reads it).
 fn event(what: serde_json::Value) {
     eprintln!("{}", what);
 }
@@ -136,7 +154,7 @@ impl State {
         self.start.elapsed().as_millis() as u32
     }
 
-    /// The screen minus the taskbar: where windows go.
+    /// The screen minus the taskbar: where windows go (their title bars included).
     fn work(&self) -> Rect {
         Rect::new((0, 0).into(), (self.width, self.height - BAR).into())
     }
@@ -149,8 +167,8 @@ impl State {
         let _ = self.out.flush();
     }
 
-    /// Recompose the screen inside `r` — desktop, windows, taskbar, menus — then send `r` if
-    /// anything in it changed.
+    /// Recompose the screen inside `r` — desktop, windows with their title bars, taskbar, menus,
+    /// the address field — then send `r` if anything in it changed.
     fn present(&mut self, r: Rect) {
         let (w, h) = (self.width, self.height);
         let x0 = r.loc.x.clamp(0, w);
@@ -173,11 +191,17 @@ impl State {
                 }
             } else {
                 for win in self.windows.iter().filter(|win| win.visible()) {
+                    if !win.desktop {
+                        win.bar.draw(y, x0, &mut line);
+                    }
                     win.picture.draw(y, x0, &mut line);
                 }
             }
             for p in &self.popups {
                 p.picture.draw(y, x0, &mut line);
+            }
+            if self.address.is_some() {
+                self.address_picture.draw(y, x0, &mut line);
             }
             let at = ((y * w + x0) * 4) as usize;
             if self.screen[at..at + row] != line[..] {
@@ -242,7 +266,7 @@ impl State {
         }
     }
 
-    /// Redraws where a window's picture was and is.
+    /// Redraws where something was and is.
     fn redraw(&mut self, old: Rect, new: Rect) {
         if old.size.w > 0 && old.overlaps(new) {
             self.present(old.merge(new));
@@ -251,6 +275,148 @@ impl State {
             self.present(new);
         }
         self.flush();
+    }
+
+    // ---- title bars and the address field -----------------------------------------------------
+
+    /// Draws window `i`'s title bar again (its title, width, whether it is active, the hover).
+    fn dress(&mut self, i: usize) {
+        let win = self.windows.get(i);
+        if win.desktop {
+            return;
+        }
+        let active = self.focused == Some(win.id);
+        let hover = self.hover.filter(|(id, _)| *id == win.id).map(|(_, b)| b);
+        let canvas = frame::title_bar(self.font.as_ref(), win.size.w, &win.title(), active, win.shown == Shown::Maximized, hover);
+        let at = (win.at.x, win.at.y - TITLE);
+        let visible = win.visible();
+        let bar = canvas.picture(at);
+        let r = bar.rect;
+        self.windows.get_mut(i).bar = bar;
+        if visible {
+            self.present(r);
+            self.flush();
+        }
+    }
+
+    fn dress_id(&mut self, id: Option<u32>) {
+        if let Some(i) = id.and_then(|id| self.windows.by_id(id)) {
+            self.dress(i);
+        }
+    }
+
+    /// Opens the address field under window `id`'s title bar, its page's address selected.
+    fn open_address(&mut self, id: u32) {
+        let Some(i) = self.windows.by_id(id) else { return };
+        self.address = Some(Address::new(id, &self.windows.get(i).url));
+        self.draw_address();
+    }
+
+    fn close_address(&mut self) {
+        if self.address.take().is_some() {
+            let r = self.address_picture.rect;
+            self.present(r);
+            self.flush();
+        }
+    }
+
+    fn draw_address(&mut self) {
+        let Some(address) = &self.address else { return };
+        let Some(i) = self.windows.by_id(address.id) else { return };
+        let win = self.windows.get(i);
+        let width = (win.size.w - 40).clamp(200, 760);
+        let canvas = address.draw(self.font.as_ref(), width);
+        let old = self.address_picture.rect;
+        self.address_picture = canvas.picture((win.at.x + 76, win.at.y - 2));
+        let new = self.address_picture.rect;
+        self.redraw(old, new);
+    }
+
+    /// A key while the address field is open: it edits the text; Enter navigates, Esc closes.
+    fn address_key(&mut self, sc: u32, ext: bool, mods: u32) {
+        let Some(address) = self.address.as_mut() else { return };
+        let ctrl = mods & 2 != 0;
+        match (sc, ext) {
+            (0x1C, _) => {
+                let (id, text) = (address.id, address.text.trim().to_string());
+                self.close_address();
+                if !text.is_empty() {
+                    event(json!({"navigate": text, "id": id}));
+                }
+                return;
+            }
+            (0x01, false) => return self.close_address(),
+            (0x0E, false) => address.backspace(),
+            (0x53, true) => address.delete(),
+            (0x4B, true) => address.step(-1),
+            (0x4D, true) => address.step(1),
+            (0x47, true) => address.home(false),
+            (0x4F, true) => address.home(true),
+            (0x1E, false) if ctrl => address.selected = true,
+            (0x2F, false) if ctrl => {
+                let clip = self.clip.replace(['\r', '\n'], " ");
+                address.typed(&clip);
+            }
+            (0x2E, false) if ctrl => {
+                let text = address.text.clone();
+                self.message(5, text.as_bytes());
+                return;
+            }
+            _ => return,
+        }
+        self.draw_address();
+    }
+
+    /// Back and forward: the keys Chromium knows for them, to that window.
+    fn history(&mut self, i: usize, forward: bool) {
+        self.focus(i);
+        let Some(keyboard) = self.seat.get_keyboard() else { return };
+        use smithay::backend::input::KeyState::{Pressed, Released};
+        let arrow = if forward { 106 } else { 105 };
+        for (key, state) in [(56, Pressed), (arrow, Pressed), (arrow, Released), (56, Released)] {
+            let time = self.now();
+            keyboard.input::<(), _>(self, Keycode::new(key + 8), state, SERIAL_COUNTER.next_serial(), time, |_, _, _| FilterResult::Forward);
+        }
+    }
+
+    /// A title bar button was clicked.
+    fn act(&mut self, i: usize, button: Button) {
+        match button {
+            Button::Back => self.history(i, false),
+            Button::Forward => self.history(i, true),
+            Button::Address => {
+                let id = self.windows.get(i).id;
+                self.open_address(id)
+            }
+            Button::Minimize => self.minimize(i),
+            Button::Maximize => self.toggle(i),
+            Button::Close => self.windows.get(i).surface.send_close(),
+            Button::Title => {}
+        }
+    }
+
+    /// The pointer is over `part` of window `i` (or nothing of ours): hover and pointer shape.
+    fn over(&mut self, hit: Option<(usize, Part)>) {
+        let hover = match hit {
+            Some((i, Part::Bar(b))) if b != Button::Title => Some((self.windows.get(i).id, b)),
+            _ => None,
+        };
+        if hover != self.hover {
+            let before = self.hover.map(|(id, _)| id);
+            self.hover = hover;
+            self.dress_id(before);
+            self.dress_id(hover.map(|(id, _)| id));
+        }
+        let cursor = match hit {
+            Some((_, part @ (Part::Bar(_) | Part::Edge(_)))) => Some(part.cursor()),
+            _ => None,
+        };
+        if cursor != self.cursor {
+            self.cursor = cursor;
+            if let Some(name) = cursor {
+                self.message(2, name.as_bytes());
+            }
+        }
     }
 
     // ---- windows ------------------------------------------------------------------------------
@@ -265,7 +431,8 @@ impl State {
         }
         let id = self.windows.get(i).id;
         if self.focused != Some(id) {
-            if let Some(old) = self.focused.and_then(|f| self.windows.by_id(f)) {
+            let before = self.focused;
+            if let Some(old) = before.and_then(|f| self.windows.by_id(f)) {
                 self.windows.get(old).configure(None, &[(xdg_toplevel::State::Activated, false)]);
             }
             self.windows.get(i).configure(None, &[(xdg_toplevel::State::Activated, true)]);
@@ -274,6 +441,7 @@ impl State {
             if let Some(keyboard) = self.seat.get_keyboard() {
                 keyboard.set_focus(self, Some(surface), SERIAL_COUNTER.next_serial());
             }
+            self.dress_id(before);
             if !self.windows.get(i).desktop {
                 event(json!({"window": if was_minimized { "restored" } else { "focused" }, "id": id}));
                 if was_minimized {
@@ -281,7 +449,8 @@ impl State {
                 }
             }
         }
-        let r = self.windows.get(i).picture.rect;
+        self.dress(i);
+        let r = self.windows.get(i).outer();
         self.present(r);
         self.flush();
     }
@@ -301,12 +470,23 @@ impl State {
         }
         win.was = win.shown;
         win.shown = Shown::Minimized;
-        let (id, r) = (win.id, win.picture.rect);
+        let (id, r) = (win.id, win.outer());
         event(json!({"window": "minimized", "id": id}));
+        if self.address.as_ref().map(|a| a.id) == Some(id) {
+            self.close_address();
+        }
         self.present(r);
         self.flush();
         if self.focused == Some(id) {
             self.focus_top();
+        }
+    }
+
+    fn toggle(&mut self, i: usize) {
+        if self.windows.get(i).shown == Shown::Maximized {
+            self.restore(i)
+        } else {
+            self.maximize(i)
         }
     }
 
@@ -318,8 +498,8 @@ impl State {
         }
         win.restore = win.frame();
         win.shown = Shown::Maximized;
-        win.at = work.loc;
-        win.configure(Some(work.size), &[(xdg_toplevel::State::Maximized, true)]);
+        win.at = (work.loc.x, work.loc.y + TITLE).into();
+        win.configure(Some((work.size.w, work.size.h - TITLE).into()), &[(xdg_toplevel::State::Maximized, true)]);
         event(json!({"window": "maximized", "id": win.id}));
     }
 
@@ -343,15 +523,20 @@ impl State {
         if !gone.desktop {
             event(json!({"window": "closed", "id": gone.id}));
         }
-        self.present(gone.picture.rect);
+        if self.address.as_ref().map(|a| a.id) == Some(gone.id) {
+            self.close_address();
+        }
+        self.present(gone.outer());
         self.flush();
         if self.focused == Some(gone.id) {
             self.focus_top();
         }
     }
 
-    /// The host (via PlangOS's plang — the taskbar) tells a window what to do.
-    fn command(&mut self, what: &str, id: u32) {
+    /// PlangOS's plang tells a window what to do (the taskbar), or what page it shows.
+    fn command(&mut self, e: &serde_json::Value) {
+        let what = e.get("window").and_then(|v| v.as_str()).unwrap_or("");
+        let id = e.get("id").and_then(|v| v.as_f64()).unwrap_or(-1.0) as u32;
         let Some(i) = self.windows.by_id(id) else { return };
         match what {
             "focus" => self.focus(i),
@@ -359,6 +544,7 @@ impl State {
             "maximize" => self.maximize(i),
             "restore" => self.restore(i),
             "close" => self.windows.get(i).surface.send_close(),
+            "url" => self.windows.get_mut(i).url = e.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
             _ => {}
         }
     }
@@ -370,10 +556,10 @@ impl State {
             Some(Grab::Move { id, from, at }) => {
                 let Some(i) = self.windows.by_id(id) else { return };
                 let win = self.windows.get_mut(i);
-                let old = win.picture.rect;
-                win.at = (at.x + (x - from.x) as i32, (at.y + (y - from.y) as i32).clamp(0, bottom - 24)).into();
+                let old = win.outer();
+                win.at = (at.x + (x - from.x) as i32, (at.y + (y - from.y) as i32).clamp(TITLE, bottom - 8)).into();
                 win.place();
-                let new = win.picture.rect;
+                let new = win.outer();
                 self.redraw(old, new);
             }
             Some(Grab::Resize { id, edges, from, frame }) => {
@@ -408,6 +594,7 @@ impl State {
             }
         }
         self.grab = None;
+        self.press = None;
     }
 
     /// The pointer leaves every surface while it holds a window.
@@ -420,7 +607,15 @@ impl State {
         }
     }
 
-    /// The surface under (x, y) and where it starts: a menu, the taskbar, a window, the desktop.
+    /// What is at (x, y): a menu, the taskbar, a window (its page, title bar or edge), the desktop.
+    fn hit(&self, x: i32, y: i32) -> Option<(usize, Part)> {
+        if y >= self.height - BAR {
+            return self.windows.iter().position(|w| w.desktop).map(|i| (i, Part::Content));
+        }
+        self.windows.hit(x, y)
+    }
+
+    /// The client surface under (x, y) and where it starts; None over plang-screen's own parts.
     fn under(&self, x: f64, y: f64) -> Option<(WlSurface, Point<f64, Logical>)> {
         let (px, py) = (x as i32, y as i32);
         for p in self.popups.iter().rev() {
@@ -429,13 +624,14 @@ impl State {
                 return Some((p.surface.wl_surface().clone(), (at.x as f64, at.y as f64).into()));
             }
         }
-        let win = if py >= self.height - BAR {
-            self.windows.desktop()
-        } else {
-            self.windows.under(px, py).map(|i| self.windows.get(i)).or(self.windows.desktop())
-        }?;
-        let at = win.picture.rect.loc;
-        Some((win.wl().clone(), (at.x as f64, at.y as f64).into()))
+        match self.hit(px, py) {
+            Some((i, Part::Content)) => {
+                let win = self.windows.get(i);
+                let at = win.picture.rect.loc;
+                Some((win.wl().clone(), (at.x as f64, at.y as f64).into()))
+            }
+            _ => None,
+        }
     }
 
     /// Reads what a client copied through a pipe, on a thread (the client writes it while the
@@ -484,26 +680,66 @@ impl State {
                 }
                 return;
             }
-            let focus = self.under(x, y);
+            let hit = self.hit(x as i32, y as i32);
+            let on_menu = self.popups.iter().any(|p| p.picture.rect.contains((x as i32, y as i32)));
+            let on_address = self.address.is_some() && self.address_picture.rect.contains((x as i32, y as i32));
+            let ours = if on_menu || on_address { None } else { hit.filter(|(_, p)| *p != Part::Content) };
+            let focus = if on_address { None } else { self.under(x, y) };
+            pointer.motion(self, focus, &MotionEvent { location: (x, y).into(), serial, time });
+            self.over(ours);
             if kind == "down" {
                 self.pressed = (x, y).into();
+                if !on_address {
+                    self.close_address();
+                }
             }
-            pointer.motion(self, focus, &MotionEvent { location: (x, y).into(), serial, time });
+            // plang-screen's own parts: the title bar and the edges
+            if let Some((i, part)) = ours {
+                let id = self.windows.get(i).id;
+                match (kind, part) {
+                    ("down", Part::Bar(Button::Title)) => {
+                        self.focus(i);
+                        if num("clicks") >= 2.0 {
+                            self.toggle(i);
+                        } else if self.windows.get(i).shown == Shown::Normal {
+                            let at = self.windows.get(i).at;
+                            self.hold(Grab::Move { id, from: self.pressed, at });
+                        }
+                    }
+                    ("down", Part::Bar(b)) => {
+                        self.focus(i);
+                        self.press = Some((id, b));
+                    }
+                    ("up", Part::Bar(b)) => {
+                        if self.press.take() == Some((id, b)) {
+                            if let Some(i) = self.windows.by_id(id) {
+                                self.act(i, b);
+                            }
+                        }
+                    }
+                    ("down", Part::Edge(edges)) => {
+                        self.focus(i);
+                        let frame = self.windows.get(i).frame();
+                        self.hold(Grab::Resize { id, edges, from: self.pressed, frame });
+                    }
+                    _ => {}
+                }
+                pointer.frame(self);
+                return;
+            }
+            if on_address {
+                pointer.frame(self);
+                return;
+            }
             match kind {
                 "down" | "up" => {
                     if kind == "down" {
                         // a click on a window brings it forward and gives it the keyboard
-                        let on_menu = self.popups.iter().any(|p| p.picture.rect.contains((x as i32, y as i32)));
-                        let target = if (y as i32) >= self.height - BAR {
-                            self.windows.desktop().map(|d| d.id)
-                        } else {
-                            self.windows.under(x as i32, y as i32).map(|i| self.windows.get(i).id)
-                        };
-                        if let (false, Some(id)) = (on_menu, target) {
-                            if let Some(i) = self.windows.by_id(id) {
-                                self.focus(i);
-                            }
+                        if let (false, Some((i, _))) = (on_menu, hit) {
+                            self.focus(i);
                         }
+                    } else {
+                        self.press = None;
                     }
                     let button = match e.get("button").and_then(|v| v.as_str()) {
                         Some("right") => 0x111,
@@ -535,9 +771,16 @@ impl State {
             }
             pointer.frame(self);
         } else if let Some(kind) = e.get("key").and_then(|v| v.as_str()) {
-            let Some(keyboard) = self.seat.get_keyboard() else { return };
             let sc = num("sc") as u32;
             let ext = e.get("ext").and_then(|v| v.as_bool()).unwrap_or(false);
+            if self.address.is_some() {
+                // the address field has the keyboard
+                if kind == "down" {
+                    self.address_key(sc, ext, num("mods") as u32);
+                }
+                return;
+            }
+            let Some(keyboard) = self.seat.get_keyboard() else { return };
             let Some(evdev) = evdev(sc, ext) else { return };
             let state = if kind == "down" {
                 smithay::backend::input::KeyState::Pressed
@@ -545,12 +788,19 @@ impl State {
                 smithay::backend::input::KeyState::Released
             };
             keyboard.input::<(), _>(self, Keycode::new(evdev + 8), state, serial, time, |_, _, _| FilterResult::Forward);
+        } else if let Some(text) = e.get("text").and_then(|v| v.as_str()) {
+            // typed characters: only the address field uses them (clients take keys)
+            if let Some(address) = self.address.as_mut() {
+                address.typed(text);
+                self.draw_address();
+            }
         } else if let Some(text) = e.get("clipboard").and_then(|v| v.as_str()) {
             // the host copied: that text is now the clipboard here; a client reads it on paste
+            self.clip = text.to_string();
             let types = TEXT.iter().map(|t| t.to_string()).collect();
             set_data_device_selection(&self.dh, &self.seat, types, Arc::new(text.to_string()));
-        } else if let Some(what) = e.get("window").and_then(|v| v.as_str()) {
-            self.command(what, num("id") as u32);
+        } else if e.get("window").is_some() {
+            self.command(&e);
         }
     }
 }
@@ -641,8 +891,9 @@ impl CompositorHandler for State {
                 _ => None,
             };
             let win = self.windows.get_mut(i);
-            let old = if win.picture.is_empty() || win.shown == Shown::Minimized { Rect::default() } else { win.picture.rect };
+            let old = if win.picture.is_empty() || win.shown == Shown::Minimized { Rect::default() } else { win.outer() };
             let first = win.picture.is_empty();
+            let resized = win.size != geo.size;
             win.offset = geo.loc;
             win.size = geo.size;
             win.picture = picture;
@@ -656,12 +907,19 @@ impl CompositorHandler for State {
                 }
             }
             win.place();
-            let new = win.picture.rect;
+            let new = win.outer();
             let minimized = win.shown == Shown::Minimized;
+            if first || resized {
+                self.dress(i);
+            }
+            if self.address.as_ref().map(|a| a.id) == Some(self.windows.get(i).id) {
+                self.draw_address();
+            }
             if !minimized {
                 if first || old != new {
                     self.redraw(old, new);
                 } else {
+                    let content = self.windows.get(i).picture.rect;
                     let rects: Vec<Rect> = damage
                         .iter()
                         .map(|d| match d {
@@ -670,10 +928,10 @@ impl CompositorHandler for State {
                         })
                         .collect();
                     if rects.is_empty() || rects.len() > 16 {
-                        self.present(new);
+                        self.present(content);
                     } else {
                         for r in rects {
-                            self.present(Rect::new(r.loc + new.loc, r.size));
+                            self.present(Rect::new(r.loc + content.loc, r.size));
                         }
                     }
                     self.flush();
@@ -722,9 +980,9 @@ impl XdgShellHandler for State {
         let (at, size): (Point<i32, Logical>, Size<i32, Logical>) = if desktop {
             ((0, 0).into(), (self.width, self.height).into())
         } else {
-            // cascade new windows from the top left
+            // cascade new windows from the top left; `at` is the page, its title bar above it
             let n = (self.windows.count() % 8) as i32;
-            ((80 + 36 * n, 40 + 36 * n).into(), ((work.size.w - 240).min(1280), (work.size.h - 160).min(800)).into())
+            ((80 + 36 * n, 40 + TITLE + 36 * n).into(), ((work.size.w - 240).min(1280), (work.size.h - 160 - TITLE).min(800)).into())
         };
         let i = self.windows.add(surface, at, size);
         let win = self.windows.get(i);
@@ -768,27 +1026,22 @@ impl XdgShellHandler for State {
             let win = self.windows.get(i);
             if !win.desktop {
                 event(json!({"window": "titled", "id": win.id, "title": win.title()}));
+                if !win.picture.is_empty() {
+                    self.dress(i);
+                }
             }
         }
     }
 
-    // A window's title bar: drag it, its edges, its buttons.
+    // A client that draws its own frame may still ask to be moved or resized.
     fn move_request(&mut self, surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
         let Some(i) = self.windows.of(surface.wl_surface()) else { return };
-        let from = self.pressed; // the window follows from where the button went down
-        if self.windows.get(i).desktop {
+        let win = self.windows.get(i);
+        if win.desktop || win.shown != Shown::Normal {
             return;
         }
-        if self.windows.get(i).shown == Shown::Maximized {
-            // dragging a maximized window takes it back to its size, under the pointer
-            let win = self.windows.get_mut(i);
-            win.shown = Shown::Normal;
-            win.at = ((from.x as i32 - win.restore.size.w / 2).max(0), 0).into();
-            win.configure(Some(win.restore.size), &[(xdg_toplevel::State::Maximized, false)]);
-            event(json!({"window": "restored", "id": win.id}));
-        }
-        let win = self.windows.get(i);
-        self.hold(Grab::Move { id: win.id, from, at: win.at });
+        let grab = Grab::Move { id: win.id, from: self.pressed, at: win.at };
+        self.hold(grab);
     }
     fn resize_request(&mut self, surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial, edges: xdg_toplevel::ResizeEdge) {
         let Some(i) = self.windows.of(surface.wl_surface()) else { return };
@@ -816,7 +1069,7 @@ impl XdgShellHandler for State {
             self.minimize(i);
         }
     }
-    // Chromium in kiosk mode asks for fullscreen: the desktop is already; a window gets the work area.
+    // Fullscreen: the desktop is already; a window gets the work area.
     fn fullscreen_request(&mut self, surface: ToplevelSurface, _output: Option<wl_output::WlOutput>) {
         match self.windows.of(surface.wl_surface()) {
             Some(i) if !self.windows.get(i).desktop => self.maximize(i),
@@ -830,6 +1083,22 @@ impl XdgShellHandler for State {
     }
 }
 
+/// Every window's frame is plang-screen's: clients are told to draw none (server-side).
+impl XdgDecorationHandler for State {
+    fn new_decoration(&mut self, toplevel: ToplevelSurface) {
+        toplevel.with_pending_state(|s| s.decoration_mode = Some(Decoration::ServerSide));
+    }
+    fn request_mode(&mut self, toplevel: ToplevelSurface, _mode: Decoration) {
+        toplevel.with_pending_state(|s| s.decoration_mode = Some(Decoration::ServerSide));
+        if toplevel.is_initial_configure_sent() {
+            toplevel.send_pending_configure();
+        }
+    }
+    fn unset_mode(&mut self, toplevel: ToplevelSurface) {
+        self.request_mode(toplevel, Decoration::ServerSide);
+    }
+}
+
 impl SeatHandler for State {
     type KeyboardFocus = WlSurface;
     type PointerFocus = WlSurface;
@@ -838,6 +1107,9 @@ impl SeatHandler for State {
         &mut self.seat_state
     }
     fn cursor_image(&mut self, _seat: &Seat<Self>, image: CursorImageStatus) {
+        if self.cursor.is_some() {
+            return; // over plang-screen's own parts, its pointer shows
+        }
         let name = match image {
             CursorImageStatus::Named(icon) => icon.name().to_string(),
             CursorImageStatus::Hidden => "none".to_string(),
@@ -886,6 +1158,7 @@ impl OutputHandler for State {}
 delegate_compositor!(State);
 delegate_shm!(State);
 delegate_xdg_shell!(State);
+delegate_xdg_decoration!(State);
 delegate_seat!(State);
 delegate_output!(State);
 delegate_cursor_shape!(State);
@@ -913,6 +1186,7 @@ fn main() {
     let compositor = CompositorState::new::<State>(&dh);
     let shm = ShmState::new::<State>(&dh, vec![]);
     let xdg = XdgShellState::new::<State>(&dh);
+    let decorations = XdgDecorationState::new::<State>(&dh);
     let mut seat_state = SeatState::new();
     let mut seat = seat_state.new_wl_seat(&dh, "seat0");
     seat.add_keyboard(XkbConfig { layout: &layout, ..Default::default() }, 400, 30).expect("keyboard (xkb layout)");
@@ -920,6 +1194,8 @@ fn main() {
     let outputs = OutputManagerState::new_with_xdg_output::<State>(&dh);
     let cursor_shape = CursorShapeManagerState::new::<State>(&dh);
     let data_device = DataDeviceState::new::<State>(&dh);
+    // no font: title bars without text, still usable
+    let font = std::fs::read(FONT).ok().and_then(|bytes| fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).ok());
 
     let output = Output::new(
         "plang-screen".into(),
@@ -999,6 +1275,7 @@ fn main() {
         compositor,
         shm,
         xdg,
+        _decorations: decorations,
         seat_state,
         seat,
         _outputs: outputs,
@@ -1006,13 +1283,20 @@ fn main() {
         data_device,
         copied,
         copy: None,
+        clip: String::new(),
         width,
         height,
+        font,
         windows: Windows::default(),
         popups: Vec::new(),
         focused: None,
         grab: None,
         pressed: (0.0, 0.0).into(),
+        press: None,
+        hover: None,
+        cursor: None,
+        address: None,
+        address_picture: Picture::default(),
         screen: vec![0u8; (width * height * 4) as usize],
         pending: Vec::new(),
         stamp: None,

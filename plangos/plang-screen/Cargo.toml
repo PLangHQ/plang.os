@@ -8,6 +8,7 @@ description = "PlangOS's display: a minimal headless Wayland compositor that str
 smithay = { version = "0.7", default-features = false, features = ["wayland_frontend"] }
 serde_json = "1"
 qoi = "0.4.1"
+fontdue = "0.9"   # title bar text (DejaVu Sans from the image), pure Rust
 
 [profile.release]
 opt-level = 3

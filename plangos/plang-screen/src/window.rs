@@ -6,6 +6,8 @@ use smithay::utils::{Logical, Point, Rectangle, Size};
 use smithay::wayland::compositor::with_states;
 use smithay::wayland::shell::xdg::{PopupSurface, SurfaceCachedState, ToplevelSurface, XdgToplevelSurfaceData};
 
+use crate::frame::{Button, EDGE, TITLE};
+
 pub type Rect = Rectangle<i32, Logical>;
 
 /// A client's pixels (BGRA, premultiplied) and where they are on the screen.
@@ -66,6 +68,27 @@ pub fn geometry(surface: &WlSurface) -> Option<Rect> {
     with_states(surface, |states| states.cached_state.get::<SurfaceCachedState>().current().geometry)
 }
 
+/// What the pointer is on.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Part {
+    Content,
+    Bar(Button),
+    Edge(u32),
+}
+
+impl Part {
+    /// The pointer over this part, by its CSS name (the host shows it).
+    pub fn cursor(self) -> &'static str {
+        match self {
+            Part::Edge(1) | Part::Edge(2) => "ns-resize",
+            Part::Edge(4) | Part::Edge(8) => "ew-resize",
+            Part::Edge(5) | Part::Edge(10) => "nwse-resize",
+            Part::Edge(6) | Part::Edge(9) => "nesw-resize",
+            _ => "default",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Shown {
     Normal,
@@ -81,6 +104,8 @@ pub struct Window {
     pub offset: Point<i32, Logical>, // where the window starts inside its buffer
     pub size: Size<i32, Logical>,    // the window's size, without shadows
     pub picture: Picture,
+    pub bar: Picture,   // its title bar, drawn by plang-screen (not for the desktop)
+    pub url: String,    // the page it shows (from PLang), for the address field
     pub shown: Shown,
     pub restore: Rect, // where it was before it was maximized
     pub was: Shown,    // how it showed before it was minimized
@@ -88,7 +113,7 @@ pub struct Window {
 
 impl Window {
     pub fn new(id: u32, surface: ToplevelSurface, desktop: bool, at: Point<i32, Logical>, size: Size<i32, Logical>) -> Self {
-        Window { id, surface, desktop, at, offset: (0, 0).into(), size, picture: Picture::default(), shown: Shown::Normal, restore: Rect::new(at, size), was: Shown::Normal }
+        Window { id, surface, desktop, at, offset: (0, 0).into(), size, picture: Picture::default(), bar: Picture::default(), url: String::new(), shown: Shown::Normal, restore: Rect::new(at, size), was: Shown::Normal }
     }
 
     pub fn visible(&self) -> bool {
@@ -100,9 +125,54 @@ impl Window {
         Rect::new(self.at, self.size)
     }
 
-    /// Puts the picture where the window is.
+    /// The window with its title bar.
+    pub fn outer(&self) -> Rect {
+        if self.desktop {
+            return self.picture.rect;
+        }
+        Rect::new((self.at.x, self.at.y - TITLE).into(), (self.size.w, self.size.h + TITLE).into())
+    }
+
+    /// Puts the picture and the title bar where the window is.
     pub fn place(&mut self) {
         self.picture.rect.loc = self.at - self.offset;
+        self.bar.rect.loc = (self.at.x, self.at.y - TITLE).into();
+    }
+
+    /// What of this window is at (x, y): its page, a part of its title bar, or an edge
+    /// (top 1, bottom 2, left 4, right 8, as xdg_toplevel's resize edges).
+    pub fn part(&self, x: i32, y: i32) -> Option<Part> {
+        if !self.visible() {
+            return None;
+        }
+        if self.desktop || self.picture.rect.contains((x, y)) {
+            return self.picture.rect.contains((x, y)).then_some(Part::Content);
+        }
+        let outer = self.outer();
+        if outer.contains((x, y)) {
+            return (y < self.at.y).then(|| Part::Bar(Button::at(x - outer.loc.x, outer.size.w))).or(Some(Part::Content));
+        }
+        if self.shown == Shown::Maximized {
+            return None;
+        }
+        let grow = Rect::new((outer.loc.x - EDGE, outer.loc.y - EDGE).into(), (outer.size.w + 2 * EDGE, outer.size.h + 2 * EDGE).into());
+        if !grow.contains((x, y)) {
+            return None;
+        }
+        let mut edges = 0;
+        if y < outer.loc.y {
+            edges |= 1;
+        }
+        if y >= outer.loc.y + outer.size.h {
+            edges |= 2;
+        }
+        if x < outer.loc.x {
+            edges |= 4;
+        }
+        if x >= outer.loc.x + outer.size.w {
+            edges |= 8;
+        }
+        Some(Part::Edge(edges))
     }
 
     pub fn wl(&self) -> &WlSurface {
@@ -208,9 +278,9 @@ impl Windows {
         self.list.iter().rposition(|w| !w.desktop && w.shown != Shown::Minimized).or_else(|| self.list.iter().position(|w| w.desktop))
     }
 
-    /// The topmost window whose picture is at (x, y).
-    pub fn under(&self, x: i32, y: i32) -> Option<usize> {
-        self.list.iter().rposition(|w| w.visible() && w.picture.rect.contains((x, y)))
+    /// The topmost window at (x, y), and what of it is there.
+    pub fn hit(&self, x: i32, y: i32) -> Option<(usize, Part)> {
+        self.list.iter().enumerate().rev().find_map(|(i, w)| w.part(x, y).map(|p| (i, p)))
     }
 }
 
