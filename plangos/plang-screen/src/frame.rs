@@ -1,4 +1,4 @@
-//! What plang-screen draws itself: each window's title bar and the address field.
+//! What plang-screen draws itself: each window's title bar, its address field and its menu.
 //! Pixels are BGRA, premultiplied, like the clients'.
 
 use crate::window::{Picture, Rect};
@@ -19,6 +19,7 @@ pub enum Button {
     Forward,
     Address,
     Title,
+    Menu,
     Minimize,
     Maximize,
     Close,
@@ -35,16 +36,18 @@ impl Button {
             x if x >= width - CAPTION => Button::Close,
             x if x >= width - 2 * CAPTION => Button::Maximize,
             x if x >= width - 3 * CAPTION => Button::Minimize,
+            x if x >= width - 3 * CAPTION - SIDE - 6 && x < width - 3 * CAPTION - 6 => Button::Menu,
             _ => Button::Title,
         }
     }
 
-    fn span(self, width: i32) -> (i32, i32) {
+    pub fn span(self, width: i32) -> (i32, i32) {
         let left = 6;
         match self {
             Button::Back => (left, SIDE),
             Button::Forward => (left + SIDE, SIDE),
             Button::Address => (left + 2 * SIDE, SIDE),
+            Button::Menu => (width - 3 * CAPTION - SIDE - 6, SIDE),
             Button::Minimize => (width - 3 * CAPTION, CAPTION),
             Button::Maximize => (width - 2 * CAPTION, CAPTION),
             Button::Close => (width - CAPTION, CAPTION),
@@ -219,7 +222,7 @@ pub fn title_bar(font: Option<&fontdue::Font>, width: i32, title: &str, active: 
         } else if matches!(b, Button::Minimize | Button::Maximize) {
             c.fill(x, 0, w, TITLE, HOVER);
         } else {
-            c.round(x + 2, 5, w - 4, TITLE - 10, 6.0, HOVER, false);
+            c.round(x + 2, 5, w - 4, TITLE - 10, 6.0, HOVER, false); // back, forward, address, menu
         }
     }
     let mid = TITLE as f32 / 2.0;
@@ -241,7 +244,13 @@ pub fn title_bar(font: Option<&fontdue::Font>, width: i32, title: &str, active: 
     c.ellipse(cx, mid, 3.2, 7.0, 1.0, ink);
     // the title, between the left buttons and the caption buttons
     let text_x = (6 + 3 * SIDE + 10) as f32;
-    c.text(font, title, text_x, mid, (width - 3 * CAPTION - 12) as f32, ink);
+    c.text(font, title, text_x, mid, (width - 3 * CAPTION - SIDE - 16) as f32, ink);
+    // the menu ☰
+    let (hx, _) = Button::Menu.span(width);
+    let cx = (hx + SIDE / 2) as f32;
+    for dy in [-4.5f32, 0.5, 5.5] {
+        c.line(cx - 6.0, mid + dy - 0.5 + 0.5, cx + 6.0, mid + dy - 0.5 + 0.5, 1.2, ink);
+    }
     // minimize —, maximize □ (restore ⧉), close ×
     let (mx, _) = Button::Minimize.span(width);
     let cx = (mx + CAPTION / 2) as f32;
@@ -264,6 +273,14 @@ pub fn title_bar(font: Option<&fontdue::Font>, width: i32, title: &str, active: 
     c
 }
 
+/// A rectangle outline from (l, t), w × h, 1 px.
+fn outline(c: &mut Canvas, l: f32, t: f32, w: f32, h: f32, ink: Color) {
+    c.line(l, t, l + w, t, 1.0, ink);
+    c.line(l + w, t, l + w, t + h, 1.0, ink);
+    c.line(l + w, t + h, l, t + h, 1.0, ink);
+    c.line(l, t + h, l, t, 1.0, ink);
+}
+
 fn square(c: &mut Canvas, cx: f32, cy: f32, size: f32, ink: Color) {
     let (l, t, r, b) = (cx - size / 2.0, cy - size / 2.0, cx + size / 2.0, cy + size / 2.0);
     c.line(l, t, r, t, 1.0, ink);
@@ -278,13 +295,22 @@ pub struct Address {
     pub text: String,
     pub caret: usize,     // in characters
     pub selected: bool,   // everything selected (as it opens: typing replaces it)
+    pub copied: bool,     // the copy button was clicked: it shows a check mark
+    pub copy_hover: bool,
 }
 
 impl Address {
     pub const HEIGHT: i32 = 40;
+    /// The copy button, at the field's right end.
+    pub const COPY: i32 = 40;
+
+    /// Whether `x` (from the picture's left) is on the copy button of a field `width` wide.
+    pub fn on_copy(x: i32, width: i32) -> bool {
+        x >= width + 4 - Self::COPY && x < width + 4
+    }
 
     pub fn new(id: u32, url: &str) -> Address {
-        Address { id, text: url.to_string(), caret: url.chars().count(), selected: true }
+        Address { id, text: url.to_string(), caret: url.chars().count(), selected: true, copied: false, copy_hover: false }
     }
 
     fn cut(&mut self) {
@@ -346,16 +372,126 @@ impl Address {
         c.round(5, 5, w - 2, h - 2, 9.0, FIELD, false);
         let mid = 4.0 + h as f32 / 2.0;
         let x = 18.0;
+        let max_x = (w + 4 - Self::COPY - 6) as f32;
         if self.selected && !self.text.is_empty() {
             let mut probe = Canvas::new(1, 1);
-            let ends = probe.text(font, &self.text, x, mid, (w - 16) as f32, TEXT_ACTIVE);
+            let ends = probe.text(font, &self.text, x, mid, max_x, TEXT_ACTIVE);
             let end = ends.last().copied().unwrap_or(x);
             c.round(x as i32 - 2, 13, (end - x) as i32 + 4, h - 18, 3.0, SELECTION, false);
         }
-        let starts = c.text(font, &self.text, x, mid, (w - 16) as f32, TEXT_ACTIVE);
+        let starts = c.text(font, &self.text, x, mid, max_x, TEXT_ACTIVE);
+        // the copy button: two sheets; a check mark once copied
+        let bx = w + 4 - Self::COPY;
+        if self.copy_hover {
+            c.round(bx + 4, 9, Self::COPY - 8, h - 10, 6.0, HOVER, false);
+        }
+        let (cx, cy) = ((bx + Self::COPY / 2) as f32, mid);
+        if self.copied {
+            c.line(cx - 5.0, cy, cx - 1.5, cy + 4.0, 1.6, ACCENT);
+            c.line(cx - 1.5, cy + 4.0, cx + 5.5, cy - 4.5, 1.6, ACCENT);
+        } else {
+            outline(&mut c, cx - 5.5, cy - 3.5, 8.0, 10.0, TEXT_INACTIVE);
+            c.fill(cx as i32 - 3, cy as i32 - 6, 9, 11, FIELD);
+            outline(&mut c, cx - 2.5, cy - 6.5, 8.0, 10.0, TEXT_ACTIVE);
+        }
         if !self.selected {
             let cx = starts.get(self.caret).copied().unwrap_or(x);
             c.line(cx, mid - 8.0, cx, mid + 8.0, 1.2, ACCENT);
+        }
+        c
+    }
+}
+
+/// What a window's menu can do: Chromium's own tools, reached by their keys or pages.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Tool {
+    NewWindow,
+    Reload,
+    Find,
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
+    Print,
+    History,
+    Downloads,
+    Settings,
+    DevTools,
+}
+
+/// A window's menu (☰), dropped down under its menu button.
+pub struct Menu {
+    pub id: u32,
+    pub hover: Option<usize>,
+}
+
+impl Menu {
+    /// The items; None is a separator.
+    pub const ITEMS: [Option<(&'static str, &'static str, Tool)>; 14] = [
+        Some(("New window", "", Tool::NewWindow)),
+        Some(("Reload", "F5", Tool::Reload)),
+        None,
+        Some(("Find…", "Ctrl+F", Tool::Find)),
+        Some(("Zoom in", "Ctrl +", Tool::ZoomIn)),
+        Some(("Zoom out", "Ctrl −", Tool::ZoomOut)),
+        Some(("Actual size", "Ctrl+0", Tool::ZoomReset)),
+        Some(("Print…", "Ctrl+P", Tool::Print)),
+        None,
+        Some(("History", "", Tool::History)),
+        Some(("Downloads", "", Tool::Downloads)),
+        Some(("Settings", "", Tool::Settings)),
+        None,
+        Some(("Developer tools", "F12", Tool::DevTools)),
+    ];
+    pub const WIDTH: i32 = 250;
+    const ROW: i32 = 32;
+    const GAP: i32 = 9;
+    const PAD: i32 = 6;
+
+    fn height() -> i32 {
+        Self::ITEMS.iter().map(|i| if i.is_some() { Self::ROW } else { Self::GAP }).sum::<i32>() + 2 * Self::PAD
+    }
+
+    /// The item at `y` (from the picture's top).
+    pub fn at(y: i32) -> Option<usize> {
+        let mut top = 4 + Self::PAD;
+        for (n, item) in Self::ITEMS.iter().enumerate() {
+            let h = if item.is_some() { Self::ROW } else { Self::GAP };
+            if y >= top && y < top + h {
+                return item.is_some().then_some(n);
+            }
+            top += h;
+        }
+        None
+    }
+
+    pub fn draw(&self, font: Option<&fontdue::Font>) -> Canvas {
+        let (w, h) = (Self::WIDTH, Self::height());
+        let mut c = Canvas::new(w + 8, h + 8);
+        c.round(4, 6, w, h, 10.0, Color::rgba(0, 0, 0, 0.35), false); // shadow
+        c.round(4, 4, w, h, 10.0, Color::rgba(0x2a, 0x36, 0x4a, 1.0), false);
+        c.round(5, 5, w - 2, h - 2, 9.0, FIELD, false);
+        let mut top = 4 + Self::PAD;
+        for (n, item) in Self::ITEMS.iter().enumerate() {
+            match item {
+                Some((label, keys, _)) => {
+                    if self.hover == Some(n) {
+                        c.round(4 + Self::PAD, top, w - 2 * Self::PAD, Self::ROW, 6.0, HOVER, false);
+                    }
+                    let mid = top as f32 + Self::ROW as f32 / 2.0;
+                    c.text(font, label, 20.0, mid, (w - 70) as f32, TEXT_ACTIVE);
+                    if !keys.is_empty() {
+                        let mut probe = Canvas::new(1, 1);
+                        let end = probe.text(font, keys, 0.0, mid, 999.0, TEXT_INACTIVE).last().copied().unwrap_or(0.0);
+                        c.text(font, keys, (w - 12) as f32 - end, mid, w as f32, TEXT_INACTIVE);
+                    }
+                    top += Self::ROW;
+                }
+                None => {
+                    let y = top as f32 + Self::GAP as f32 / 2.0;
+                    c.line(16.0, y, (w - 8) as f32, y, 1.0, Color::rgba(0xff, 0xff, 0xff, 0.10));
+                    top += Self::GAP;
+                }
+            }
         }
         c
     }

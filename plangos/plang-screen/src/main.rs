@@ -12,7 +12,8 @@
 //!   kind 5  the clipboard's new text, UTF-8, when a client (or the address field) copies something
 //!
 //! The screen, bottom to top: the desktop (the first window: full screen), the windows, the
-//! desktop's taskbar (its bottom BAR pixels, always on top), menus (popups), the address field.
+//! desktop's parts above the windows (its bottom BAR pixels, the taskbar, and whatever it asks for:
+//! its start menu), menus (popups), a window's address field and menu.
 //! plang-screen draws every window's title bar itself (server-side decorations): back, forward,
 //! address; the title; minimize, maximize, close. It moves and resizes windows from their title
 //! bar and edges.
@@ -20,7 +21,9 @@
 //! stderr, one JSON line each: {"ready":"wayland-plang"} when clients can connect, then:
 //!   {"window":"opened","id","title","app"}  {"window":"titled","id","title"}
 //!   {"window":"focused|minimized|maximized|restored|closed","id"}
-//!   {"navigate":"what was typed","id"}      the address field's Enter
+//!   {"navigate":"what was typed","id"}      the address field's Enter; the menu's History,
+//!                                           Downloads, Settings (chrome:// pages)
+//!   {"open":"url","id"}                     the menu's New window
 //!
 //! stdin takes one JSON line each (input events are the same lines screen.open gives):
 //!   {"mouse":"move|down|up|wheel","x","y","button","clicks","dx","dy"}
@@ -29,6 +32,8 @@
 //!   {"clipboard":"text"}   the host's clipboard; a client pastes it
 //!   {"window":"focus|minimize|maximize|restore|close","id"}
 //!   {"window":"url","id","url"}   the page a window shows (for its address field)
+//!   {"window":"above","id":0,"x","y","w","h"}   a part of the desktop to show above the windows
+//!                                              (its start menu); w 0: none
 //!
 //! usage: plang-screen <width> <height> [xkb-layout]      (socket in $XDG_RUNTIME_DIR)
 
@@ -80,7 +85,7 @@ use smithay::wayland::shm::{with_buffer_contents, ShmHandler, ShmState};
 use smithay::wayland::socket::ListeningSocketSource;
 use smithay::wayland::tablet_manager::TabletSeatHandler;
 
-use frame::{Address, Button, TITLE};
+use frame::{Address, Button, Menu, Tool, TITLE};
 use window::{geometry, Part, Picture, Popup, Rect, Shown, Windows};
 
 const SOCKET: &str = "wayland-plang";
@@ -127,6 +132,9 @@ struct State {
     cursor: Option<&'static str>,    // the pointer plang-screen shows over its own parts (None: the client's)
     address: Option<Address>,        // the address field, when open
     address_picture: Picture,
+    menu: Option<Menu>,              // a window's menu, when open
+    menu_picture: Picture,
+    above: Option<Rect>,             // a part of the desktop above the windows (its start menu)
     screen: Vec<u8>, // what the host shows
     pending: Vec<(i32, i32, u32, u32, Vec<u8>)>, // rectangles of the frame being built (x, y, w, h, QOI), sent by flush()
     stamp: Option<(u64, Instant)>, // the host's stamp of the last input and when it came, echoed after the next frame
@@ -196,12 +204,22 @@ impl State {
                     }
                     win.picture.draw(y, x0, &mut line);
                 }
+                // the desktop's part above the windows: its pixels again, there
+                if let (Some(a), Some(d)) = (self.above, self.windows.desktop()) {
+                    let (ax0, ax1) = (x0.max(a.loc.x), x1.min(a.loc.x + a.size.w));
+                    if y >= a.loc.y && y < a.loc.y + a.size.h && ax1 > ax0 {
+                        d.picture.draw(y, ax0, &mut line[((ax0 - x0) * 4) as usize..((ax1 - x0) * 4) as usize]);
+                    }
+                }
             }
             for p in &self.popups {
                 p.picture.draw(y, x0, &mut line);
             }
             if self.address.is_some() {
                 self.address_picture.draw(y, x0, &mut line);
+            }
+            if self.menu.is_some() {
+                self.menu_picture.draw(y, x0, &mut line);
             }
             let at = ((y * w + x0) * 4) as usize;
             if self.screen[at..at + row] != line[..] {
@@ -320,6 +338,62 @@ impl State {
         }
     }
 
+    /// Opens (or closes) window `id`'s menu under its menu button.
+    fn toggle_menu(&mut self, id: u32) {
+        if self.menu.as_ref().map(|m| m.id) == Some(id) {
+            return self.close_menu();
+        }
+        self.close_address();
+        self.menu = Some(Menu { id, hover: None });
+        self.draw_menu();
+    }
+
+    fn close_menu(&mut self) {
+        if self.menu.take().is_some() {
+            let r = self.menu_picture.rect;
+            self.present(r);
+            self.flush();
+        }
+    }
+
+    fn draw_menu(&mut self) {
+        let Some(menu) = &self.menu else { return };
+        let Some(i) = self.windows.by_id(menu.id) else { return };
+        let win = self.windows.get(i);
+        let (bx, bw) = Button::Menu.span(win.size.w);
+        let right = win.at.x + bx + bw;
+        let canvas = menu.draw(self.font.as_ref());
+        let old = self.menu_picture.rect;
+        self.menu_picture = canvas.picture(((right - Menu::WIDTH - 4).max(0), win.at.y - 2));
+        let new = self.menu_picture.rect;
+        self.redraw(old, new);
+    }
+
+    /// A menu item: Chromium's tool, by its keys (to that window) or its page (opened by PLang).
+    fn tool(&mut self, id: u32, tool: Tool) {
+        let Some(i) = self.windows.by_id(id) else { return };
+        const CTRL: u32 = 29;
+        match tool {
+            Tool::NewWindow => {
+                let url = self.windows.get(i).url.clone();
+                if !url.is_empty() {
+                    event(json!({"open": url, "id": id}));
+                }
+            }
+            // Chromium's own pages don't open as app windows: the window goes there (Back returns)
+            Tool::History => event(json!({"navigate": "chrome://history", "id": id})),
+            Tool::Downloads => event(json!({"navigate": "chrome://downloads", "id": id})),
+            Tool::Settings => event(json!({"navigate": "chrome://settings", "id": id})),
+            Tool::Reload => self.keys(i, &[], 63),       // F5
+            Tool::Find => self.keys(i, &[CTRL], 33),     // Ctrl+F
+            Tool::ZoomIn => self.keys(i, &[CTRL], 78),   // Ctrl + keypad +: the same key on every layout
+            Tool::ZoomOut => self.keys(i, &[CTRL], 74),  // Ctrl + keypad −
+            Tool::ZoomReset => self.keys(i, &[CTRL], 11), // Ctrl+0
+            Tool::Print => self.keys(i, &[CTRL], 25),    // Ctrl+P
+            Tool::DevTools => self.keys(i, &[], 88),     // F12
+        }
+    }
+
     fn draw_address(&mut self) {
         let Some(address) = &self.address else { return };
         let Some(i) = self.windows.by_id(address.id) else { return };
@@ -367,16 +441,23 @@ impl State {
         self.draw_address();
     }
 
-    /// Back and forward: the keys Chromium knows for them, to that window.
-    fn history(&mut self, i: usize, forward: bool) {
+    /// Keys to window `i` (evdev codes): the modifiers held around one key.
+    fn keys(&mut self, i: usize, held: &[u32], key: u32) {
         self.focus(i);
         let Some(keyboard) = self.seat.get_keyboard() else { return };
         use smithay::backend::input::KeyState::{Pressed, Released};
-        let arrow = if forward { 106 } else { 105 };
-        for (key, state) in [(56, Pressed), (arrow, Pressed), (arrow, Released), (56, Released)] {
+        let presses = held.iter().map(|k| (*k, Pressed))
+            .chain([(key, Pressed), (key, Released)])
+            .chain(held.iter().rev().map(|k| (*k, Released)));
+        for (code, state) in presses.collect::<Vec<_>>() {
             let time = self.now();
-            keyboard.input::<(), _>(self, Keycode::new(key + 8), state, SERIAL_COUNTER.next_serial(), time, |_, _, _| FilterResult::Forward);
+            keyboard.input::<(), _>(self, Keycode::new(code + 8), state, SERIAL_COUNTER.next_serial(), time, |_, _, _| FilterResult::Forward);
         }
+    }
+
+    /// Back and forward: the keys Chromium knows for them (Alt+Left, Alt+Right), to that window.
+    fn history(&mut self, i: usize, forward: bool) {
+        self.keys(i, &[56], if forward { 106 } else { 105 });
     }
 
     /// A title bar button was clicked.
@@ -385,8 +466,13 @@ impl State {
             Button::Back => self.history(i, false),
             Button::Forward => self.history(i, true),
             Button::Address => {
+                self.close_menu();
                 let id = self.windows.get(i).id;
                 self.open_address(id)
+            }
+            Button::Menu => {
+                let id = self.windows.get(i).id;
+                self.toggle_menu(id)
             }
             Button::Minimize => self.minimize(i),
             Button::Maximize => self.toggle(i),
@@ -396,7 +482,7 @@ impl State {
     }
 
     /// The pointer is over `part` of window `i` (or nothing of ours): hover and pointer shape.
-    fn over(&mut self, hit: Option<(usize, Part)>) {
+    fn over(&mut self, hit: Option<(usize, Part)>, panel: bool) {
         let hover = match hit {
             Some((i, Part::Bar(b))) if b != Button::Title => Some((self.windows.get(i).id, b)),
             _ => None,
@@ -408,6 +494,7 @@ impl State {
             self.dress_id(hover.map(|(id, _)| id));
         }
         let cursor = match hit {
+            _ if panel => Some("default"),
             Some((_, part @ (Part::Bar(_) | Part::Edge(_)))) => Some(part.cursor()),
             _ => None,
         };
@@ -475,6 +562,9 @@ impl State {
         if self.address.as_ref().map(|a| a.id) == Some(id) {
             self.close_address();
         }
+        if self.menu.as_ref().map(|m| m.id) == Some(id) {
+            self.close_menu();
+        }
         self.present(r);
         self.flush();
         if self.focused == Some(id) {
@@ -526,6 +616,9 @@ impl State {
         if self.address.as_ref().map(|a| a.id) == Some(gone.id) {
             self.close_address();
         }
+        if self.menu.as_ref().map(|m| m.id) == Some(gone.id) {
+            self.close_menu();
+        }
         self.present(gone.outer());
         self.flush();
         if self.focused == Some(gone.id) {
@@ -545,6 +638,15 @@ impl State {
             "restore" => self.restore(i),
             "close" => self.windows.get(i).surface.send_close(),
             "url" => self.windows.get_mut(i).url = e.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            "above" if self.windows.get(i).desktop => {
+                let n = |k: &str| e.get(k).and_then(|v| v.as_f64()).unwrap_or(0.0) as i32;
+                let old = self.above.take().unwrap_or_default();
+                let new = Rect::new((n("x"), n("y")).into(), (n("w"), n("h")).into());
+                if new.size.w > 0 && new.size.h > 0 {
+                    self.above = Some(new);
+                }
+                self.redraw(old, new);
+            }
             _ => {}
         }
     }
@@ -609,7 +711,7 @@ impl State {
 
     /// What is at (x, y): a menu, the taskbar, a window (its page, title bar or edge), the desktop.
     fn hit(&self, x: i32, y: i32) -> Option<(usize, Part)> {
-        if y >= self.height - BAR {
+        if y >= self.height - BAR || self.above.is_some_and(|a| a.contains((x, y))) {
             return self.windows.iter().position(|w| w.desktop).map(|i| (i, Part::Content));
         }
         self.windows.hit(x, y)
@@ -680,18 +782,73 @@ impl State {
                 }
                 return;
             }
-            let hit = self.hit(x as i32, y as i32);
-            let on_menu = self.popups.iter().any(|p| p.picture.rect.contains((x as i32, y as i32)));
-            let on_address = self.address.is_some() && self.address_picture.rect.contains((x as i32, y as i32));
-            let ours = if on_menu || on_address { None } else { hit.filter(|(_, p)| *p != Part::Content) };
-            let focus = if on_address { None } else { self.under(x, y) };
+            let (px, py) = (x as i32, y as i32);
+            let hit = self.hit(px, py);
+            let on_menu = self.popups.iter().any(|p| p.picture.rect.contains((px, py)));
+            let on_address = self.address.is_some() && self.address_picture.rect.contains((px, py));
+            let on_tools = self.menu.is_some() && self.menu_picture.rect.contains((px, py));
+            let panel = on_address || on_tools;
+            let ours = if on_menu || panel { None } else { hit.filter(|(_, p)| *p != Part::Content) };
+            let focus = if panel { None } else { self.under(x, y) };
             pointer.motion(self, focus, &MotionEvent { location: (x, y).into(), serial, time });
-            self.over(ours);
+            self.over(ours, panel);
             if kind == "down" {
                 self.pressed = (x, y).into();
                 if !on_address {
                     self.close_address();
                 }
+                // the menu button toggles it itself
+                let on_menu_button = matches!(ours, Some((_, Part::Bar(Button::Menu))));
+                if !on_tools && !on_menu_button {
+                    self.close_menu();
+                }
+                // the desktop's part above the windows goes when a click lands elsewhere
+                if self.above.is_some_and(|a| !a.contains((px, py))) {
+                    let old = self.above.take().unwrap_or_default();
+                    self.present(old);
+                    self.flush();
+                }
+            }
+            if on_tools {
+                let pic = self.menu_picture.rect;
+                let item = Menu::at(py - pic.loc.y).filter(|_| px >= pic.loc.x + 4 && px < pic.loc.x + 4 + Menu::WIDTH);
+                if let Some(menu) = self.menu.as_mut() {
+                    if menu.hover != item {
+                        menu.hover = item;
+                        self.draw_menu();
+                    }
+                }
+                if kind == "up" {
+                    if let (Some(n), Some(id)) = (item, self.menu.as_ref().map(|m| m.id)) {
+                        self.close_menu();
+                        if let Some((_, _, tool)) = Menu::ITEMS[n] {
+                            self.tool(id, tool);
+                        }
+                    }
+                }
+                pointer.frame(self);
+                return;
+            }
+            if on_address {
+                let pic = self.address_picture.rect;
+                let on_copy = Address::on_copy(px - pic.loc.x, pic.size.w - 8);
+                if let Some(address) = self.address.as_mut() {
+                    let changed = address.copy_hover != on_copy;
+                    address.copy_hover = on_copy;
+                    let copy = kind == "down" && on_copy;
+                    if copy {
+                        address.copied = true;
+                    }
+                    let text = address.text.clone();
+                    if copy {
+                        self.message(5, text.as_bytes()); // to the host's clipboard
+                    }
+                    if changed || copy {
+                        self.draw_address();
+                    }
+                }
+                pointer.frame(self);
+                return;
             }
             // plang-screen's own parts: the title bar and the edges
             if let Some((i, part)) = ours {
@@ -724,10 +881,6 @@ impl State {
                     }
                     _ => {}
                 }
-                pointer.frame(self);
-                return;
-            }
-            if on_address {
                 pointer.frame(self);
                 return;
             }
@@ -773,6 +926,12 @@ impl State {
         } else if let Some(kind) = e.get("key").and_then(|v| v.as_str()) {
             let sc = num("sc") as u32;
             let ext = e.get("ext").and_then(|v| v.as_bool()).unwrap_or(false);
+            if self.menu.is_some() && kind == "down" {
+                self.close_menu();
+                if sc == 0x01 {
+                    return; // Esc only closes the menu
+                }
+            }
             if self.address.is_some() {
                 // the address field has the keyboard
                 if kind == "down" {
@@ -1297,6 +1456,9 @@ fn main() {
         cursor: None,
         address: None,
         address_picture: Picture::default(),
+        menu: None,
+        menu_picture: Picture::default(),
+        above: None,
         screen: vec![0u8; (width * height * 4) as usize],
         pending: Vec::new(),
         stamp: None,

@@ -143,7 +143,7 @@
     : `<div class="tile" style="background:${a.color}">${a.mark}</div>`;
   // The desktop talks to PlangOS's plang: plang(text) asks, a 'message' event from origin 'plang' tells.
   const ask = message => window.plang ? window.plang(JSON.stringify(message)) : console.warn('no plang', message);
-  const open = url => { menu.hidden = true; ask({ open: url }); };   // a window of its own
+  const open = url => { if (!menu.hidden) showMenu(false); ask({ open: url }); };   // a window of its own
 
   const icons = document.getElementById('icons');
   const menuApps = document.getElementById('apps');
@@ -170,10 +170,19 @@
   }
 
   // start menu
+  // start menu. The desktop is under every window; while the menu is open the screen shows this
+  // part of the desktop above them (the taskbar always is).
   const menu = document.getElementById('menu');
-  document.getElementById('start').onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; };
-  document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.hidden = true; });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') menu.hidden = true; });
+  function showMenu(open) {
+    menu.hidden = !open;
+    const r = menu.getBoundingClientRect();
+    ask(open ? { window: 'above', id: 0, x: Math.floor(r.left), y: Math.floor(r.top), w: Math.ceil(r.width), h: Math.ceil(r.height) }
+             : { window: 'above', id: 0, w: 0 });
+  }
+  document.getElementById('start').onclick = e => { e.stopPropagation(); showMenu(menu.hidden); };
+  document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target)) showMenu(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) showMenu(false); });
+  window.addEventListener('blur', () => { if (!menu.hidden) showMenu(false); });   // a window was clicked
 
   // search or address
   document.getElementById('go').onsubmit = e => {

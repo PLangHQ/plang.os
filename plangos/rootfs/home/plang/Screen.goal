@@ -26,10 +26,15 @@ Command
 
 Window
 / The screen says what happened to a window: the desktop's taskbar shows it. Enter in a
-/ window's address field ({"navigate": what was typed, "id"}) sends that window there.
+/ window's address field ({"navigate": what was typed, "id"}) sends that window there; its
+/ menu's New window, History, Downloads, Settings ({"open": url, "id"}) open a window.
 - set %event% to %!data%
 - post %event% to the page of %browser%
 - if %event.navigate%, call Navigate
+- if %event.open%, call OpenPage
 
 Navigate
 - navigate window %event.id% to %event.navigate% in %browser%
+
+OpenPage
+- open window %event.open% in %browser%
