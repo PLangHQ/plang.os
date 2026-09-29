@@ -3,7 +3,7 @@
   "step": [
     {
       "index": 0,
-      "text": "start browser 'https://www.visir.is', size 1920x1080, frames to output, write to %browser%",
+      "text": "browser.start Url='file:///home/plang/desktop.html', Width=1920, Height=1080, ToOutput=true, write to %browser%",
       "line": {
         "number": 6
       },
@@ -18,7 +18,7 @@
               "type": {
                 "name": "text"
               },
-              "value": "https://www.visir.is"
+              "value": "file:///home/plang/desktop.html"
             },
             {
               "name": "ToOutput",
@@ -262,7 +262,7 @@
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "e4062dcf32ccba039e602d974daf865abc7c56a1ca6bf5e9738fa155369e25ce",
+  "hash": "a72bb0c2f5e6b1fc8014a1ea944dfe948261c2adb357274cc6d5ab8a7e4f148f",
   "isSetup": false,
   "isEvent": false,
   "isSystem": false,

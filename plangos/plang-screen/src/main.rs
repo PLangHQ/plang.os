@@ -454,6 +454,21 @@ impl XdgShellHandler for State {
         }
         self.toplevel = Some(surface);
     }
+    // Chromium in kiosk mode asks for fullscreen: that's what drops its tabs and toolbar.
+    // The screen is all it gets either way; only the state changes.
+    fn fullscreen_request(&mut self, surface: ToplevelSurface, _output: Option<smithay::reexports::wayland_server::protocol::wl_output::WlOutput>) {
+        surface.with_pending_state(|s| {
+            s.size = Some((self.width, self.height).into());
+            s.states.set(xdg_toplevel::State::Fullscreen);
+        });
+        surface.send_configure();
+    }
+    fn unfullscreen_request(&mut self, surface: ToplevelSurface) {
+        surface.with_pending_state(|s| {
+            s.states.unset(xdg_toplevel::State::Fullscreen);
+        });
+        surface.send_configure();
+    }
     fn new_popup(&mut self, surface: PopupSurface, positioner: PositionerState) {
         let geometry = positioner.get_geometry();
         surface.with_pending_state(|s| s.geometry = geometry);

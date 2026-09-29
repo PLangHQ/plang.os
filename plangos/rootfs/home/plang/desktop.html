@@ -1,0 +1,197 @@
+<!doctype html>
+<!-- PlangOS's desktop, first version. Chromium draws it with no toolbar (kiosk): this page is
+     everything the user sees. Opening an app goes to its page; back (mouse back button or
+     Alt+Left) returns here. -->
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<title>PlangOS</title>
+<style>
+  :root {
+    --bar: rgba(12, 18, 28, .72);
+    --glass: rgba(255, 255, 255, .08);
+    --line: rgba(255, 255, 255, .14);
+    --text: #eef2f7;
+    --dim: #9fb0c3;
+    --accent: #f2a33a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font: 15px/1.4 system-ui, "Segoe UI", "DejaVu Sans", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 700px at 78% 18%, rgba(242, 163, 58, .22), transparent 60%),
+      radial-gradient(900px 600px at 12% 88%, rgba(56, 189, 190, .20), transparent 60%),
+      linear-gradient(160deg, #0d1b2a 0%, #13293d 55%, #0b1520 100%);
+    user-select: none;
+  }
+
+  /* desktop icons, top left, in columns */
+  .icons {
+    position: absolute; top: 24px; left: 24px; bottom: 80px;
+    display: grid; grid-auto-flow: column; grid-template-rows: repeat(auto-fill, 104px);
+    grid-auto-columns: 96px; gap: 8px 12px;
+  }
+  .icon {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 8px 4px; border-radius: 10px; cursor: default; text-align: center;
+  }
+  .icon:hover { background: var(--glass); }
+  .icon:active { background: rgba(255, 255, 255, .16); }
+  .tile {
+    width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+    font-weight: 700; font-size: 22px; color: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+  }
+  .tile img { width: 44px; height: 44px; }
+  .icon span { font-size: 13px; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
+
+  /* the middle: time, date, and where to go */
+  .home {
+    position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; width: 640px;
+  }
+  .time { font-size: 112px; font-weight: 200; letter-spacing: -2px; line-height: 1; }
+  .date { font-size: 22px; color: var(--dim); margin-top: 8px; }
+  .date::first-letter { text-transform: uppercase; }
+  form { margin-top: 40px; }
+  input {
+    width: 100%; padding: 16px 22px; font: inherit; font-size: 18px; color: var(--text);
+    background: rgba(255, 255, 255, .10); border: 1px solid var(--line); border-radius: 999px;
+    outline: none; backdrop-filter: blur(12px);
+  }
+  input::placeholder { color: var(--dim); }
+  input:focus { border-color: var(--accent); background: rgba(255, 255, 255, .14); }
+
+  /* taskbar */
+  .bar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 56px;
+    display: flex; align-items: center; gap: 6px; padding: 0 12px;
+    background: var(--bar); border-top: 1px solid var(--line); backdrop-filter: blur(20px);
+  }
+  .bar button {
+    height: 42px; min-width: 42px; padding: 0 12px; border: 0; border-radius: 8px;
+    display: flex; align-items: center; gap: 8px; color: var(--text); font: inherit;
+    background: transparent;
+  }
+  .bar button:hover { background: var(--glass); }
+  .bar .start img { width: 30px; height: 30px; }
+  .bar .start b { font-weight: 600; letter-spacing: .3px; }
+  .bar .pin .tile { width: 28px; height: 28px; border-radius: 7px; font-size: 13px; box-shadow: none; }
+  .spacer { flex: 1; }
+  .tray { text-align: right; font-size: 13px; line-height: 1.25; padding: 0 8px; }
+  .tray small { color: var(--dim); }
+
+  /* start menu */
+  .menu {
+    position: absolute; left: 12px; bottom: 64px; width: 360px; padding: 16px;
+    background: rgba(16, 24, 36, .92); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .5); backdrop-filter: blur(24px);
+  }
+  .menu h2 { margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .8px; }
+  .menu .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .menu .about { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; gap: 12px; align-items: center; color: var(--dim); font-size: 13px; }
+  .menu .about img { width: 40px; height: 40px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="icons" id="icons"></div>
+
+<div class="home">
+  <div class="time" id="time"></div>
+  <div class="date" id="date"></div>
+  <form id="go"><input id="where" placeholder="Leita eða slá inn vefslóð" autocomplete="off" autofocus></form>
+</div>
+
+<div class="menu" id="menu" hidden>
+  <h2>Forrit</h2>
+  <div class="apps" id="apps"></div>
+  <div class="about"><img src="plang.png" alt=""><div><b style="color:var(--text)">PlangOS</b><br>Only PLang runs here.</div></div>
+</div>
+
+<div class="bar">
+  <button class="start" id="start"><img src="plang.png" alt=""><b>PlangOS</b></button>
+  <div id="pins" style="display:flex;gap:2px"></div>
+  <div class="spacer"></div>
+  <div class="tray"><div id="clock"></div><small id="day"></small></div>
+</div>
+
+<script>
+  // The apps: for now web pages. Later these come from PLang (apps installed in PlangOS).
+  const apps = [
+    { name: 'Vísir', url: 'https://www.visir.is', color: '#d7263d', mark: 'V', pin: true },
+    { name: 'mbl.is', url: 'https://www.mbl.is', color: '#1d4e89', mark: 'm', pin: true },
+    { name: 'RÚV', url: 'https://www.ruv.is', color: '#0b7a75', mark: 'R', pin: true },
+    { name: 'Wikipedia', url: 'https://is.wikipedia.org', color: '#444c56', mark: 'W' },
+    { name: 'YouTube', url: 'https://www.youtube.com', color: '#e62117', mark: '▶', pin: true },
+    { name: 'Veður', url: 'https://www.vedur.is', color: '#2f80ed', mark: '☁' },
+    { name: 'PLang', url: 'https://plang.is', logo: true },
+  ];
+
+  const tile = a => a.logo
+    ? `<div class="tile" style="background:#fff"><img src="plang.png" alt=""></div>`
+    : `<div class="tile" style="background:${a.color}">${a.mark}</div>`;
+  const open = url => { location.href = url; };
+
+  const icons = document.getElementById('icons');
+  const menuApps = document.getElementById('apps');
+  const pins = document.getElementById('pins');
+  for (const a of apps) {
+    const icon = document.createElement('div');
+    icon.className = 'icon';
+    icon.innerHTML = tile(a) + `<span>${a.name}</span>`;
+    icon.ondblclick = () => open(a.url);      // desktop: double-click opens
+    icons.append(icon);
+
+    const item = icon.cloneNode(true);
+    item.onclick = () => open(a.url);         // start menu: one click
+    menuApps.append(item);
+
+    if (a.pin) {
+      const pin = document.createElement('button');
+      pin.className = 'pin';
+      pin.title = a.name;
+      pin.innerHTML = tile(a);
+      pin.onclick = () => open(a.url);
+      pins.append(pin);
+    }
+  }
+
+  // start menu
+  const menu = document.getElementById('menu');
+  document.getElementById('start').onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; };
+  document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') menu.hidden = true; });
+
+  // search or address
+  document.getElementById('go').onsubmit = e => {
+    e.preventDefault();
+    const q = document.getElementById('where').value.trim();
+    if (!q) return;
+    const looksLikeUrl = /^[a-z]+:\/\//i.test(q) || (/^[^\s]+\.[a-z]{2,}(\/.*)?$/i.test(q));
+    open(looksLikeUrl ? (/^[a-z]+:\/\//i.test(q) ? q : 'https://' + q)
+                      : 'https://duckduckgo.com/?q=' + encodeURIComponent(q));
+  };
+
+  // clock
+  const time = document.getElementById('time'), date = document.getElementById('date');
+  const clock = document.getElementById('clock'), day = document.getElementById('day');
+  // Icelandic by hand: PlangOS's Chromium has no Icelandic locale data
+  const days = ['sunnudagur', 'mánudagur', 'þriðjudagur', 'miðvikudagur', 'fimmtudagur', 'föstudagur', 'laugardagur'];
+  const months = ['janúar', 'febrúar', 'mars', 'apríl', 'maí', 'júní', 'júlí', 'ágúst', 'september', 'október', 'nóvember', 'desember'];
+  const two = n => String(n).padStart(2, '0');
+  function tick() {
+    const now = new Date();
+    const hm = two(now.getHours()) + ':' + two(now.getMinutes());
+    time.textContent = hm;
+    clock.textContent = hm;
+    date.textContent = `${days[now.getDay()]} ${now.getDate()}. ${months[now.getMonth()]}`;
+    day.textContent = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()}`;
+  }
+  tick();
+  setInterval(tick, 1000);
+</script>
+</body>
+</html>

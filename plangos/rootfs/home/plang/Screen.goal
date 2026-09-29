@@ -3,7 +3,7 @@ Screen
 / browser draws into plang-screen, whose binary frames go straight to this app's output — the
 / pipe to host plang — untouched. Input from the host's screen comes down on stdin, one line
 / per event. Ends when the host closes the pipe.
-- start browser 'https://www.visir.is', size 1920x1080, frames to output, write to %browser%
+- browser.start Url='file:///home/plang/desktop.html', Width=1920, Height=1080, ToOutput=true, write to %browser%
 - on input call Input
 - stop %browser%
 
