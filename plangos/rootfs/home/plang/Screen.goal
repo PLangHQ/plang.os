@@ -4,7 +4,7 @@ Screen
 / the pipe to host plang. Input from the host comes down on stdin, one line per event, and goes
 / to the screen. Ends when the host closes the pipe.
 / The first page is the desktop; every app opens in a window of its own.
-- screen.open(Width=1920, Height=1080, ToOutput=true, OnWindow=goal.call(Name="Window")); variable.set(Name=%screen%, Value=%!data%)
+- screen.open(ToOutput=true, OnWindow=goal.call(Name="Window")); variable.set(Name=%screen%, Value=%!data%)
 - browser.start(Url="file:///home/plang/desktop.html", Screen=%screen%, OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
 - on input call Input
 - stop %browser%

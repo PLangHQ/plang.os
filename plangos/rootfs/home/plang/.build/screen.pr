@@ -3,7 +3,7 @@
   "step": [
     {
       "index": 0,
-      "text": "screen.open(Width=1920, Height=1080, ToOutput=true, OnWindow=goal.call(Name=\"Window\")); variable.set(Name=%screen%, Value=%!data%)",
+      "text": "screen.open(ToOutput=true, OnWindow=goal.call(Name=\"Window\")); variable.set(Name=%screen%, Value=%!data%)",
       "line": {
         "number": 7
       },
@@ -1205,7 +1205,7 @@
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "57eac93f99123130f299fe31bd1c2a415be654701965f05069d8050e6a8e7f5f",
+  "hash": "a6bb369ec5dd1fde309f0eae76f7747b46119e4dc75d33b0415bb4440f600f75",
   "isSetup": false,
   "isEvent": false,
   "isSystem": false,

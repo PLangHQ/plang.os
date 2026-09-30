@@ -35,7 +35,10 @@ CheckImage
 
 CheckVersion
 - check if file 'distro/%manifest.sha256%.imported' exists, write to %current%
-- if %current%, write out 'PlangOS %manifest.version% is installed', else call ReplaceImage
+- if %current%, call Installed, else call ReplaceImage
+
+Installed
+- write out 'PlangOS %manifest.version% is installed'
 
 NotOurs
 - throw error 'A WSL distro named PlangOS exists, but this folder did not import it (no distro/ext4.vhdx). Remove it with: wsl --unregister PlangOS, then run start.ps1 again.'
