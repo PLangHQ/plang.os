@@ -277,17 +277,25 @@
     },
     {
       "index": 2,
-      "text": "on input call Input",
+      "text": "channel.set(Name=\"input\", Goal=goal.call(Name=\"Question\"))",
       "line": {
-        "number": 9
+        "number": 11
       },
+      "comment": "A question for the user (a permission, `ask user \"…\"`) is a dialog on the screen: asked on the\nconsole, it would go into the screen's pipe and wait on the host's input.",
       "code": [
         {
-          "module": "on",
-          "name": "input",
+          "module": "channel",
+          "name": "set",
           "property": [
             {
-              "name": "Action",
+              "name": "Name",
+              "type": {
+                "name": "text"
+              },
+              "value": "input"
+            },
+            {
+              "name": "Goal",
               "type": {
                 "name": "action"
               },
@@ -298,9 +306,9 @@
                   {
                     "name": "Name",
                     "type": {
-                      "name": "text"
+                      "name": "goal"
                     },
-                    "value": "Input"
+                    "value": "Question"
                   }
                 ],
                 "default": [
@@ -321,9 +329,44 @@
     },
     {
       "index": 3,
+      "text": "screen.listen(Screen=%screen%)",
+      "line": {
+        "number": 14
+      },
+      "comment": "The screen takes the host's input itself — no goal per event, so nothing waits behind a goal\n(a question waiting for the click that answers it).",
+      "code": [
+        {
+          "module": "screen",
+          "name": "listen",
+          "property": [
+            {
+              "name": "Screen",
+              "type": {
+                "name": "screen",
+                "template": "plang"
+              },
+              "value": "%screen%",
+              "variable": [
+                {
+                  "text": "%screen%",
+                  "code": [
+                    {
+                      "variable": "screen"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    },
+    {
+      "index": 4,
       "text": "stop %browser%",
       "line": {
-        "number": 10
+        "number": 15
       },
       "code": [
         {
@@ -356,13 +399,115 @@
   ],
   "child": [
     {
-      "name": "Input",
+      "name": "Question",
       "step": [
         {
           "index": 0,
-          "text": "send %!data% to %screen%",
+          "text": "window.callGoal(Name=\"AskShow\", Window=%browser.desktop%, Parameter={question: %message%}); variable.set(Name=%above%, Value=%!data%)",
           "line": {
-            "number": 13
+            "number": 20
+          },
+          "comment": "The question in a dialog on the desktop, lifted above every window; the answer is what the person\nchose (a permission: y, a or n; a question: what they typed). The question is %message%.",
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "AskShow"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%browser.desktop%",
+                  "variable": [
+                    {
+                      "text": "%browser.desktop%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        },
+                        {
+                          "property": "desktop"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"question","type":{"name":"item","template":"plang"},"value":"%message%","variable":[{"text":"%message%","code":[{"variable":"message"}]}]}]
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%above%",
+                  "variable": [
+                    {
+                      "text": "%above%",
+                      "code": [
+                        {
+                          "variable": "above"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "send %above% to %screen%",
+          "line": {
+            "number": 21
           },
           "code": [
             {
@@ -375,13 +520,13 @@
                     "name": "item",
                     "template": "plang"
                   },
-                  "value": "%!data%",
+                  "value": "%above%",
                   "variable": [
                     {
-                      "text": "%!data%",
+                      "text": "%above%",
                       "code": [
                         {
-                          "variable": "!data"
+                          "variable": "above"
                         }
                       ]
                     }
@@ -409,13 +554,208 @@
             }
           ],
           "waitForExecution": true
+        },
+        {
+          "index": 2,
+          "text": "window.callGoal(Name=\"AskAnswer\", Window=%browser.desktop%); variable.set(Name=%answer%, Value=%!data%)",
+          "line": {
+            "number": 22
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "AskAnswer"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%browser.desktop%",
+                  "variable": [
+                    {
+                      "text": "%browser.desktop%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        },
+                        {
+                          "property": "desktop"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%answer%",
+                  "variable": [
+                    {
+                      "text": "%answer%",
+                      "code": [
+                        {
+                          "variable": "answer"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 3,
+          "text": "send %answer.below% to %screen%",
+          "line": {
+            "number": 23
+          },
+          "code": [
+            {
+              "module": "screen",
+              "name": "send",
+              "property": [
+                {
+                  "name": "Data",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%answer.below%",
+                  "variable": [
+                    {
+                      "text": "%answer.below%",
+                      "code": [
+                        {
+                          "variable": "answer"
+                        },
+                        {
+                          "property": "below"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Screen",
+                  "type": {
+                    "name": "screen",
+                    "template": "plang"
+                  },
+                  "value": "%screen%",
+                  "variable": [
+                    {
+                      "text": "%screen%",
+                      "code": [
+                        {
+                          "variable": "screen"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 4,
+          "text": "return %answer.text%",
+          "line": {
+            "number": 24
+          },
+          "code": [
+            {
+              "module": "goal",
+              "name": "return",
+              "property": [
+                {
+                  "name": "Data",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%answer.text%",
+                  "variable": [
+                    {
+                      "text": "%answer.text%",
+                      "code": [
+                        {
+                          "variable": "answer"
+                        },
+                        {
+                          "property": "text"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "depth",
+                  "type": {
+                    "name": "number"
+                  },
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "8bd295246c7a7d304433359caf77122345d2f41c2c0dff7f8a97423d426093d2",
+      "hash": "29d441a25b983b3aed586367fb0e5cad1cdc7cf40f5d0582489381321dc3ccfe",
       "isSetup": false,
       "isEvent": false,
       "isSystem": false,
@@ -428,7 +768,7 @@
           "index": 0,
           "text": "set %asked% to %!data%",
           "line": {
-            "number": 19
+            "number": 30
           },
           "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}; \"from\" is the window that asked.",
           "code": [
@@ -489,7 +829,7 @@
           "index": 1,
           "text": "if %asked.open%, call Open",
           "line": {
-            "number": 20
+            "number": 31
           },
           "code": [
             {
@@ -560,7 +900,7 @@
           "index": 2,
           "text": "if %asked.window%, call Command",
           "line": {
-            "number": 21
+            "number": 32
           },
           "code": [
             {
@@ -631,7 +971,7 @@
           "index": 3,
           "text": "if %asked.files%, call Files",
           "line": {
-            "number": 22
+            "number": 33
           },
           "code": [
             {
@@ -702,7 +1042,7 @@
           "index": 4,
           "text": "if %asked.edit%, call Edit",
           "line": {
-            "number": 23
+            "number": 34
           },
           "code": [
             {
@@ -773,7 +1113,7 @@
           "index": 5,
           "text": "if %asked.save%, call Save",
           "line": {
-            "number": 24
+            "number": 35
           },
           "code": [
             {
@@ -858,7 +1198,7 @@
           "index": 0,
           "text": "open window %asked.open% in %browser%",
           "line": {
-            "number": 27
+            "number": 38
           },
           "code": [
             {
@@ -933,7 +1273,7 @@
           "index": 0,
           "text": "send %asked% to %screen%",
           "line": {
-            "number": 30
+            "number": 41
           },
           "code": [
             {
@@ -999,7 +1339,7 @@
           "index": 0,
           "text": "list files in 'Desktop', write to %files%",
           "line": {
-            "number": 34
+            "number": 45
           },
           "comment": "the desktop's files: what is in Desktop/, shown as icons",
           "code": [
@@ -1089,7 +1429,7 @@
           "index": 1,
           "text": "call ShowFiles files=%files% in %browser.desktop%",
           "line": {
-            "number": 35
+            "number": 46
           },
           "code": [
             {
@@ -1154,7 +1494,7 @@
           "index": 0,
           "text": "open window 'file:///home/plang/app/writer/start.html' in %browser%, write to %writer%",
           "line": {
-            "number": 40
+            "number": 51
           },
           "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value",
           "code": [
@@ -1246,7 +1586,7 @@
           "index": 1,
           "text": "read %asked.edit%, write to %content%",
           "line": {
-            "number": 41
+            "number": 52
           },
           "code": [
             {
@@ -1348,7 +1688,7 @@
           "index": 2,
           "text": "call Show file=%asked.edit%, content=%content% in %writer%",
           "line": {
-            "number": 42
+            "number": 53
           },
           "code": [
             {
@@ -1410,7 +1750,7 @@
           "index": 0,
           "text": "save %asked.content% to %asked.save%",
           "line": {
-            "number": 46
+            "number": 57
           },
           "comment": "Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value",
           "code": [
@@ -1469,7 +1809,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Saved\", Window=%asked.from%, Browser=%browser%)",
           "line": {
-            "number": 47
+            "number": 58
           },
           "code": [
             {
@@ -1545,7 +1885,7 @@
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 53
+            "number": 64
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -1606,7 +1946,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 54
+            "number": 65
           },
           "code": [
             {
@@ -1661,7 +2001,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 55
+            "number": 66
           },
           "code": [
             {
@@ -1732,7 +2072,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 56
+            "number": 67
           },
           "code": [
             {
@@ -1817,7 +2157,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 59
+            "number": 70
           },
           "code": [
             {
@@ -1913,7 +2253,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 62
+            "number": 73
           },
           "code": [
             {
@@ -1985,7 +2325,7 @@
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "a6bb369ec5dd1fde309f0eae76f7747b46119e4dc75d33b0415bb4440f600f75",
+  "hash": "e9aeac77b9c0260c40fac7484818f71aa0202ca5374ba740d54fbd42a4cac96d",
   "isSetup": false,
   "isEvent": false,
   "isSystem": false,

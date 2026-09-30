@@ -123,6 +123,26 @@
   .context .swatches span:hover { border-color: var(--dim); }
   .context .swatches span.on { border-color: var(--text); }
   .icons.gone { visibility: hidden; }
+
+  /* a question from plang: centred, above every window (the screen lifts exactly this box) */
+  .ask {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: 480px; padding: 22px 24px 18px;
+    background: #182334; border: 1px solid rgba(242, 163, 58, .55); border-radius: 8px;
+  }
+  .ask h2 { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .8px; }
+  .ask .what { margin: 8px 0 16px; white-space: pre-wrap; word-break: break-word; font-size: 15px; line-height: 1.5; }
+  .ask .what code { font: 13px ui-monospace, "DejaVu Sans Mono", monospace; color: #cfe3ff; }
+  .ask input { width: 100%; margin: 0 0 14px; border-radius: 6px; padding: 9px 12px; font-size: 15px; }
+  .ask .buttons { display: flex; gap: 8px; justify-content: flex-end; }
+  .ask button {
+    padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); background: rgba(255, 255, 255, .06);
+    color: var(--text); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .ask button:hover { background: rgba(255, 255, 255, .14); }
+  .ask button.yes { background: var(--accent); border-color: var(--accent); color: #1b1203; font-weight: 600; }
+  .ask button.yes:hover { background: #f6b35a; }
+  .ask button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .ask small { display: block; margin-top: 12px; color: var(--dim); font-size: 12px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -158,6 +178,22 @@
 </div>
 
 <div class="menu context" id="context" hidden></div>
+
+<div class="ask" id="ask" hidden role="dialog" aria-modal="true" aria-labelledby="ask-title">
+  <h2 id="ask-title">Leyfi</h2>
+  <div class="what" id="ask-what"></div>
+  <input id="ask-field" autocomplete="off" hidden>
+  <div class="buttons" id="ask-choose">
+    <button id="ask-no">Hafna</button>
+    <button id="ask-always">Leyfa alltaf</button>
+    <button class="yes" id="ask-once">Leyfa einu sinni</button>
+  </div>
+  <div class="buttons" id="ask-type" hidden>
+    <button id="ask-cancel">Hætta við</button>
+    <button class="yes" id="ask-send">Svara</button>
+  </div>
+  <small id="ask-keys">Enter: leyfa einu sinni · Esc: hafna</small>
+</div>
 
 <div class="bar">
   <button class="start" id="start"><img src="plang.png" alt=""><b>PlangOS</b></button>
@@ -433,6 +469,59 @@
 
   // the desktop's files: asked for once plang's door is there (it comes as the desktop is shown)
   (function askFiles() { window.plang ? ask({ files: true }) : setTimeout(askFiles, 100); })();
+
+  // ---- a question from plang (a permission, or `ask user "…"`) ---------------------------------
+  // plang calls AskShow({question}): the dialog shows, and its place comes back (for the screen to
+  // lift it above every window); then AskAnswer(): it answers when the person does — a permission
+  // "y" (once), "a" (always) or "n", a free question the typed text ("" for none) — with the
+  // screen's command to lower it again.
+  const askBox = document.getElementById('ask');
+  const askWhat = document.getElementById('ask-what');
+  const askField = document.getElementById('ask-field');
+  const permission = /\s*\(y\/n\/a[^)]*\)\s*$/i;
+  let asking = false, answered = null, waiting = null;
+  window.AskShow = ({ question }) => {
+    const q = String(question ?? '');
+    asking = permission.test(q);
+    closePanel();
+    document.getElementById('ask-title').textContent = asking ? 'Leyfi' : 'Spurning';
+    // a permission's lines ("User wants to:\n  - write /x") shown as they are; the paths as code
+    askWhat.replaceChildren();
+    for (const part of q.replace(permission, '').split(/(\s\/\S+)/)) {
+      if (/^\s\//.test(part)) { askWhat.append(' '); const c = document.createElement('code'); c.textContent = part.trim(); askWhat.append(c); }
+      else askWhat.append(part);
+    }
+    document.getElementById('ask-choose').hidden = !asking;
+    document.getElementById('ask-type').hidden = asking;
+    askField.hidden = asking;
+    askField.value = '';
+    document.getElementById('ask-keys').textContent = asking ? 'Enter: leyfa einu sinni · Esc: hafna' : 'Enter: svara · Esc: hætta við';
+    answered = null;
+    askBox.hidden = false;
+    (asking ? document.getElementById('ask-once') : askField).focus();
+    const r = askBox.getBoundingClientRect();
+    return { window: 'above', id: 0, x: Math.floor(r.left), y: Math.floor(r.top), w: Math.ceil(r.width), h: Math.ceil(r.height) };
+  };
+  window.AskAnswer = () => new Promise(resolve => {
+    if (answered !== null) { resolve(answered); answered = null; } else waiting = resolve;
+  });
+  function reply(text) {
+    if (askBox.hidden) return;
+    askBox.hidden = true;
+    const result = { text, below: { window: 'above', id: 0, w: 0 } };
+    if (waiting) { const w = waiting; waiting = null; w(result); } else answered = result;
+  }
+  document.getElementById('ask-once').onclick = () => reply('y');
+  document.getElementById('ask-always').onclick = () => reply('a');
+  document.getElementById('ask-no').onclick = () => reply('n');
+  document.getElementById('ask-send').onclick = () => reply(askField.value);
+  document.getElementById('ask-cancel').onclick = () => reply('');
+  askBox.addEventListener('keydown', e => {
+    // Enter on a button is that button's; elsewhere (the text field) the default answer
+    if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); reply(asking ? 'y' : askField.value); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); reply(asking ? 'n' : ''); }
+  });
+  askBox.addEventListener('click', e => e.stopPropagation());   // not a click on the desktop (which closes panels)
 </script>
 </body>
 </html>
