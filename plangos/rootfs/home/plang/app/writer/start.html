@@ -13,6 +13,9 @@
   const textOf = content => typeof content === 'string' ? content : JSON.stringify(content ?? null, null, 2);
   window.Show = async ({ file, content }) => { await ready; writer.show(file, textOf(content)); return true; };
   window.Saved = async () => { await ready; writer.saved(); return true; };
+  // something dropped on this window (the desktop's shortcut): {name, url, image} — a page takes it
+  // as an embed block
+  window.Drop = async value => { await ready; return writer.take(value ?? {}); };
 </script>
 <title>Writer</title>
 <style>
@@ -42,10 +45,41 @@
   footer .error { color: #e5484d; }
   .waiting { padding: 40px; color: var(--dim); }
 
-  /* text: a page to write on */
-  .paper { height: 100%; overflow: auto; }
-  .paper textarea { display: block; width: min(820px, 100%); min-height: 100%; margin: 0 auto; padding: 36px 28px 80px;
-    border: 0; outline: 0; resize: none; background: transparent; color: inherit; font: 17px/1.65 var(--sans); }
+  /* page: blocks, each its own editable line; a handle to drag it, "/" to change what it is */
+  .page { height: 100%; overflow: auto; }
+  .blocks { width: min(780px, 100%); margin: 0 auto; padding: 40px 28px 120px 56px; font: 17px/1.6 var(--sans); counter-reset: n; }
+  .block { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; border-radius: 4px; }
+  .block.k-p { margin-bottom: .45em; }
+  .block.drag-over { box-shadow: 0 -2px 0 var(--accent); }
+  .handle { position: absolute; left: -30px; top: 5px; width: 22px; height: 22px; border-radius: 4px; color: #b3b0a8;
+    font: 14px/22px var(--sans); text-align: center; cursor: grab; opacity: 0; user-select: none; }
+  .block:hover .handle, .block:focus-within .handle { opacity: 1; }
+  .handle:hover { background: var(--line); color: var(--fg); }
+  .body { flex: 1; min-width: 0; outline: 0; white-space: pre-wrap; word-break: break-word; min-height: 1.6em; }
+  .body:empty::before { content: attr(data-hint); color: #b8b5ad; }
+  .block.k-heading1 .body { font-size: 1.9em; font-weight: 700; line-height: 1.25; margin-top: .6em; }
+  .block.k-heading2 .body { font-size: 1.45em; font-weight: 650; line-height: 1.3; margin-top: .5em; }
+  .block.k-heading3 .body { font-size: 1.2em; font-weight: 650; margin-top: .3em; }
+  .block.k-bullet::before { content: "•"; width: 18px; text-align: center; color: var(--dim); }
+  .block.k-number { counter-increment: n; }
+  .block.k-number::before { content: counter(n) "."; width: 22px; text-align: right; color: var(--dim); }
+  .block:not(.k-number) { counter-reset: none; }
+  .block.k-todo input { margin: 6px 2px 0; width: 16px; height: 16px; accent-color: var(--accent); }
+  .block.k-todo.done .body { color: var(--dim); text-decoration: line-through; }
+  .block.k-quote .body { border-left: 3px solid var(--fg); padding-left: 14px; }
+  .block.k-code .body { font: 14px/1.55 var(--mono); background: #f0eee8; border-radius: 6px; padding: 10px 14px; white-space: pre; overflow-x: auto; }
+  .block.k-divider hr { flex: 1; border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+  .block.k-embed figure { flex: 1; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; outline: 0; }
+  .block.k-embed figure:focus { box-shadow: 0 0 0 2px var(--accent); }
+  .block.k-embed img { display: block; width: 100%; max-height: 420px; object-fit: cover; object-position: top; background: #eee; }
+  .block.k-embed figcaption { display: flex; gap: 10px; align-items: baseline; padding: 8px 12px; font-size: 14px; }
+  .block.k-embed figcaption b { font-weight: 600; }
+  .block.k-embed figcaption a { color: var(--dim); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .slash { position: fixed; z-index: 5; width: 250px; max-height: 320px; overflow: auto; padding: 6px; background: #fff;
+    border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, .15); font-size: 14px; }
+  .slash div { display: flex; gap: 10px; padding: 6px 8px; border-radius: 5px; cursor: pointer; }
+  .slash div i { width: 22px; font-style: normal; text-align: center; color: var(--dim); }
+  .slash div.on { background: var(--line); }
 
   /* code: numbers, colours under a transparent textarea */
   .editor { position: absolute; inset: 0; display: flex; overflow: auto; font: 14px/21px var(--mono); tab-size: 4; }
@@ -160,24 +194,293 @@
     }).join('\n');
   }
 
+  // ---- a page: a text written as blocks ------------------------------------------------------
+  // Blocks with a blank line between them. A paragraph is its text; any other block starts with a
+  // marker line "::kind key=value …" and has its text on the lines after (a code block until a line
+  // "::"). A text with no markers is a page of paragraphs — every text file opens as a page, and
+  // an unchanged one writes back the same.
+  const page = {
+    kinds: {
+      p: { name: 'Texti', glyph: '¶' },
+      heading1: { name: 'Fyrirsögn 1', glyph: 'H1' },
+      heading2: { name: 'Fyrirsögn 2', glyph: 'H2' },
+      heading3: { name: 'Fyrirsögn 3', glyph: 'H3' },
+      bullet: { name: 'Punktalisti', glyph: '•' },
+      number: { name: 'Númeraður listi', glyph: '1.' },
+      todo: { name: 'Verkefni', glyph: '☐' },
+      quote: { name: 'Tilvitnun', glyph: '”' },
+      code: { name: 'Kóði', glyph: '{}' },
+      divider: { name: 'Lína', glyph: '—' },
+    },
+
+    parse(text) {
+      const lines = text.replace(/\r\n/g, '\n').split('\n'), blocks = [];
+      for (let i = 0; i < lines.length;) {
+        if (lines[i].trim() === '') { i++; continue; }
+        const m = lines[i].match(/^::(\w+)\s*(.*)$/);
+        if (!m) {
+          const start = i;
+          while (i < lines.length && lines[i].trim() !== '') i++;
+          blocks.push({ kind: 'p', props: {}, text: lines.slice(start, i).join('\n').replace(/^\\::/gm, '::') });
+          continue;
+        }
+        const props = {};
+        for (const [, k, quoted, bare] of m[2].matchAll(/(\w+)=(?:"([^"]*)"|(\S+))/g)) props[k] = quoted ?? bare;
+        i++;
+        const body = [];
+        if (m[1] === 'code') { while (i < lines.length && lines[i] !== '::') body.push(lines[i++]); i++; }
+        else while (i < lines.length && lines[i].trim() !== '') body.push(lines[i++]);
+        const kind = m[1] === 'heading' ? 'heading' + (props.level ?? 1) : m[1];
+        blocks.push({ kind: kind in page.kinds || kind === 'embed' ? kind : 'p', props, text: body.join('\n') });
+      }
+      return blocks.length ? blocks : [{ kind: 'p', props: {}, text: '' }];
+    },
+
+    write(blocks) {
+      const value = v => /[\s"]/.test(v) ? `"${String(v).replace(/"/g, "'")}"` : v;
+      const marker = (kind, props) => '::' + kind + Object.entries(props)
+        .filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => ` ${k}=${value(v)}`).join('');
+      return blocks.map(b => {
+        const text = (b.text ?? '').replace(/\n{2,}/g, '\n').replace(/\n+$/, '');
+        switch (b.kind) {
+          case 'p': return text.replace(/^::/gm, '\\::');
+          case 'heading1': case 'heading2': case 'heading3': return marker('heading', { level: b.kind.at(-1) }) + '\n' + text;
+          case 'todo': return marker('todo', { done: b.props?.done ? 'true' : undefined }) + '\n' + text;
+          case 'code': return marker('code', { lang: b.props?.lang }) + '\n' + (b.text ?? '') + '\n::';
+          case 'divider': return '::divider';
+          case 'embed': return marker('embed', { url: b.props.url, image: b.props.image, title: b.props.title });
+          default: return marker(b.kind, {}) + '\n' + text;
+        }
+      }).filter(s => s !== '').join('\n\n') + '\n';
+    },
+  };
+
+  // the caret in a block, as an offset into its text
+  function caretOffset(body) {
+    const s = getSelection();
+    if (!s.rangeCount || !body.contains(s.anchorNode)) return 0;
+    const r = document.createRange();
+    r.selectNodeContents(body);
+    r.setEnd(s.getRangeAt(0).startContainer, s.getRangeAt(0).startOffset);
+    return r.toString().length;
+  }
+  function setCaret(body, offset) {
+    const s = getSelection(), r = document.createRange();
+    const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+    for (let n, left = offset; (n = walker.nextNode());) {
+      if (left <= n.length) { r.setStart(n, left); r.collapse(true); s.removeAllRanges(); s.addRange(r); return; }
+      left -= n.length;
+    }
+    r.selectNodeContents(body); r.collapse(false); s.removeAllRanges(); s.addRange(r);
+  }
+
+  // The page editor: the blocks are the page; each is shown as its own editable element. Structure
+  // (split, join, move, change kind) redraws the blocks; typing only updates the block's text.
+  function pageView(blocks, file, onChange) {
+    main.innerHTML = '<div class="page"><div class="blocks"></div></div>';
+    const list = main.querySelector('.blocks');
+    const listish = ['bullet', 'number', 'todo'];
+    let menu = null;   // the "/" menu: { block, filter, index, el }
+
+    const changed = () => onChange(page.write(blocks));
+    const folder = file.includes('/') ? file.slice(0, file.lastIndexOf('/') + 1) : '';
+    const resolve = path => /^[a-z]+:/i.test(path ?? '') ? path
+      : new URL(path ?? '', new URL(folder, 'file:///home/plang/')).href;
+
+    function draw(focus, caret) {
+      list.replaceChildren(...blocks.map(element));
+      if (focus != null) place(focus, caret);
+    }
+
+    function place(i, caret) {
+      const div = list.children[Math.max(0, Math.min(i, blocks.length - 1))];
+      const target = div?.querySelector('.body') ?? div?.querySelector('figure');
+      if (!target) return;
+      target.focus();
+      if (target.classList.contains('body')) setCaret(target, caret === 'end' ? target.textContent.length : caret ?? 0);
+    }
+
+    function element(b, i) {
+      const div = document.createElement('div');
+      div.className = `block k-${b.kind}${b.kind === 'todo' && b.props?.done ? ' done' : ''}`;
+      const handle = document.createElement('span');
+      handle.className = 'handle'; handle.textContent = '⋮⋮'; handle.title = 'Dragðu til að færa, smelltu til að breyta';
+      handle.addEventListener('pointerdown', e => grab(e, i, div));
+      div.append(handle);
+      if (b.kind === 'divider') div.append(document.createElement('hr'));
+      else if (b.kind === 'embed') {
+        const figure = document.createElement('figure');
+        figure.tabIndex = 0;
+        figure.innerHTML = '<img alt=""><figcaption><b></b><a target="_blank"></a></figcaption>';
+        if (b.props.image) figure.querySelector('img').src = resolve(b.props.image); else figure.querySelector('img').hidden = true;
+        figure.querySelector('b').textContent = b.props.title ?? '';
+        figure.querySelector('a').textContent = figure.querySelector('a').href = b.props.url ?? '';
+        figure.addEventListener('keydown', e => {
+          if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); blocks.splice(i, 1); changed(); draw(i - 1, 'end'); }
+          if (e.key === 'Enter') { e.preventDefault(); blocks.splice(i + 1, 0, { kind: 'p', props: {}, text: '' }); changed(); draw(i + 1, 0); }
+          if (e.key === 'ArrowUp') { e.preventDefault(); place(i - 1, 'end'); }
+          if (e.key === 'ArrowDown') { e.preventDefault(); place(i + 1, 0); }
+        });
+        div.append(figure);
+      } else {
+        if (b.kind === 'todo') {
+          const box = document.createElement('input');
+          box.type = 'checkbox'; box.checked = !!b.props?.done;
+          box.onchange = () => { b.props = { ...b.props, done: box.checked }; div.classList.toggle('done', box.checked); changed(); };
+          div.append(box);
+        }
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.contentEditable = 'plaintext-only';
+        body.spellcheck = false;
+        body.textContent = b.text ?? '';
+        body.dataset.hint = b.kind === 'p' ? (blocks.length === 1 ? 'Skrifaðu eitthvað, eða / fyrir kubba' : '') : page.kinds[b.kind].name;
+        body.addEventListener('input', () => typed(b, i, body));
+        body.addEventListener('keydown', e => key(e, b, i, body));
+        body.addEventListener('focus', () => { if (b.kind === 'p' && !body.dataset.hint) body.dataset.hint = '/ fyrir kubba'; });
+        div.append(body);
+      }
+      return div;
+    }
+
+    // "# " makes a heading, "- " a list, and so on — at the start of a paragraph
+    const shortcuts = { '#': 'heading1', '##': 'heading2', '###': 'heading3', '-': 'bullet', '*': 'bullet', '1.': 'number', '[]': 'todo', '>': 'quote', '```': 'code' };
+    function typed(b, i, body) {
+      const text = body.textContent;
+      if (b.kind === 'p') {
+        const m = text.match(/^(###|##|#|-|\*|1\.|\[\]|>|```)\s/);
+        if (m) { b.kind = shortcuts[m[1]]; b.text = text.slice(m[0].length); changed(); draw(i, 0); return; }
+        if (text === '---') { b.kind = 'divider'; b.text = ''; blocks.splice(i + 1, 0, { kind: 'p', props: {}, text: '' }); changed(); draw(i + 1, 0); return; }
+      }
+      b.text = text;
+      if (menu?.block === b) filterMenu(text.startsWith('/') ? text.slice(1) : null);
+      changed();
+    }
+
+    function key(e, b, i, body) {
+      if (menu && menu.block === b && menuKey(e)) return;
+      const at = caretOffset(body), text = body.textContent, whole = getSelection().isCollapsed;
+      if (e.key === 'Enter' && !e.shiftKey && b.kind !== 'code') {
+        e.preventDefault();
+        if (listish.includes(b.kind) && text === '') { b.kind = 'p'; b.props = {}; changed(); draw(i, 0); return; }
+        b.text = text.slice(0, at);
+        blocks.splice(i + 1, 0, { kind: listish.includes(b.kind) ? b.kind : 'p', props: {}, text: text.slice(at) });
+        changed(); draw(i + 1, 0); return;
+      }
+      if (e.key === 'Enter' && e.shiftKey && b.kind === 'code') {   // out of a code block
+        e.preventDefault(); blocks.splice(i + 1, 0, { kind: 'p', props: {}, text: '' }); changed(); draw(i + 1, 0); return;
+      }
+      if (e.key === 'Backspace' && at === 0 && whole) {
+        if (b.kind !== 'p') { e.preventDefault(); b.kind = 'p'; b.props = {}; changed(); draw(i, 0); return; }
+        const before = blocks[i - 1];
+        if (!before) return;
+        e.preventDefault();
+        if (before.kind === 'divider' || before.kind === 'embed') { blocks.splice(i - 1, 1); changed(); draw(i - 1, 0); return; }
+        const join = (before.text ?? '').length;
+        before.text = (before.text ?? '') + text;
+        blocks.splice(i, 1); changed(); draw(i - 1, join); return;
+      }
+      if (e.key === 'ArrowUp' && at === 0 && i > 0) { e.preventDefault(); place(i - 1, 'end'); }
+      if (e.key === 'ArrowDown' && at === text.length && i < blocks.length - 1) { e.preventDefault(); place(i + 1, 0); }
+      if (e.key === '/' && text === '') openMenu(b, i, body.closest('.block'));
+    }
+
+    // ---- the "/" menu: what a block is ----
+    function openMenu(block, i, div, change = false) {
+      closeMenu();
+      const el = document.createElement('div');
+      el.className = 'slash';
+      const r = div.getBoundingClientRect();
+      el.style.left = Math.max(8, r.left) + 'px';
+      el.style.top = Math.min(innerHeight - 330, r.bottom + 4) + 'px';
+      document.body.append(el);
+      menu = { block, i, el, index: 0, change, items: [] };
+      filterMenu('');
+    }
+    function filterMenu(filter) {
+      if (!menu) return;
+      if (filter === null) { closeMenu(); return; }
+      const f = filter.toLowerCase();
+      menu.items = Object.entries(page.kinds).filter(([k, v]) => !f || v.name.toLowerCase().includes(f) || k.includes(f));
+      menu.index = Math.min(menu.index, Math.max(0, menu.items.length - 1));
+      menu.el.replaceChildren(...menu.items.map(([k, v], n) => {
+        const row = document.createElement('div');
+        row.className = n === menu.index ? 'on' : '';
+        row.innerHTML = '<i></i><span></span>';
+        row.firstChild.textContent = v.glyph; row.lastChild.textContent = v.name;
+        row.onmousedown = e => { e.preventDefault(); pick(k); };
+        return row;
+      }));
+      if (!menu.items.length) closeMenu();
+    }
+    function menuKey(e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        menu.index = (menu.index + (e.key === 'ArrowDown' ? 1 : -1) + menu.items.length) % menu.items.length;
+        filterMenu(menu.block.text.startsWith('/') ? menu.block.text.slice(1) : ''); return true;
+      }
+      if (e.key === 'Enter') { e.preventDefault(); pick(menu.items[menu.index][0]); return true; }
+      if (e.key === 'Escape') { e.preventDefault(); closeMenu(); return true; }
+      return false;
+    }
+    function pick(kind) {
+      const { block, i, change } = menu;
+      closeMenu();
+      if (!change) block.text = '';   // the "/…" typed to choose goes
+      if (kind === 'divider') {
+        block.kind = 'divider'; block.text = '';
+        blocks.splice(i + 1, 0, { kind: 'p', props: {}, text: '' });
+        changed(); draw(i + 1, 0); return;
+      }
+      block.kind = kind; block.props = {};
+      changed(); draw(i, change ? 'end' : 0);
+    }
+    function closeMenu() { menu?.el.remove(); menu = null; }
+    document.addEventListener('mousedown', e => { if (menu && !menu.el.contains(e.target)) closeMenu(); });
+
+    // ---- a handle: drag it to move the block; a click changes what the block is ----
+    function grab(e, from, div) {
+      e.preventDefault();
+      const startY = e.clientY;
+      let to = from, moved = false;
+      const rows = () => [...list.children];
+      const move = ev => {
+        if (!moved && Math.abs(ev.clientY - startY) < 4) return;
+        moved = true; div.style.opacity = '.4';
+        to = rows().findIndex(r => ev.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2);
+        if (to < 0) to = blocks.length;
+        rows().forEach((r, k) => r.classList.toggle('drag-over', k === to));
+      };
+      const up = () => {
+        removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+        div.style.opacity = '';
+        rows().forEach(r => r.classList.remove('drag-over'));
+        if (!moved) { openMenu(blocks[from], from, div, true); return; }
+        if (to === from || to === from + 1) return;
+        const [b] = blocks.splice(from, 1);
+        const at = to > from ? to - 1 : to;
+        blocks.splice(at, 0, b);
+        changed(); draw(at, 'end');
+      };
+      addEventListener('pointermove', move); addEventListener('pointerup', up);
+    }
+
+    draw(0, 'end');
+    return {
+      // something dropped on the page: after the block with the caret, else at the end
+      take(block) {
+        const focused = [...list.children].findIndex(d => d.contains(document.activeElement));
+        const at = focused < 0 ? blocks.length : focused + 1;
+        blocks.splice(at, 0, block);
+        changed(); draw(at);
+      },
+      get count() { return blocks.length; },
+    };
+  }
+
   // ---- the views ----------------------------------------------------------------------------
   const main = document.getElementById('main');
   const where = document.getElementById('where'), size = document.getElementById('size'), state = document.getElementById('state');
-
-  // one textarea whose text is the file's: every view edits through it (json's tree only shows)
-  function textView(text, onChange) {
-    // no spellcheck: PlangOS's Chromium has an English dictionary only
-    main.innerHTML = '<div class="paper"><textarea spellcheck="false"></textarea></div>';
-    const area = main.querySelector('textarea');
-    area.value = text;
-    area.addEventListener('input', () => onChange(area.value));
-    grow(area);
-    return area;
-  }
-  function grow(area) {
-    const fit = () => { area.style.height = 'auto'; area.style.height = area.scrollHeight + 'px'; };
-    area.addEventListener('input', fit); requestAnimationFrame(fit);
-  }
 
   function codeView(text, ext, onChange) {
     main.innerHTML = '<div class="editor"><div class="gutter"></div><div class="surface"><pre></pre><textarea spellcheck="false" wrap="off"></textarea></div></div>';
@@ -236,7 +539,7 @@
 
   // ---- Writer: the file, its text, its view --------------------------------------------------
   const writer = {
-    file: '', text: '', stored: '', kind: 'text', mode: 'tree', area: null,
+    file: '', text: '', stored: '', kind: 'text', mode: 'tree', area: null, page: null,
 
     show(file, text) {
       this.file = file; this.text = this.stored = text; this.kind = kindOf(file);
@@ -251,10 +554,11 @@
     render() {
       const changed = text => { this.text = text; this.status(); };
       state.textContent = ''; state.className = '';
+      this.page = null; this.area = null;
       if (this.kind === 'json' && this.mode === 'tree') {
-        try { treeView(JSON.parse(this.text)); this.area = null; }
+        try { treeView(JSON.parse(this.text)); }
         catch (e) { this.mode = 'text'; this.modes(); this.render(); this.fail('Ógilt JSON: ' + e.message); return; }
-      } else if (this.kind === 'text') this.area = textView(this.text, changed);
+      } else if (this.kind === 'text') this.page = pageView(page.parse(this.text), this.file, changed);
       else this.area = codeView(this.text, this.kind === 'json' ? 'json' : extension(this.file), changed);
       this.area?.addEventListener('keyup', () => this.status());
       this.area?.addEventListener('click', () => this.status());
@@ -273,7 +577,23 @@
       if (this.area) {
         const before = this.text.slice(0, this.area.selectionStart).split('\n');
         where.textContent = `Lína ${before.length}, dálkur ${before.at(-1).length + 1}`;
-      } else where.textContent = '';
+      } else where.textContent = this.page ? `${this.page.count} ${this.page.count === 1 ? 'kubbur' : 'kubbar'}` : '';
+    },
+
+    // Something dropped on this window: each kind takes it its own way. A page (a text) takes it as
+    // an embed (the site's picture, its name, its address); json and code take the address itself —
+    // json as a value (a string), code as text — where the caret is.
+    take({ name, title, url, image }) {
+      if (!url) return false;
+      if (this.page) {
+        this.page.take({ kind: 'embed', props: { url, image, title: title ?? name }, text: '' });
+        return true;
+      }
+      const insert = this.kind === 'json' ? JSON.stringify(url) : url;
+      if (this.kind === 'json' && this.mode === 'tree') { this.mode = 'text'; this.modes(); this.render(); }
+      this.area?.focus();
+      document.execCommand('insertText', false, insert);   // at the caret, as if typed (undo works)
+      return true;
     },
 
     fail(message) { state.textContent = message; state.className = 'error'; },
