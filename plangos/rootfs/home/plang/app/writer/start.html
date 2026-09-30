@@ -1,0 +1,315 @@
+<!doctype html>
+<!-- Writer: a file in a window of its own. Its look follows the file's kind: text (notepad), json
+     (a tree, or its text), code (monospace, line numbers, colours). plang shows the file by calling
+     this page's goals — Show({file, text}), Saved({file}) — and the page saves through plang(). -->
+<html lang="is">
+<head>
+<meta charset="utf-8">
+<script>
+  // The page's goals, before the title: plang calls them once the window has its title, and the
+  // page may still be loading then — a call waits for the page to be ready.
+  const ready = new Promise(done => addEventListener('DOMContentLoaded', done));
+  // the file arrives as what it holds: a text file its text, a json file its value (shown as json)
+  const textOf = content => typeof content === 'string' ? content : JSON.stringify(content ?? null, null, 2);
+  window.Show = async ({ file, content }) => { await ready; writer.show(file, textOf(content)); return true; };
+  window.Saved = async () => { await ready; writer.saved(); return true; };
+</script>
+<title>Writer</title>
+<style>
+  :root { --mono: "DejaVu Sans Mono", ui-monospace, monospace; --sans: system-ui, "DejaVu Sans", sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { display: flex; flex-direction: column; font: 14px/1.4 var(--sans); background: var(--bg); color: var(--fg); }
+  body.text { --bg: #fbfaf7; --fg: #22252a; --bar: #f1efe9; --line: #e2ded5; --dim: #7c7f87; --accent: #c77c14; }
+  body.code, body.json { --bg: #161a21; --fg: #d7dce5; --bar: #1d222b; --line: #2b313c; --dim: #7d8594; --accent: #f2a33a; }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--bar); border-bottom: 1px solid var(--line); }
+  .kind { font: 600 11px var(--mono); letter-spacing: .5px; padding: 3px 7px; border-radius: 5px; background: var(--accent); color: #111; }
+  .name { font-weight: 600; }
+  .dirty { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); visibility: hidden; }
+  body.changed .dirty { visibility: visible; }
+  .spacer { flex: 1; }
+  header button { font: inherit; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+  header button:hover { border-color: var(--dim); }
+  header button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+  .toggle { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .toggle button { border: 0; border-radius: 0; }
+  .toggle button.on { background: var(--line); }
+  [hidden] { display: none !important; }
+
+  main { flex: 1; min-height: 0; position: relative; }
+  footer { display: flex; gap: 16px; padding: 4px 14px; font-size: 12px; color: var(--dim); background: var(--bar); border-top: 1px solid var(--line); }
+  footer .error { color: #e5484d; }
+  .waiting { padding: 40px; color: var(--dim); }
+
+  /* text: a page to write on */
+  .paper { height: 100%; overflow: auto; }
+  .paper textarea { display: block; width: min(820px, 100%); min-height: 100%; margin: 0 auto; padding: 36px 28px 80px;
+    border: 0; outline: 0; resize: none; background: transparent; color: inherit; font: 17px/1.65 var(--sans); }
+
+  /* code: numbers, colours under a transparent textarea */
+  .editor { position: absolute; inset: 0; display: flex; overflow: auto; font: 14px/21px var(--mono); tab-size: 4; }
+  .gutter { flex: none; padding: 12px 10px 12px 14px; text-align: right; color: #4d5563; user-select: none; background: var(--bg);
+    position: sticky; left: 0; z-index: 1; border-right: 1px solid var(--line); white-space: pre; }
+  .gutter b { color: var(--dim); font-weight: normal; }
+  .surface { position: relative; flex: 1; min-width: 0; }
+  .surface pre, .surface textarea { margin: 0; padding: 12px 16px 60px; font: inherit; white-space: pre; tab-size: 4; border: 0; }
+  .surface pre { pointer-events: none; min-height: 100%; }
+  .surface textarea { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; outline: 0; overflow: hidden;
+    background: transparent; color: transparent; caret-color: var(--fg); }
+  .surface textarea::selection { background: rgba(120, 160, 255, .35); color: transparent; }
+  .k { color: #c792ea; } .s { color: #c3e88d; } .n { color: #f78c6c; } .c { color: #697386; font-style: italic; }
+  .t { color: #82aaff; } .f { color: #ffcb6b; } .v { color: #89ddff; } .g { color: #f2a33a; font-weight: bold; } .p { color: #89ddff; }
+
+  /* json: a tree */
+  .tree { position: absolute; inset: 0; overflow: auto; padding: 14px 18px 60px; font: 14px/22px var(--mono); }
+  .tree ul { list-style: none; margin: 0; padding-left: 20px; border-left: 1px dotted var(--line); }
+  .tree > ul { padding-left: 0; border: 0; }
+  .tree li { white-space: nowrap; }
+  .tree .open { cursor: pointer; color: var(--dim); display: inline-block; width: 14px; }
+  .tree .key { color: #82aaff; }
+  .tree .sum { color: var(--dim); cursor: pointer; }
+  .tree li.closed > ul { display: none; }
+  .tree .string { color: #c3e88d; } .tree .number { color: #f78c6c; } .tree .boolean, .tree .null { color: #c792ea; }
+</style>
+</head>
+<body class="text">
+<header>
+  <span class="kind" id="kind">…</span>
+  <span class="name" id="name">Opna…</span>
+  <span class="dirty" title="Óvistaðar breytingar"></span>
+  <span class="spacer"></span>
+  <div class="toggle" id="jsonMode" hidden><button data-mode="tree" class="on">Tré</button><button data-mode="text">Texti</button></div>
+  <button class="primary" id="save" title="Vista (Ctrl+S)">Vista</button>
+</header>
+<main id="main"><div class="waiting">Opna skrá…</div></main>
+<footer><span id="where"></span><span id="size"></span><span id="state"></span></footer>
+
+<script>
+  // ---- what a file is: its kind from the extension ------------------------------------------
+  const kinds = {
+    json: ['json'],
+    code: ['cs', 'goal', 'js', 'mjs', 'ts', 'py', 'html', 'htm', 'css', 'sh', 'bash', 'ps1', 'xml', 'sql', 'java', 'go', 'rs', 'c', 'h', 'cpp', 'yaml', 'yml', 'toml', 'csproj'],
+  };
+  const extension = file => (file.match(/\.([^./]+)$/)?.[1] ?? '').toLowerCase();
+  const kindOf = file => Object.keys(kinds).find(k => kinds[k].includes(extension(file))) ?? 'text';
+
+  // ---- colours for code: one pass, per language ---------------------------------------------
+  const words = s => new Set(s.split(' '));
+  const languages = {
+    cs: { line: ['//'], block: [['/*', '*/']], quotes: '"\'', verbatim: true, keys: words('abstract as async await base bool break byte case catch char checked class const continue decimal default delegate do double else enum event explicit extern false finally fixed float for foreach get goto if implicit in init int interface internal is lock long namespace new null object operator out override params partial private protected public readonly record ref return sbyte sealed set short sizeof stackalloc static string struct switch this throw true try typeof uint ulong unchecked unsafe ushort using var virtual void volatile when where while with yield') },
+    js: { line: ['//'], block: [['/*', '*/']], quotes: '"\'`', keys: words('async await break case catch class const continue debugger default delete do else export extends false finally for from function if import in instanceof let new null of return static super switch this throw true try typeof undefined var void while with yield') },
+    py: { line: ['#'], block: [['"""', '"""']], quotes: '"\'', keys: words('and as assert async await break class continue def del elif else except False finally for from global if import in is lambda None nonlocal not or pass raise return self True try while with yield') },
+    sh: { line: ['#'], block: [], quotes: '"\'', keys: words('if then else elif fi for while do done case esac in function return local export set exit echo') },
+    css: { line: [], block: [['/*', '*/']], quotes: '"\'', keys: words('important') },
+    sql: { line: ['--'], block: [['/*', '*/']], quotes: '\'"', keys: words('select from where and or not insert into values update set delete create table index join left right inner outer on as group by order having limit null is in like distinct primary key') },
+    xml: { line: [], block: [['<!--', '-->']], quotes: '"\'', tags: true, keys: new Set() },
+    json: { line: [], block: [], quotes: '"', keys: words('true false null'), json: true },
+  };
+  const languageOf = ext => ({ ts: 'js', mjs: 'js', bash: 'sh', ps1: 'sh', yaml: 'sh', yml: 'sh', toml: 'sh', html: 'xml', htm: 'xml', csproj: 'xml',
+    java: 'cs', go: 'cs', rs: 'cs', c: 'cs', h: 'cs', cpp: 'cs' })[ext] ?? (languages[ext] ? ext : 'cs');
+  const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  const span = (cls, s) => `<span class="${cls}">${esc(s)}</span>`;
+
+  function colour(text, ext) {
+    if (ext === 'goal') return colourGoal(text);
+    const lang = languages[languageOf(ext)];
+    let out = '', i = 0;
+    while (i < text.length) {
+      const rest = text.slice(i);
+      const line = lang.line.find(p => rest.startsWith(p));
+      if (line) { const end = text.indexOf('\n', i); const j = end < 0 ? text.length : end; out += span('c', text.slice(i, j)); i = j; continue; }
+      const block = lang.block.find(([a]) => rest.startsWith(a));
+      if (block) { const end = text.indexOf(block[1], i + block[0].length); const j = end < 0 ? text.length : end + block[1].length; out += span('c', text.slice(i, j)); i = j; continue; }
+      const c = text[i];
+      if (lang.quotes.includes(c) || (lang.verbatim && (rest.startsWith('@"') || rest.startsWith('$"')))) {
+        const q = lang.quotes.includes(c) ? c : '"';
+        let j = i + (lang.quotes.includes(c) ? 1 : 2);
+        while (j < text.length && text[j] !== q && text[j] !== '\n') j += text[j] === '\\' ? 2 : 1;
+        j = Math.min(j + 1, text.length);
+        const s = text.slice(i, j);
+        out += span(lang.json && /^\s*:/.test(text.slice(j)) ? 't' : 's', s); i = j; continue;
+      }
+      if (lang.tags && c === '<') {
+        const m = rest.match(/^<\/?[\w:-]+/);
+        if (m) { out += span('k', m[0]); i += m[0].length; continue; }
+      }
+      const num = rest.match(/^\d[\d_.]*[a-zA-Z]*/);
+      if (num && !/\w/.test(text[i - 1] ?? '')) { out += span('n', num[0]); i += num[0].length; continue; }
+      const word = rest.match(/^[A-Za-z_][\w]*/);
+      if (word) {
+        const w = word[0], after = text.slice(i + w.length);
+        out += lang.keys.has(w) ? span('k', w) : /^\s*\(/.test(after) ? span('f', w) : /^[A-Z]/.test(w) ? span('t', w) : esc(w);
+        i += w.length; continue;
+      }
+      out += esc(c); i++;
+    }
+    return out;
+  }
+
+  // PLang: a goal's name at the line's start, steps after '-', '/' comments, %variables%, 'strings'
+  function colourGoal(text) {
+    return text.split('\n').map(line => {
+      if (/^\s*\//.test(line)) return span('c', line);
+      if (/^\S/.test(line) && !line.startsWith('-')) return span('g', line);
+      return esc(line)
+        .replace(/^(\s*)-/, '$1<span class="p">-</span>')
+        .replace(/'[^']*'|"[^"]*"/g, s => `<span class="s">${s}</span>`)
+        .replace(/%[^%\s]+%/g, v => `<span class="v">${v}</span>`)
+        .replace(/\b\d+(\.\d+)?\b/g, n => `<span class="n">${n}</span>`);
+    }).join('\n');
+  }
+
+  // ---- the views ----------------------------------------------------------------------------
+  const main = document.getElementById('main');
+  const where = document.getElementById('where'), size = document.getElementById('size'), state = document.getElementById('state');
+
+  // one textarea whose text is the file's: every view edits through it (json's tree only shows)
+  function textView(text, onChange) {
+    // no spellcheck: PlangOS's Chromium has an English dictionary only
+    main.innerHTML = '<div class="paper"><textarea spellcheck="false"></textarea></div>';
+    const area = main.querySelector('textarea');
+    area.value = text;
+    area.addEventListener('input', () => onChange(area.value));
+    grow(area);
+    return area;
+  }
+  function grow(area) {
+    const fit = () => { area.style.height = 'auto'; area.style.height = area.scrollHeight + 'px'; };
+    area.addEventListener('input', fit); requestAnimationFrame(fit);
+  }
+
+  function codeView(text, ext, onChange) {
+    main.innerHTML = '<div class="editor"><div class="gutter"></div><div class="surface"><pre></pre><textarea spellcheck="false" wrap="off"></textarea></div></div>';
+    const area = main.querySelector('textarea'), pre = main.querySelector('pre'), gutter = main.querySelector('.gutter');
+    const paint = () => {
+      pre.innerHTML = colour(area.value, ext) + '\n';
+      const lines = area.value.split('\n').length;
+      gutter.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+      // the textarea is as big as its text, so the editor scrolls both together
+      area.style.height = pre.scrollHeight + 'px';
+      area.style.width = Math.max(pre.scrollWidth, area.parentElement.clientWidth) + 'px';
+    };
+    area.value = text;
+    area.addEventListener('input', () => { paint(); onChange(area.value); });
+    area.addEventListener('keydown', e => {
+      if (e.key === 'Tab') { e.preventDefault(); document.execCommand('insertText', false, '    '); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const before = area.value.slice(0, area.selectionStart);
+        const indent = before.slice(before.lastIndexOf('\n') + 1).match(/^\s*/)[0];
+        document.execCommand('insertText', false, '\n' + indent + (/[{[(:]\s*$/.test(before) ? '    ' : ''));
+      }
+    });
+    paint();
+    return area;
+  }
+
+  function treeView(value) {
+    main.innerHTML = '<div class="tree"></div>';
+    main.firstChild.append(node(null, value));
+    main.firstChild.addEventListener('click', e => {
+      const li = e.target.closest('.open, .sum')?.closest('li');
+      if (li) { li.classList.toggle('closed'); li.querySelector('.open').textContent = li.classList.contains('closed') ? '▸' : '▾'; }
+    });
+  }
+  function node(key, value) {
+    const ul = document.createElement('ul');
+    ul.append(item(key, value));
+    return ul;
+  }
+  function item(key, value) {
+    const li = document.createElement('li');
+    const label = key === null ? '' : `<span class="key">${esc(JSON.stringify(key))}</span>: `;
+    if (value !== null && typeof value === 'object') {
+      const list = Array.isArray(value), entries = list ? value.map((v, i) => [i, v]) : Object.entries(value);
+      li.innerHTML = `<span class="open">▾</span>${label}<span class="sum">${list ? `[${entries.length}]` : `{${entries.length}}`}</span>`;
+      const ul = document.createElement('ul');
+      for (const [k, v] of entries) ul.append(item(list ? null : k, v));
+      li.append(ul);
+    } else {
+      const type = value === null ? 'null' : typeof value;
+      li.innerHTML = `<span class="open"></span>${label}<span class="${type}">${esc(JSON.stringify(value))}</span>`;
+    }
+    return li;
+  }
+
+  // ---- Writer: the file, its text, its view --------------------------------------------------
+  const writer = {
+    file: '', text: '', stored: '', kind: 'text', mode: 'tree', area: null,
+
+    show(file, text) {
+      this.file = file; this.text = this.stored = text; this.kind = kindOf(file);
+      document.body.className = this.kind;
+      document.title = file.split('/').pop() + ' — Writer';
+      document.getElementById('name').textContent = file.split('/').pop();
+      document.getElementById('kind').textContent = { text: 'TEXTI', json: 'JSON', code: ({ cs: 'C#', goal: 'PLANG' })[extension(file)] ?? extension(file).toUpperCase() }[this.kind];
+      document.getElementById('jsonMode').hidden = this.kind !== 'json';
+      this.render();
+    },
+
+    render() {
+      const changed = text => { this.text = text; this.status(); };
+      state.textContent = ''; state.className = '';
+      if (this.kind === 'json' && this.mode === 'tree') {
+        try { treeView(JSON.parse(this.text)); this.area = null; }
+        catch (e) { this.mode = 'text'; this.modes(); this.render(); this.fail('Ógilt JSON: ' + e.message); return; }
+      } else if (this.kind === 'text') this.area = textView(this.text, changed);
+      else this.area = codeView(this.text, this.kind === 'json' ? 'json' : extension(this.file), changed);
+      this.area?.addEventListener('keyup', () => this.status());
+      this.area?.addEventListener('click', () => this.status());
+      this.area?.focus();
+      this.status();
+    },
+
+    modes() {
+      for (const b of document.querySelectorAll('#jsonMode button')) b.classList.toggle('on', b.dataset.mode === this.mode);
+    },
+
+    status() {
+      document.body.classList.toggle('changed', this.text !== this.stored);
+      const lines = this.text.split('\n').length;
+      size.textContent = `${lines} ${lines === 1 ? 'lína' : 'línur'} · ${this.text.length} stafir`;
+      if (this.area) {
+        const before = this.text.slice(0, this.area.selectionStart).split('\n');
+        where.textContent = `Lína ${before.length}, dálkur ${before.at(-1).length + 1}`;
+      } else where.textContent = '';
+    },
+
+    fail(message) { state.textContent = message; state.className = 'error'; },
+
+    save() {
+      if (!this.file) return;
+      if (!window.plang) { setTimeout(() => this.save(), 100); return; }   // plang's door comes when the window is shown
+      // what the file holds goes back: a json file's value (its format writes it), any other file's text
+      let content = this.text;
+      if (this.kind === 'json') {
+        try { content = JSON.parse(this.text); }
+        catch (e) { this.fail('Ógilt JSON — ekki vistað: ' + e.message); return; }
+      }
+      state.textContent = 'Vista…'; state.className = '';
+      plang(JSON.stringify({ save: this.file, content }));
+    },
+
+    saved() {
+      this.stored = this.text;
+      state.textContent = 'Vistað'; state.className = '';
+      this.status();
+    },
+  };
+
+  document.getElementById('save').onclick = () => writer.save();
+  addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); writer.save(); }
+  });
+  document.getElementById('jsonMode').onclick = e => {
+    const mode = e.target.dataset.mode;
+    if (!mode || mode === writer.mode) return;
+    if (mode === 'tree') {
+      try { JSON.parse(writer.text); } catch (err) { writer.fail('Ógilt JSON: ' + err.message); return; }
+    }
+    writer.mode = mode; writer.modes(); writer.render();
+  };
+</script>
+</body>
+</html>

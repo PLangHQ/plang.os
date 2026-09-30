@@ -428,9 +428,9 @@
           "index": 0,
           "text": "set %asked% to %!data%",
           "line": {
-            "number": 18
+            "number": 19
           },
-          "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen.",
+          "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}; \"from\" is the window that asked.",
           "code": [
             {
               "module": "variable",
@@ -489,7 +489,7 @@
           "index": 1,
           "text": "if %asked.open%, call Open",
           "line": {
-            "number": 19
+            "number": 20
           },
           "code": [
             {
@@ -560,7 +560,7 @@
           "index": 2,
           "text": "if %asked.window%, call Command",
           "line": {
-            "number": 20
+            "number": 21
           },
           "code": [
             {
@@ -626,13 +626,226 @@
             }
           ],
           "waitForExecution": true
+        },
+        {
+          "index": 3,
+          "text": "if %asked.files%, call Files",
+          "line": {
+            "number": 22
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.files%",
+                  "variable": [
+                    {
+                      "text": "%asked.files%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "files"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Files\")",
+                  "line": {
+                    "number": 22
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "text"
+                          },
+                          "value": "Files"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 4,
+          "text": "if %asked.edit%, call Edit",
+          "line": {
+            "number": 23
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.edit%",
+                  "variable": [
+                    {
+                      "text": "%asked.edit%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "edit"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Edit\")",
+                  "line": {
+                    "number": 23
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "text"
+                          },
+                          "value": "Edit"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 5,
+          "text": "if %asked.save%, call Save",
+          "line": {
+            "number": 24
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.save%",
+                  "variable": [
+                    {
+                      "text": "%asked.save%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "save"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Save\")",
+                  "line": {
+                    "number": 24
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "text"
+                          },
+                          "value": "Save"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "3dc98a6a3fcdb9d17b9e223313716d448e133922d588e82f01dff308153bfbb4",
+      "hash": "9eb93918077bd270d30eab708d40b4d8c2efc1f7a1996310cdaef7dd56ff0500",
       "isSetup": false,
       "isEvent": false,
       "isSystem": false,
@@ -645,7 +858,7 @@
           "index": 0,
           "text": "open window %asked.open% in %browser%",
           "line": {
-            "number": 23
+            "number": 27
           },
           "code": [
             {
@@ -720,7 +933,7 @@
           "index": 0,
           "text": "send %asked% to %screen%",
           "line": {
-            "number": 26
+            "number": 30
           },
           "code": [
             {
@@ -780,13 +993,559 @@
       "isTest": false
     },
     {
+      "name": "Files",
+      "step": [
+        {
+          "index": 0,
+          "text": "list files in 'Desktop', write to %files%",
+          "line": {
+            "number": 34
+          },
+          "comment": "the desktop's files: what is in Desktop/, shown as icons",
+          "code": [
+            {
+              "module": "file",
+              "name": "list",
+              "property": [
+                {
+                  "name": "Path",
+                  "type": {
+                    "name": "path"
+                  },
+                  "value": "Desktop"
+                }
+              ],
+              "default": [
+                {
+                  "name": "pattern",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "*"
+                },
+                {
+                  "name": "recursive",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%files%",
+                  "variable": [
+                    {
+                      "text": "%files%",
+                      "code": [
+                        {
+                          "variable": "files"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "call ShowFiles files=%files% in %browser.desktop%",
+          "line": {
+            "number": 35
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "ShowFiles"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%browser.desktop%",
+                  "variable": [
+                    {
+                      "text": "%browser.desktop%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        },
+                        {
+                          "property": "desktop"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"files","type":{"name":"item","template":"plang"},"value":"%files%","variable":[{"text":"%files%","code":[{"variable":"files"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "2d96e04c6a1d3e2366f04286832fb546cd1be14a012f011515a1cb020bbc79b6",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
+    },
+    {
+      "name": "Edit",
+      "step": [
+        {
+          "index": 0,
+          "text": "open window 'file:///home/plang/app/writer/start.html' in %browser%, write to %writer%",
+          "line": {
+            "number": 40
+          },
+          "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value",
+          "code": [
+            {
+              "module": "window",
+              "name": "open",
+              "property": [
+                {
+                  "name": "Url",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "file:///home/plang/app/writer/start.html"
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%writer%",
+                  "variable": [
+                    {
+                      "text": "%writer%",
+                      "code": [
+                        {
+                          "variable": "writer"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "read %asked.edit%, write to %content%",
+          "line": {
+            "number": 41
+          },
+          "code": [
+            {
+              "module": "file",
+              "name": "read",
+              "property": [
+                {
+                  "name": "Path",
+                  "type": {
+                    "name": "path",
+                    "template": "plang"
+                  },
+                  "value": "%asked.edit%",
+                  "variable": [
+                    {
+                      "text": "%asked.edit%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "edit"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "resolvevariables",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%content%",
+                  "variable": [
+                    {
+                      "text": "%content%",
+                      "code": [
+                        {
+                          "variable": "content"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Unsure",
+              "message": "step 1 uses file.read, which the decider was not sure of (0.88)"
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 2,
+          "text": "call Show file=%asked.edit%, content=%content% in %writer%",
+          "line": {
+            "number": 42
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "Show"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%writer%",
+                  "variable": [
+                    {
+                      "text": "%writer%",
+                      "code": [
+                        {
+                          "variable": "writer"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"file","type":{"name":"item","template":"plang"},"value":"%asked.edit%","variable":[{"text":"%asked.edit%","code":[{"variable":"asked"},{"property":"edit"}]}]},{"name":"content","type":{"name":"item","template":"plang"},"value":"%content%","variable":[{"text":"%content%","code":[{"variable":"content"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "4fadd983073f3fdd6af49d9c097959167541ede67337f5841ccaf801be1f5aff",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
+    },
+    {
+      "name": "Save",
+      "step": [
+        {
+          "index": 0,
+          "text": "save %asked.content% to %asked.save%",
+          "line": {
+            "number": 46
+          },
+          "comment": "Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value",
+          "code": [
+            {
+              "module": "file",
+              "name": "save",
+              "property": [
+                {
+                  "name": "Path",
+                  "type": {
+                    "name": "path",
+                    "template": "plang"
+                  },
+                  "value": "%asked.save%",
+                  "variable": [
+                    {
+                      "text": "%asked.save%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "save"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.content%",
+                  "variable": [
+                    {
+                      "text": "%asked.content%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "content"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "window.callGoal(Name=\"Saved\", Window=%asked.from%, Browser=%browser%)",
+          "line": {
+            "number": 47
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "Saved"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.from%",
+                  "variable": [
+                    {
+                      "text": "%asked.from%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "from"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "1e1dbfab23c3527a46315b38c12c937550c2b2f7ccc7a29cb304cd32916286ad",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": false,
+      "isTest": false
+    },
+    {
       "name": "Window",
       "step": [
         {
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 32
+            "number": 53
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -847,7 +1606,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 33
+            "number": 54
           },
           "code": [
             {
@@ -902,7 +1661,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 34
+            "number": 55
           },
           "code": [
             {
@@ -973,7 +1732,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 35
+            "number": 56
           },
           "code": [
             {
@@ -1058,7 +1817,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 38
+            "number": 59
           },
           "code": [
             {
@@ -1154,7 +1913,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 41
+            "number": 62
           },
           "code": [
             {

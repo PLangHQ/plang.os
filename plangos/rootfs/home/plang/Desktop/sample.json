@@ -1,0 +1,12 @@
+{
+  "name": "PlangOS",
+  "version": "0.0.0-dev",
+  "runs": ["plang", "chromium"],
+  "screen": { "width": 1920, "height": 1080, "fps": 60 },
+  "apps": [
+    { "name": "Writer", "kinds": ["text", "json", "code"] },
+    { "name": "Desktop", "kinds": [] }
+  ],
+  "secure": true,
+  "shell": null
+}

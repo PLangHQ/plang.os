@@ -1,0 +1,7 @@
+Minnispunktar
+
+Þetta er textaskrá á skjáborði PlangOS. Tvísmelltu á hana og hún opnast í Writer.
+Breyttu henni og ýttu á Ctrl+S til að vista.
+
+- PlangOS keyrir aðeins PLang.
+- Writer sýnir skrá eftir tegund: texta, JSON eða kóða.

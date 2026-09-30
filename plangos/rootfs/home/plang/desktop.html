@@ -43,6 +43,7 @@
     font-weight: 700; font-size: 22px; color: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
   }
   .tile img { width: 44px; height: 44px; }
+  .tile.file { border-radius: 6px 16px 6px 6px; font: 700 15px "DejaVu Sans Mono", monospace; }
   .icon span { font-size: 13px; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
 
   /* the middle: time, date, and where to go */
@@ -206,6 +207,32 @@
     item.onclick = () => open(a.url);         // start menu: one click
     menuApps.append(item);
   }
+  // The files on the desktop (Desktop/ in PlangOS): plang calls this page's goal ShowFiles with
+  // them; a double-click opens one in Writer.
+  const fileTile = name => {
+    const ext = (name.match(/\.([^.]+)$/)?.[1] ?? '').toLowerCase();
+    const [mark, color] = { txt: ['TXT', '#5b6b7f'], md: ['MD', '#5b6b7f'], json: ['{ }', '#b7791f'], cs: ['C#', '#68217a'],
+      goal: ['PL', '#0b7a75'], js: ['JS', '#a38a00'], py: ['PY', '#2f6ea6'], html: ['</>', '#c2410c'] }[ext] ?? [ext.toUpperCase().slice(0, 4) || '•', '#555d6b'];
+    return `<div class="tile file" style="background:${color}">${mark}</div>`;
+  };
+  let fileIcons = [];
+  window.ShowFiles = ({ files }) => {
+    for (const icon of fileIcons) icon.remove();
+    fileIcons = (files ?? []).map(f => {
+      const path = typeof f === 'string' ? f : (f.path ?? f.absolute ?? f.name ?? String(f));
+      const name = path.split('/').pop();
+      const icon = document.createElement('div');
+      icon.className = 'icon';
+      icon.title = path;
+      icon.innerHTML = fileTile(name) + '<span></span>';
+      icon.lastChild.textContent = name;
+      icon.ondblclick = () => ask({ edit: path });
+      icons.append(icon);
+      return icon;
+    });
+    return fileIcons.length;
+  };
+
   function showPins() {
     pins.replaceChildren(...apps.filter(a => pinned.has(a.name)).map(a => {
       const pin = document.createElement('button');
@@ -403,6 +430,9 @@
   }
   tick();
   setInterval(tick, 1000);
+
+  // the desktop's files: asked for once plang's door is there (it comes as the desktop is shown)
+  (function askFiles() { window.plang ? ask({ files: true }) : setTimeout(askFiles, 100); })();
 </script>
 </body>
 </html>

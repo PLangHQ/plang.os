@@ -14,16 +14,37 @@ Input
 
 Desktop
 / The desktop page asks: {"open": url} opens a window; {"window": "focus|minimize|…", "id"}
-/ goes to the screen.
+/ goes to the screen; {"files"} shows the desktop's files; {"edit": path} opens one in Writer.
+/ Writer asks: {"save": path, "text"}; "from" is the window that asked.
 - set %asked% to %!data%
 - if %asked.open%, call Open
 - if %asked.window%, call Command
+- if %asked.files%, call Files
+- if %asked.edit%, call Edit
+- if %asked.save%, call Save
 
 Open
 - open window %asked.open% in %browser%
 
 Command
 - send %asked% to %screen%
+
+Files
+/ the desktop's files: what is in Desktop/, shown as icons
+- list files in 'Desktop', write to %files%
+- call ShowFiles files=%files% in %browser.desktop%
+
+Edit
+/ a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file
+/ its value
+- open window 'file:///home/plang/app/writer/start.html' in %browser%, write to %writer%
+- read %asked.edit%, write to %content%
+- call Show file=%asked.edit%, content=%content% in %writer%
+
+Save
+/ Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value
+- save %asked.content% to %asked.save%
+- window.callGoal(Name="Saved", Window=%asked.from%, Browser=%browser%)
 
 Window
 / The screen says what happened to a window: the desktop's taskbar shows it. Enter in a
