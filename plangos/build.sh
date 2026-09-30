@@ -189,6 +189,15 @@ cmd_image() {
   # .NET's optional LTTng tracing provider: needs liblttng-ust, which PlangOS doesn't ship
   rm -f "$ROOT/opt/plang/libcoreclrtraceptprovider.so"
   cp -a "$HERE/rootfs/." "$ROOT/"
+  # Widevine (Google's DRM module: not ours to ship, never in git) — only when the build is given it,
+  # PLANGOS_WIDEVINE=<its WidevineCdm folder, from Chrome's package>; Chromium loads it from beside
+  # itself. Later: downloaded on first use instead (Ingi, 2026-09-30).
+  if [ -n "${PLANGOS_WIDEVINE:-}" ]; then
+    [ -f "$PLANGOS_WIDEVINE/manifest.json" ] || die "PLANGOS_WIDEVINE has no manifest.json"
+    mkdir -p "$ROOT/usr/lib/chromium/WidevineCdm"
+    cp -a "$PLANGOS_WIDEVINE/." "$ROOT/usr/lib/chromium/WidevineCdm/"
+    log "added Widevine $(grep -o '"version": *"[^"]*"' "$PLANGOS_WIDEVINE/manifest.json")"
+  fi
   : > "$ROOT/etc/fstab"
   ln -sf ../usr/share/zoneinfo/Etc/UTC "$ROOT/etc/localtime"
   echo "Etc/UTC" > "$ROOT/etc/timezone"
