@@ -17,7 +17,9 @@ OpenPlangOS
 / straight to our window — no goal per frame; our window's mouse and keyboard go down it (stdin),
 / one JSON line per event.
 - open screen titled 'PlangOS desktop', size 1920x1080, on input call Input, on close call Close, write to %screen%
-- run terminal 'wsl.exe' with parameters '-d', 'PlangOS', '--cd', '/home/plang', '--exec', '/opt/plang/plang', 'Screen', keep running, binary output to %screen%, write to %container%
+/ Formal: in words, the builder took the 'Screen' among the parameters for a goal to call on every
+/ message (60 a second, a goal that doesn't exist: "Screen" in the console, and the pipe held up).
+- terminal.open(App="wsl.exe", Parameter=["-d", "PlangOS", "--cd", "/home/plang", "--exec", "/opt/plang/plang", "Screen"], Binary=true, OutputTo=%screen%); variable.set(Name=%container%, Value=%!data%)
 - wait for %container%
 
 Input
