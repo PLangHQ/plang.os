@@ -186,11 +186,11 @@
     return text.split('\n').map(line => {
       if (/^\s*\//.test(line)) return span('c', line);
       if (/^\S/.test(line) && !line.startsWith('-')) return span('g', line);
-      return esc(line)
-        .replace(/^(\s*)-/, '$1<span class="p">-</span>')
-        .replace(/'[^']*'|"[^"]*"/g, s => `<span class="s">${s}</span>`)
-        .replace(/%[^%\s]+%/g, v => `<span class="v">${v}</span>`)
-        .replace(/\b\d+(\.\d+)?\b/g, n => `<span class="n">${n}</span>`);
+      // one pass over the raw line, each piece escaped as it is wrapped: no pattern ever sees the
+      // markup an earlier one made (chained replaces coloured the quotes of class="p")
+      return line.replace(/^(\s*)(-)|('[^']*'|"[^"]*")|(%[^%\s]+%)|(\b\d+(?:\.\d+)?\b)|([^'"%\d-]+|[\s\S])/g,
+        (m, indent, dash, s, v, n) => dash ? esc(indent) + span('p', dash)
+          : s ? span('s', s) : v ? span('v', v) : n ? span('n', n) : esc(m));
     }).join('\n');
   }
 
