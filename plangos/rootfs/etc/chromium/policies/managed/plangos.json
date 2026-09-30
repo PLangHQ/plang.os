@@ -1,3 +1,15 @@
 {
-  "CommandLineFlagSecurityWarningsEnabled": false
+  "CommandLineFlagSecurityWarningsEnabled": false,
+  "DefaultNotificationsSetting": 2,
+  "DefaultGeolocationSetting": 2,
+  "AudioCaptureAllowed": false,
+  "VideoCaptureAllowed": false,
+  "DefaultClipboardSetting": 2,
+  "DefaultSensorsSetting": 2,
+  "DefaultSerialGuardSetting": 2,
+  "DefaultWebUsbGuardSetting": 2,
+  "DefaultWebHidGuardSetting": 2,
+  "DefaultWebBluetoothGuardSetting": 2,
+  "DefaultLocalFontsSetting": 2,
+  "DefaultWindowManagementSetting": 2
 }
