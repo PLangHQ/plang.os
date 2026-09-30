@@ -58,10 +58,14 @@ InstallFailed
 ReplaceImage
 / A new image: remove the old distro, then import. /home/plang is not carried over yet.
 - write out 'New PlangOS image %manifest.version%: replacing the installed one.'
-/ A PlangOS still running (an earlier window) can make --unregister hang: stop it first.
-- run terminal 'wsl.exe' with parameters '--terminate', 'PlangOS', env WSL_UTF8=1, write to %stopped%
-- run terminal 'wsl.exe' with parameters '--unregister', 'PlangOS', env WSL_UTF8=1, write to %removed%
+/ A PlangOS still running (an earlier window) can make --unregister hang: stop it first. Neither
+/ may hang the start: if WSL doesn't answer, say so and stop.
+- terminal.start(App="wsl.exe", Parameter=["--terminate", "PlangOS"], Environment={"WSL_UTF8": 1}); on.timeout(After="PT1M"); on.error(Recovery=[goal.call(Name="WslStuck")]); variable.set(Name=%stopped%, Value=%!data%)
+- terminal.start(App="wsl.exe", Parameter=["--unregister", "PlangOS"], Environment={"WSL_UTF8": 1}); on.timeout(After="PT2M"); on.error(Recovery=[goal.call(Name="WslStuck")]); variable.set(Name=%removed%, Value=%!data%)
 - call ImportImage
+
+WslStuck
+- throw error 'WSL is not answering: PlangOS would not stop. Restart Windows, then run start.ps1 again.'
 
 ImportImage
 - write out 'Importing PlangOS %manifest.version%'
