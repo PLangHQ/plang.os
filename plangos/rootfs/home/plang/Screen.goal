@@ -30,7 +30,7 @@ Window
 / window's address field ({"navigate": what was typed, "id"}) sends that window there; its
 / menu's New window, and links opened as tabs ({"open": url}), open a window.
 - set %event% to %!data%
-- post %event% to the page of %browser%
+- post %event% to %browser.desktop%
 - if %event.navigate%, call Navigate
 - if %event.open%, call OpenPage
 

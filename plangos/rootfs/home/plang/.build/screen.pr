@@ -649,7 +649,7 @@
           },
           "code": [
             {
-              "module": "browser",
+              "module": "window",
               "name": "open",
               "property": [
                 {
@@ -692,6 +692,12 @@
                   ]
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'open window %asked.open% in %browser%': browser.open: module 'browser' exists but action 'open' not found. Did you mean: send, stop, start?"
             }
           ],
           "waitForExecution": true
@@ -839,13 +845,13 @@
         },
         {
           "index": 1,
-          "text": "post %event% to the page of %browser%",
+          "text": "post %event% to %browser.desktop%",
           "line": {
             "number": 33
           },
           "code": [
             {
-              "module": "browser",
+              "module": "window",
               "name": "post",
               "property": [
                 {
@@ -867,18 +873,21 @@
                   ]
                 },
                 {
-                  "name": "Browser",
+                  "name": "Window",
                   "type": {
-                    "name": "browser",
+                    "name": "item",
                     "template": "plang"
                   },
-                  "value": "%browser%",
+                  "value": "%browser.desktop%",
                   "variable": [
                     {
-                      "text": "%browser%",
+                      "text": "%browser.desktop%",
                       "code": [
                         {
                           "variable": "browser"
+                        },
+                        {
+                          "property": "desktop"
                         }
                       ]
                     }
@@ -1036,7 +1045,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "7c2c2ac8f168a20271e3b2dfda8d3b2b9c1f7ff7cf670d2a9dec311ba2fa6474",
+      "hash": "dc5e47790cb91007f5487fcc04d4c0116c54e8907de1fc0ccaf5dc0491c2705f",
       "isSetup": false,
       "isEvent": false,
       "isSystem": false,
@@ -1053,13 +1062,13 @@
           },
           "code": [
             {
-              "module": "browser",
+              "module": "window",
               "name": "navigate",
               "property": [
                 {
                   "name": "Window",
                   "type": {
-                    "name": "number",
+                    "name": "item",
                     "template": "plang"
                   },
                   "value": "%event.id%",
@@ -1119,6 +1128,12 @@
               ]
             }
           ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'navigate window %event.id% to %event.navigate% in %browser%': browser.navigate: module 'browser' exists but action 'navigate' not found. Did you mean: start, stop, send?"
+            }
+          ],
           "waitForExecution": true
         }
       ],
@@ -1143,7 +1158,7 @@
           },
           "code": [
             {
-              "module": "browser",
+              "module": "window",
               "name": "open",
               "property": [
                 {
@@ -1186,6 +1201,12 @@
                   ]
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'open window %event.open% in %browser%': browser.open: module 'browser' exists but action 'open' not found. Did you mean: send, stop, start?"
             }
           ],
           "waitForExecution": true
