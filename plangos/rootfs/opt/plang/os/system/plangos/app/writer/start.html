@@ -19,6 +19,9 @@
   window.Tool = async ({ tool }) => { await ready; return writer.tool(tool); };
   // the clipboard as a value (Ctrl+Shift+V asked for it): a copy that knows where it came from
   window.Paste = async ({ value }) => { await ready; return writer.paste(value); };
+  // a .goal's ▶: what plang build and the run wrote, and how they ended (code 0: well)
+  window.Built = async result => { await ready; return runner.built(result ?? {}); };
+  window.Ran = async result => { await ready; return runner.ran(result ?? {}); };
   // something dropped on this window (the desktop's shortcut): {name, url, image} — a page takes it
   // as an embed block
   window.Drop = async value => { await ready; return writer.take(value ?? {}); };
@@ -77,8 +80,28 @@
   .unsaved span { flex: 1; min-width: 180px; }
 
   main { flex: 1; min-height: 0; position: relative; }
-  footer { display: flex; gap: 16px; padding: 4px 14px; font-size: 12px; color: var(--dim); background: var(--bar); border-top: 1px solid var(--line); }
+  footer { display: flex; align-items: center; gap: 16px; padding: 4px 14px; font-size: 12px; color: var(--dim); background: var(--bar); border-top: 1px solid var(--line); }
   footer .error { color: #e5484d; }
+  footer .ok { color: #3fb950; }
+  footer .busy::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%;
+    border: 2px solid var(--accent); border-right-color: transparent; animation: spin .8s linear infinite; vertical-align: -1px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  footer .grow { flex: 1; }
+  footer button { font: inherit; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 5px; padding: 1px 8px; cursor: pointer; }
+  footer button:hover { border-color: var(--dim); }
+  .modes { position: fixed; z-index: 10; right: 12px; bottom: 30px; background: var(--bar); border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3); padding: 4px; font-size: 13px; }
+  .modes div { padding: 6px 12px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+  .modes div:hover { background: var(--line); }
+  .modes div.on::before { content: "✓ "; color: var(--accent); }
+  /* what the build or the run wrote, above the footer */
+  .out { height: 32%; min-height: 90px; display: flex; flex-direction: column; border-top: 1px solid var(--line); background: var(--bg); }
+  .out header { padding: 4px 14px; font-size: 12px; }
+  .out header button { padding: 0 8px; border: 0; font-size: 15px; }
+  .out pre { flex: 1; margin: 0; padding: 6px 14px 10px; overflow: auto; font: 13px/1.5 var(--mono); white-space: pre-wrap; }
+  .out pre .err { color: #e5484d; }
+  .gutter .ok { color: #3fb950; font-weight: normal; }
+  .gutter .bad { color: #e5484d; font-weight: normal; }
   .waiting { padding: 40px; color: var(--dim); }
 
   /* page: blocks, each its own editable line; a handle to drag it, "/" to change what it is */
@@ -170,7 +193,16 @@
   <div class="note" id="newNote"></div>
 </div>
 <main id="main"><div class="waiting">Opna skrá…</div></main>
-<footer><span id="where"></span><span id="size"></span><span id="state"></span></footer>
+<!-- a .goal's build and run: what plang wrote -->
+<section class="out" id="out" hidden>
+  <header><b id="outTitle"></b><span class="spacer"></span><button id="outClose" title="Loka">×</button></header>
+  <pre id="outText"></pre>
+</section>
+<footer><span id="where"></span><span id="size"></span><span id="state"></span><span class="grow"></span>
+  <button id="mode" hidden title="Hvað ▶ gerir">Byggja og keyra ▾</button></footer>
+<div class="modes" id="modes" hidden>
+  <div data-mode="both">Byggja og keyra</div><div data-mode="build">Byggja</div><div data-mode="run">Keyra</div>
+</div>
 
 <script>
   // ---- what a file is: its kind from the extension ------------------------------------------
@@ -541,13 +573,16 @@
     const paint = () => {
       pre.innerHTML = colour(area.value, ext) + '\n';
       const lines = area.value.split('\n').length;
-      gutter.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+      // a .goal's step lines carry the build's mark: ✓ built, ✗ refused
+      gutter.innerHTML = Array.from({ length: lines }, (_, i) =>
+        (marks[i] === 'ok' ? '<span class="ok">✓ </span>' : marks[i] === 'bad' ? '<span class="bad">✗ </span>' : '') + (i + 1)).join('\n');
       // the textarea is as big as its text, so the editor scrolls both together
       area.style.height = pre.scrollHeight + 'px';
       area.style.width = Math.max(pre.scrollWidth, area.parentElement.clientWidth) + 'px';
     };
     area.value = text;
     area.addEventListener('input', () => { paint(); onChange(area.value); });
+    area.addEventListener('repaint', paint);   // the build's ✓/✗ changed
     area.addEventListener('keydown', e => {
       if (e.key === 'Tab') { e.preventDefault(); document.execCommand('insertText', false, '    '); }
       if (e.key === 'Enter') {
@@ -602,8 +637,10 @@
       document.getElementById('kind').textContent = { text: 'TEXTI', json: 'JSON', code: ({ cs: 'C#', goal: 'PLANG' })[extension(file)] ?? extension(file).toUpperCase() }[this.kind];
       document.getElementById('jsonMode').hidden = this.kind !== 'json';
       this.render();
-      // the window: its tools in the title bar, and its address — the file, as a path in the app
-      ask({ window: 'tools', tools: ['new', 'open', 'save'] });
+      // the window: its tools in the title bar (a .goal's ▶ too), and its address — the file, as a path in the app
+      const goal = extension(file) === 'goal';
+      ask({ window: 'tools', tools: goal ? ['new', 'open', 'save', 'run'] : ['new', 'open', 'save'] });
+      runner.show(goal);
       // origin: this page; plang adds the step, goal and .pr the address passes through
       const page = decodeURIComponent(location.pathname).replace(/^\/opt\/plang\/os\//, '/os/');
       ask({ window: 'url', url: { path: file, source: 'file:///home/plang' + file, origin: { page } } });
@@ -624,6 +661,7 @@
       if (name === 'new') maker.open();
       else if (name === 'open') picker.open();
       else if (name === 'save') this.save();
+      else if (name === 'run') runner.go();
       else return false;
       return true;
     },
@@ -697,9 +735,113 @@
     },
   };
 
-  // ---- New and Open: plang lists a folder (ShowList), opens a file here (Show), makes one ---------
   const $ = id => document.getElementById(id);
+  // what the page says to plang (its door, plang(), comes when the window is shown)
   const ask = message => window.plang ? plang(JSON.stringify(message)) : setTimeout(() => ask(message), 100);
+
+  // ---- a .goal's ▶: build, run, or both (the footer's mode); the status in the footer, what plang
+  // wrote above it, ✓/✗ on the step lines ---------------------------------------------------------
+  const marks = {};   // line index → 'ok' | 'bad'
+  const runner = {
+    mode: 'both', step: null,
+
+    show(goal) {
+      $('mode').hidden = !goal;
+      for (const k of Object.keys(marks)) delete marks[k];
+    },
+
+    // save first (▶ runs what is on disk); then the mode's first step
+    go() {
+      if (this.step) return;
+      if (dirty()) { writer.after = () => this.go(); writer.save(); return; }
+      this.out('', '');
+      this.mode === 'run' ? this.run() : this.build();
+    },
+
+    build() {
+      this.step = 'build';
+      this.status('Byggi…', 'busy');
+      ask({ build: writer.file });
+    },
+
+    run() {
+      this.step = 'run';
+      this.status('Keyri…', 'busy');
+      // the goal by its name from the app's root: /Desktop/Start.goal → Desktop/Start
+      ask({ run: writer.file.replace(/^\//, '').replace(/\.goal$/i, '') });
+    },
+
+    // (once per ▶: a failed start answers first, the step after it again)
+    built({ output, error, code }) {
+      if (this.step !== 'build') return false;
+      this.step = null;
+      const ok = Number(code) === 0 && !/Build error|^\w+Error \(\d+\)/m.test(String(output ?? ''));
+      this.mark(ok, String(output ?? '') + String(error ?? ''));
+      this.out('Bygging', output, error);
+      if (!ok) { this.status('✗ Bygging mistókst', 'error'); return true; }
+      this.status('✓ Byggt', 'ok');
+      if (this.mode === 'both') this.run();
+      return true;
+    },
+
+    ran({ output, error, code }) {
+      if (this.step !== 'run') return false;
+      this.step = null;
+      const ok = Number(code) === 0;
+      this.out('Keyrsla', output, error);
+      this.status(ok ? '✓ Keyrt' : `✗ Keyrsla mistókst (${code})`, ok ? 'ok' : 'error');
+      return true;
+    },
+
+    // ✓ on every step line when the build went through; when it refused a step ("in Start: step 2"),
+    // ✗ on that one
+    mark(ok, said) {
+      for (const k of Object.keys(marks)) delete marks[k];
+      const lines = writer.text.split('\n');
+      const steps = [];   // [goal name, step index in it, line]
+      let goal = null, n = 0;
+      lines.forEach((line, i) => {
+        if (/^\S/.test(line) && !line.startsWith('-') && !line.startsWith('/')) { goal = line.trim(); n = 0; }
+        else if (/^\s*-/.test(line)) steps.push([goal, n++, i]);
+      });
+      const refused = [...said.matchAll(/Build error in (\S+?):\s*step (\d+)/g)].map(m => [m[1], Number(m[2])]);
+      for (const [g, k, i] of steps)
+        if (refused.some(([rg, rk]) => rg === g && rk === k)) marks[i] = 'bad';
+        else if (ok) marks[i] = 'ok';
+      writer.area?.dispatchEvent(new Event('repaint'));
+    },
+
+    status(text, cls) { state.textContent = text; state.className = cls ?? ''; },
+
+    out(title, output, error) {
+      const text = [output, error].map(t => String(t ?? '').trim()).filter(Boolean);
+      if (!title || !text.length) { if (!title) $('out').hidden = true; return; }
+      $('out').hidden = false;
+      $('outTitle').textContent = title;
+      const pre = $('outText');
+      if (title === 'Keyrsla' && pre.dataset.from === 'Bygging') pre.append('\n');   // the run after its build
+      else pre.textContent = '';
+      pre.dataset.from = title;
+      const add = (t, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; pre.append(s); };
+      if (text[0] && String(output ?? '').trim()) add(String(output).trim());
+      if (String(error ?? '').trim()) add(String(error).trim(), 'err');
+      pre.scrollTop = pre.scrollHeight;
+    },
+  };
+
+  $('mode').onclick = () => { $('modes').hidden = !$('modes').hidden; };
+  $('modes').onclick = e => {
+    const mode = e.target.dataset.mode;
+    if (!mode) return;
+    runner.mode = mode;
+    for (const d of $('modes').children) d.classList.toggle('on', d.dataset.mode === mode);
+    $('mode').textContent = e.target.textContent + ' ▾';
+    $('modes').hidden = true;
+  };
+  $('modes').firstElementChild.classList.add('on');
+  $('outClose').onclick = () => { $('out').hidden = true; };
+
+  // ---- New and Open: plang lists a folder (ShowList), opens a file here (Show), makes one ---------
   const folderOf = file => file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '';
   // a path in the app, from its root: "/Desktop/notes.txt" (the app is /home/plang)
   const inApp = p => {

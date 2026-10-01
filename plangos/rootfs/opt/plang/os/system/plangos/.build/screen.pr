@@ -770,7 +770,7 @@
           "line": {
             "number": 34
           },
-          "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}, {\"list\": folder}, {\"load\": path}, {\"create\": path}; \"from\"\nis the window that asked.",
+          "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}, {\"list\": folder}, {\"load\": path}, {\"create\": path},\n{\"build\": path}, {\"run\": goal}; \"from\" is the window that asked.",
           "code": [
             {
               "module": "variable",
@@ -1392,13 +1392,155 @@
             }
           ],
           "waitForExecution": true
+        },
+        {
+          "index": 9,
+          "text": "if %asked.build%, call Build",
+          "line": {
+            "number": 43
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.build%",
+                  "variable": [
+                    {
+                      "text": "%asked.build%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "build"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Build\")",
+                  "line": {
+                    "number": 43
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "Build"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 10,
+          "text": "if %asked.run%, call Run",
+          "line": {
+            "number": 44
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.run%",
+                  "variable": [
+                    {
+                      "text": "%asked.run%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "run"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Run\")",
+                  "line": {
+                    "number": 44
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "Run"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "f0c9fe4e513e3e7476a5c36655c29070c88c8f290f97f3a888149213e31cb016",
+      "hash": "a3a90015ee165e93a08ad45ffe113fadb928fb29beed99bce4e1fa59f48d1c7a",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,
@@ -1411,7 +1553,7 @@
           "index": 0,
           "text": "open window %asked.open% in %browser%",
           "line": {
-            "number": 45
+            "number": 47
           },
           "code": [
             {
@@ -1486,7 +1628,7 @@
           "index": 0,
           "text": "send %asked% to %screen%",
           "line": {
-            "number": 48
+            "number": 50
           },
           "code": [
             {
@@ -1552,7 +1694,7 @@
           "index": 0,
           "text": "list files in '/Desktop', write to %files%",
           "line": {
-            "number": 53
+            "number": 55
           },
           "comment": "the desktop's files: what is in the app's Desktop/, shown as icons. A path that starts with \"/\"\nis in the app (/home/plang); without it, it would be beside this goal, in the os folder.",
           "code": [
@@ -1642,7 +1784,7 @@
           "index": 1,
           "text": "call ShowFiles files=%files% in %browser.desktop%",
           "line": {
-            "number": 54
+            "number": 56
           },
           "code": [
             {
@@ -1707,7 +1849,7 @@
           "index": 0,
           "text": "open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%",
           "line": {
-            "number": 59
+            "number": 61
           },
           "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value",
           "code": [
@@ -1799,7 +1941,7 @@
           "index": 1,
           "text": "read %asked.edit%, write to %content%",
           "line": {
-            "number": 60
+            "number": 62
           },
           "code": [
             {
@@ -1901,7 +2043,7 @@
           "index": 2,
           "text": "call Show file=%asked.edit%, content=%content% in %writer%",
           "line": {
-            "number": 61
+            "number": 63
           },
           "code": [
             {
@@ -1963,7 +2105,7 @@
           "index": 0,
           "text": "save %asked.content% to %asked.save%",
           "line": {
-            "number": 65
+            "number": 67
           },
           "comment": "Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value",
           "code": [
@@ -2022,7 +2164,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Saved\", Window=%asked.from%, Browser=%browser%)",
           "line": {
-            "number": 66
+            "number": 68
           },
           "code": [
             {
@@ -2098,7 +2240,7 @@
           "index": 0,
           "text": "list files in %asked.list% recursive, write to %files%",
           "line": {
-            "number": 70
+            "number": 72
           },
           "comment": "Writer's Open and New: the files in a folder and its folders",
           "code": [
@@ -2202,7 +2344,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"ShowList\", Window=%asked.from%, Browser=%browser%, Parameter={folder: %asked.list%, files: %files%})",
           "line": {
-            "number": 71
+            "number": 73
           },
           "code": [
             {
@@ -2285,7 +2427,7 @@
           "index": 0,
           "text": "read %asked.load%, write to %content%",
           "line": {
-            "number": 75
+            "number": 77
           },
           "comment": "Writer's Open: another file in the same window",
           "code": [
@@ -2382,7 +2524,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.load%, content: %content%})",
           "line": {
-            "number": 76
+            "number": 78
           },
           "code": [
             {
@@ -2465,7 +2607,7 @@
           "index": 0,
           "text": "file.save(Path=%asked.create%, Value=\"\")",
           "line": {
-            "number": 80
+            "number": 82
           },
           "comment": "Writer's New: an empty file, opened in the same window; the desktop shows it",
           "code": [
@@ -2510,7 +2652,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.create%, content: \"\"})",
           "line": {
-            "number": 81
+            "number": 83
           },
           "code": [
             {
@@ -2579,7 +2721,7 @@
           "index": 2,
           "text": "call Files",
           "line": {
-            "number": 82
+            "number": 84
           },
           "code": [
             {
@@ -2619,13 +2761,672 @@
       "isTest": false
     },
     {
+      "name": "Build",
+      "step": [
+        {
+          "index": 0,
+          "text": "terminal.start(App=\"plang\", Parameter=[\"build\", \"--llmservice=openai\"]); on.timeout(After=\"PT10M\"); on.error(Recovery=[goal.call(Name=\"BuildFailed\")]); variable.set(Name=%built%, Value=%!data%)",
+          "line": {
+            "number": 89
+          },
+          "comment": "Writer's ▶ (build): plang builds the app — its own process, as plang build does anywhere; what it\nwrote, and how it ended, go back to the window.",
+          "code": [
+            {
+              "module": "terminal",
+              "name": "start",
+              "property": [
+                {
+                  "name": "App",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "plang"
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": ["build","--llmservice=openai"]
+                }
+              ],
+              "default": [
+                {
+                  "name": "interactive",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                },
+                {
+                  "name": "administrator",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "on",
+              "name": "timeout",
+              "property": [
+                {
+                  "name": "After",
+                  "type": {
+                    "name": "duration"
+                  },
+                  "value": "PT10M"
+                }
+              ]
+            },
+            {
+              "module": "on",
+              "name": "error",
+              "property": [
+                {
+                  "name": "Recovery",
+                  "type": {
+                    "name": "list",
+                    "kind": "action"
+                  },
+                  "value": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "BuildFailed"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "ignoreerror",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%built%",
+                  "variable": [
+                    {
+                      "text": "%built%",
+                      "code": [
+                        {
+                          "variable": "built"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "window.callGoal(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={output: %built%, error: %built!error%, code: %built!exitCode%})",
+          "line": {
+            "number": 90
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "Built"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.from%",
+                  "variable": [
+                    {
+                      "text": "%asked.from%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "from"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"output","type":{"name":"item","template":"plang"},"value":"%built%","variable":[{"text":"%built%","code":[{"variable":"built"}]}]},{"name":"error","type":{"name":"item","template":"plang"},"value":"%built!error%","variable":[{"text":"%built!error%","code":[{"variable":"built"},{"property":"!error"}]}]},{"name":"code","type":{"name":"item","template":"plang"},"value":"%built!exitCode%","variable":[{"text":"%built!exitCode%","code":[{"variable":"built"},{"property":"!exitCode"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "139e87cae3f20a6ec49c57ad2e9a9d6b44df9c66fc18492d604e0ed7c5106c52",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
+      "name": "BuildFailed",
+      "step": [
+        {
+          "index": 0,
+          "text": "window.callGoal(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
+          "line": {
+            "number": 94
+          },
+          "comment": "plang couldn't be started (or timed out): the window hears it, rather than waiting on",
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "Built"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.from%",
+                  "variable": [
+                    {
+                      "text": "%asked.from%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "from"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"error","type":{"name":"item","template":"plang"},"value":"%!error.Message%","variable":[{"text":"%!error.Message%","code":[{"variable":"!error"},{"property":"Message"}]}]},{"name":"code","type":{"name":"number"},"value":-1}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "ed7359e45c9a32094a6f627ee71704406df551687b3d36be503a1a7c3b4d6ee4",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
+      "name": "Run",
+      "step": [
+        {
+          "index": 0,
+          "text": "terminal.start(App=\"plang\", Parameter=[%asked.run%]); on.timeout(After=\"PT5M\"); on.error(Recovery=[goal.call(Name=\"RunFailed\")]); variable.set(Name=%ran%, Value=%!data%)",
+          "line": {
+            "number": 99
+          },
+          "comment": "Writer's ▶ (run): the goal runs in a plang of its own (this one's output is the screen); what it\nwrote goes back to the window.",
+          "code": [
+            {
+              "module": "terminal",
+              "name": "start",
+              "property": [
+                {
+                  "name": "App",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "plang"
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list",
+                    "template": "plang"
+                  },
+                  "value": ["%asked.run%"],
+                  "variable": [
+                    {
+                      "text": "%asked.run%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "run"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "interactive",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                },
+                {
+                  "name": "administrator",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "on",
+              "name": "timeout",
+              "property": [
+                {
+                  "name": "After",
+                  "type": {
+                    "name": "duration"
+                  },
+                  "value": "PT5M"
+                }
+              ]
+            },
+            {
+              "module": "on",
+              "name": "error",
+              "property": [
+                {
+                  "name": "Recovery",
+                  "type": {
+                    "name": "list",
+                    "kind": "action"
+                  },
+                  "value": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "RunFailed"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "ignoreerror",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%ran%",
+                  "variable": [
+                    {
+                      "text": "%ran%",
+                      "code": [
+                        {
+                          "variable": "ran"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "window.callGoal(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={output: %ran%, error: %ran!error%, code: %ran!exitCode%})",
+          "line": {
+            "number": 100
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "Ran"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.from%",
+                  "variable": [
+                    {
+                      "text": "%asked.from%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "from"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"output","type":{"name":"item","template":"plang"},"value":"%ran%","variable":[{"text":"%ran%","code":[{"variable":"ran"}]}]},{"name":"error","type":{"name":"item","template":"plang"},"value":"%ran!error%","variable":[{"text":"%ran!error%","code":[{"variable":"ran"},{"property":"!error"}]}]},{"name":"code","type":{"name":"item","template":"plang"},"value":"%ran!exitCode%","variable":[{"text":"%ran!exitCode%","code":[{"variable":"ran"},{"property":"!exitCode"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "fdc046927d5a09816ac42826f37172f05f25967ba299d0b527f4d33f4292b8e5",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
+      "name": "RunFailed",
+      "step": [
+        {
+          "index": 0,
+          "text": "window.callGoal(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
+          "line": {
+            "number": 103
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "Ran"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.from%",
+                  "variable": [
+                    {
+                      "text": "%asked.from%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "from"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"error","type":{"name":"item","template":"plang"},"value":"%!error.Message%","variable":[{"text":"%!error.Message%","code":[{"variable":"!error"},{"property":"Message"}]}]},{"name":"code","type":{"name":"number"},"value":-1}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "4dc31e2bccd9e73e55856c69bca3e41b5d9cf19639344419dcf8f77362d9797b",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
       "name": "Window",
       "step": [
         {
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 88
+            "number": 109
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -2686,7 +3487,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 89
+            "number": 110
           },
           "code": [
             {
@@ -2741,7 +3542,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 90
+            "number": 111
           },
           "code": [
             {
@@ -2812,7 +3613,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 91
+            "number": 112
           },
           "code": [
             {
@@ -2883,7 +3684,7 @@
           "index": 4,
           "text": "if %event.tool%, call Tool",
           "line": {
-            "number": 92
+            "number": 113
           },
           "code": [
             {
@@ -2954,7 +3755,7 @@
           "index": 5,
           "text": "if %event.paste%, call Paste",
           "line": {
-            "number": 93
+            "number": 114
           },
           "code": [
             {
@@ -3039,7 +3840,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 96
+            "number": 117
           },
           "code": [
             {
@@ -3135,7 +3936,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 99
+            "number": 120
           },
           "code": [
             {
@@ -3210,7 +4011,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Tool\", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})",
           "line": {
-            "number": 104
+            "number": 125
           },
           "comment": "One of the app's tools in its window's title bar was clicked ({\"tool\": \"save\", \"id\"}): its page's\ngoal Tool gets it. The page named its tools itself ({\"window\": \"tools\", \"tools\": [...]}).",
           "code": [
@@ -3294,7 +4095,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Paste\", Window=%event.id%, Browser=%browser%, Parameter={value: %event.paste%})",
           "line": {
-            "number": 109
+            "number": 130
           },
           "comment": "A page asked for the clipboard as a value ({\"window\": \"paste\"}): a copy that knows where it came\nfrom, as json; its page's goal Paste gets it.",
           "code": [

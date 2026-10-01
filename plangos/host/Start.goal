@@ -20,8 +20,9 @@ OpenPlangOS
 / Formal: in words, the builder took the 'Screen' among the parameters for a goal to call on every
 / message (60 a second, a goal that doesn't exist: "Screen" in the console, and the pipe held up).
 / The shell is a system goal (plang's os folder, from the image); it runs in the person's app,
-/ /home/plang.
-- terminal.open(App="wsl.exe", Parameter=["-d", "PlangOS", "--cd", "/home/plang", "--exec", "/opt/plang/plang", "system/plangos/Screen"], Binary=true, OutputTo=%screen%); variable.set(Name=%container%, Value=%!data%)
+/ /home/plang. The LLM keys plang build needs inside (Writer's ▶) come from this Windows session's
+/ environment, through WSL's WSLENV — never into the image. (Later: llm.plang.is, no key.)
+- terminal.open(App="wsl.exe", Parameter=["-d", "PlangOS", "--cd", "/home/plang", "--exec", "/opt/plang/plang", "system/plangos/Screen"], Environment={"WSLENV": "TYPESAFE_API_KEY/u:OPENAI_API_KEY/u"}, Binary=true, OutputTo=%screen%); variable.set(Name=%container%, Value=%!data%)
 - wait for %container%
 
 Input

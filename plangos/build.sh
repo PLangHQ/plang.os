@@ -188,6 +188,8 @@ cmd_image() {
   find "$ROOT/opt/plang" -name '*.pdb' -delete
   # .NET's optional LTTng tracing provider: needs liblttng-ust, which PlangOS doesn't ship
   rm -f "$ROOT/opt/plang/libcoreclrtraceptprovider.so"
+  # plang on PATH: a goal starts it as a program by its name (Writer's ▶ builds and runs goals)
+  ln -sf ../../opt/plang/plang "$ROOT/usr/bin/plang"
   cp -a "$HERE/rootfs/." "$ROOT/"
   # Widevine (Google's DRM module: not ours to ship, never in git) — only when the build is given it,
   # PLANGOS_WIDEVINE=<its WidevineCdm folder, from Chrome's package>; Chromium loads it from beside
