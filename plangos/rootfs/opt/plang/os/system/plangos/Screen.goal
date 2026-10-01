@@ -89,9 +89,15 @@ Window
 - post %event% to %browser.desktop%
 - if %event.navigate%, call Navigate
 - if %event.open%, call OpenPage
+- if %event.tool%, call Tool
 
 Navigate
 - navigate window %event.id% to %event.navigate% in %browser%
 
 OpenPage
 - open window %event.open% in %browser%
+
+Tool
+/ One of the app's tools in its window's title bar was clicked ({"tool": "save", "id"}): its page's
+/ goal Tool gets it. The page named its tools itself ({"window": "tools", "tools": [...]}).
+- window.callGoal(Name="Tool", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})

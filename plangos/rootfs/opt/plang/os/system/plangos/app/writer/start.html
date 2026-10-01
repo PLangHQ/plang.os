@@ -15,6 +15,8 @@
   window.Saved = async () => { await ready; writer.saved(); return true; };
   // the files in a folder, for Open and New: paths in the app, from its root (/Desktop/notes.txt)
   window.ShowList = async ({ folder, files }) => { await ready; return files_.show(folder, files); };
+  // one of Writer's tools in the window's title bar was clicked: new, open, save
+  window.Tool = async ({ tool }) => { await ready; return writer.tool(tool); };
   // something dropped on this window (the desktop's shortcut): {name, url, image} — a page takes it
   // as an embed block
   window.Drop = async value => { await ready; return writer.take(value ?? {}); };
@@ -141,15 +143,13 @@
 </head>
 <body class="text">
 <header>
-  <button class="tool" id="new" title="Ný skrá (Ctrl+N)"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3.5 3.5v9.5h-8.5z M9 1.5v3.5h3.5 M8 7.5v5 M5.5 10h5"/></svg>Nýtt</button>
-  <button class="tool" id="open" title="Opna skrá (Ctrl+O)"><svg viewBox="0 0 16 16"><path d="M1.5 3.5h4.5l1.5 1.5h7v8.5h-13z M1.5 7h13"/></svg>Opna</button>
-  <span class="sep"></span>
+  <!-- New, Open and Save are in the window's title bar (the app's tools, drawn by the screen); a
+       click there comes to the page's goal Tool -->
   <span class="kind" id="kind">…</span>
-  <button class="name" id="name" title="Opna aðra skrá">Opna…</button>
+  <button class="name" id="name" title="Opna aðra skrá (Ctrl+O)">Opna…</button>
   <span class="dirty" title="Óvistaðar breytingar"></span>
   <span class="spacer"></span>
   <div class="toggle" id="jsonMode" hidden><button data-mode="tree" class="on">Tré</button><button data-mode="text">Texti</button></div>
-  <button class="primary" id="save" title="Vista (Ctrl+S)"><svg viewBox="0 0 16 16"><path d="M2.5 2.5h9l2 2v9h-11z M5 2.5v3.5h5.5v-3.5 M5 13.5v-4h6v4"/></svg>Vista</button>
 </header>
 <!-- Open: like a browser's address field — the file's path, selected; below it the files Writer can
      open from the file's folder, its folders as headings. Enter opens what is typed. -->
@@ -600,6 +600,17 @@
       document.getElementById('kind').textContent = { text: 'TEXTI', json: 'JSON', code: ({ cs: 'C#', goal: 'PLANG' })[extension(file)] ?? extension(file).toUpperCase() }[this.kind];
       document.getElementById('jsonMode').hidden = this.kind !== 'json';
       this.render();
+      // the window: its tools in the title bar, and its address — the file, as a path in the app
+      ask({ window: 'tools', tools: ['new', 'open', 'save'] });
+      ask({ window: 'url', url: { path: file, source: 'file:///home/plang' + file } });
+    },
+
+    tool(name) {
+      if (name === 'new') maker.open();
+      else if (name === 'open') picker.open();
+      else if (name === 'save') this.save();
+      else return false;
+      return true;
     },
 
     render() {
@@ -803,9 +814,7 @@
     },
   };
 
-  $('open').onclick = () => $('picker').hidden ? picker.open() : close();
   $('name').onclick = () => $('picker').hidden ? picker.open() : close();
-  $('new').onclick = () => $('maker').hidden ? maker.open() : close();
   $('make').onclick = () => maker.make();
   $('newName').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); maker.make(); } if (e.key === 'Escape') close(); };
   $('path').oninput = () => { files_.pick = 0; files_.draw(); };
@@ -827,10 +836,9 @@
   $('dropOpen').onclick = () => picker.load(picker.next);
   $('saveOpen').onclick = () => { const next = picker.next; writer.after = () => picker.load(next); writer.save(); close(); };
   document.addEventListener('mousedown', e => {
-    if (!e.target.closest('.picker, #open, #name, #new')) { $('picker').hidden = $('maker').hidden = true; }
+    if (!e.target.closest('.picker, #name')) { $('picker').hidden = $('maker').hidden = true; }
   });
 
-  $('save').onclick = () => writer.save();
   addEventListener('keydown', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
     const k = e.key.toLowerCase();
