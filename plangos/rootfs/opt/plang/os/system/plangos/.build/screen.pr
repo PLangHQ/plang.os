@@ -1010,11 +1010,11 @@
       "step": [
         {
           "index": 0,
-          "text": "window.callGoal(Name=\"ErrorShow\", Window=%browser.desktop%, Parameter={error: %message%})",
+          "text": "window.callGoal(Name=\"ErrorShow\", Window=%browser.desktop%, Parameter={error: %message%, where: %where%})",
           "line": {
             "number": 42
           },
-          "comment": "An error written to an error channel is %message%: the desktop lists it (what, where, when) and counts it on\nthe taskbar.",
+          "comment": "An error written to an error channel is %message%, and where it happened %where% (goal · step): the desktop\nlists it (what, where, when) and counts it on the taskbar.",
           "code": [
             {
               "module": "window",
@@ -1053,7 +1053,7 @@
                   "type": {
                     "name": "list"
                   },
-                  "value": [{"name":"error","type":{"name":"item","template":"plang"},"value":"%message%","variable":[{"text":"%message%","code":[{"variable":"message"}]}]}]
+                  "value": [{"name":"error","type":{"name":"item","template":"plang"},"value":"%message%","variable":[{"text":"%message%","code":[{"variable":"message"}]}]},{"name":"where","type":{"name":"item","template":"plang"},"value":"%where%","variable":[{"text":"%where%","code":[{"variable":"where"}]}]}]
                 }
               ]
             }
@@ -1065,7 +1065,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "e534cf842eab17a1930efc580e03554bf8090b9494e00698b3f09083df3b51e7",
+      "hash": "f3538e6baa75c047fd2a6b177312291e62f66694384718f974245abe18adc27c",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,

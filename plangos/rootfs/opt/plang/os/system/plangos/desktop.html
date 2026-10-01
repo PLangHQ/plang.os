@@ -397,11 +397,11 @@
   const errs = document.getElementById('errs');
   let errorCount = 0, unseen = 0;
   const field = (e, ...names) => { for (const n of names) { const v = n.split('.').reduce((o, k) => o?.[k] ?? o?.[k[0].toUpperCase() + k.slice(1)], e); if (v !== undefined && v !== null && v !== '') return v; } return ''; };
-  window.ErrorShow = ({ error }) => {
+  window.ErrorShow = ({ error, where: at }) => {
     const e = typeof error === 'string' ? { message: error } : (error ?? {});
     const row = document.createElement('div');
     row.className = 'err';
-    const where = [field(e, 'goal.name', 'goal'), field(e, 'step.text', 'step')].filter(Boolean).join(' · ');
+    const where = at || [field(e, 'goal.name', 'goal'), field(e, 'step.text', 'step')].filter(Boolean).join(' · ');
     row.innerHTML = '<b></b> <span></span><small></small>';
     row.children[0].textContent = field(e, 'key') || 'Error';
     row.children[1].textContent = field(e, 'message') || JSON.stringify(e).slice(0, 400);
