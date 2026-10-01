@@ -38,13 +38,16 @@ ToPlangOS
 
 ToClaude
 / Claude runs here, on Windows (the person's own Claude Code, no API key), started at the first
-/ message and kept: stream-json both ways, its own tools off (--tools "") — it acts only through
-/ plang goals, which PlangOS runs; we only pass the lines along.
+/ message and kept: stream-json both ways, no tools at all — its own off (--tools ""), and no MCP
+/ servers (--strict-mcp-config with none), so it can't act on this computer; it acts only through
+/ plang goals, which PlangOS runs. We only pass the lines along. The first start asks here, in this
+/ console, whether claude may run (y/n/a).
 - if %claude% is empty, call StartClaude
 - terminal.send(Data=%event.guest.agent%, Process=%claude%)
 
 StartClaude
-- terminal.open(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--tools", ""], OnOutput=goal.call(Name="FromClaude"), OnError=goal.call(Name="ClaudeErred")); on.error(Recovery=[goal.call(Name="NoClaude")]); variable.set(Name=%claude%, Value=%!data%)
+- write out 'Starting Claude for PlangOS (if asked below whether claude may run, answer a)'
+- terminal.open(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--tools", "", "--strict-mcp-config", "--mcp-config", "{\"mcpServers\":{}}", "--no-session-persistence"], OnOutput=goal.call(Name="FromClaude"), OnError=goal.call(Name="ClaudeErred")); on.error(Recovery=[goal.call(Name="NoClaude")]); variable.set(Name=%claude%, Value=%!data%)
 
 FromClaude
 / Each line Claude writes (one stream-json event) goes down to PlangOS, where the agent's panel reads it.
