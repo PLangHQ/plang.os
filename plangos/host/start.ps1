@@ -32,7 +32,13 @@ if (Test-Path $staged) {
     try {
         if (Test-Path $current) { Rename-Item $current 'runtime.old' -ErrorAction Stop }
         Rename-Item $staged 'runtime' -ErrorAction Stop
-        Write-Host '==> Using the new plang runtime' -ForegroundColor Cyan
+        # say what changed: the runtime comes with its CHANGES.txt (commit, what is new)
+        Write-Host ''
+        Write-Host '==> NEW PLANG RUNTIME - the old one is replaced' -ForegroundColor Cyan
+        $changes = Join-Path $current 'CHANGES.txt'
+        if (Test-Path $changes) { Get-Content $changes | ForEach-Object { Write-Host "    $_" } }
+        else { Write-Host '    (it came without CHANGES.txt: no notes on what is new)' -ForegroundColor Yellow }
+        Write-Host ''
         Remove-Item $old -Recurse -Force -ErrorAction SilentlyContinue
     } catch {
         Write-Host "The new runtime waits in runtime.new: close PlangOS (plang is still running) and start again." -ForegroundColor Yellow
@@ -79,6 +85,18 @@ if (-not ('PlangOS.Shell' -as [type])) {
 }
 [PlangOS.Shell]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)   # SHCNE_ASSOCCHANGED
 
+# A newer image staged beside the one in use is not used until it is moved into image\: say it is there.
+$next = Join-Path $Root 'image.next\manifest-amd64.json'
+if (Test-Path $next) {
+    $waiting = Get-Content $next -Raw | ConvertFrom-Json
+    $inUse   = Join-Path $Root 'image\manifest-amd64.json'
+    $using   = if (Test-Path $inUse) { (Get-Content $inUse -Raw | ConvertFrom-Json).sha256 } else { '' }
+    if ($waiting.sha256 -ne $using) {
+        Write-Host "==> A new PlangOS image waits in image.next ($($waiting.sha256.Substring(0, 8))) - not used yet." -ForegroundColor Yellow
+        Write-Host '    Using it replaces PlangOS, and /home/plang (your files) is not kept.' -ForegroundColor Yellow
+    }
+}
+
 # The image must match its manifest before Start.goal may import it.
 $manifestPath = Join-Path $Root 'image\manifest-amd64.json'
 if (Test-Path $manifestPath) {
@@ -87,6 +105,8 @@ if (Test-Path $manifestPath) {
     if (-not (Test-Path $marker)) {   # not imported yet: Start.goal will import it
         $tar = Join-Path $Root "image\$($manifest.file)"
         if (-not (Test-Path $tar)) { Fail "image file missing: $tar" }
+        Write-Host ''
+        Write-Host "==> NEW PLANGOS IMAGE ($($manifest.sha256.Substring(0, 8))): PlangOS is replaced, /home/plang (your files) is not kept" -ForegroundColor Cyan
         Write-Host "==> Verifying $($manifest.file) ($([math]::Round($manifest.size / 1MB)) MB)" -ForegroundColor Cyan
         $hash = (Get-FileHash $tar -Algorithm SHA256).Hash.ToLower()
         if ($hash -ne $manifest.sha256) {
@@ -94,6 +114,12 @@ if (Test-Path $manifestPath) {
         }
     }
 }
+
+# What runs, said every start: the runtime (its CHANGES.txt's first line) and the image.
+$notes = Join-Path $Root 'runtime\CHANGES.txt'
+$runtimeIs = if (Test-Path $notes) { (Get-Content $notes -TotalCount 1) } else { 'no CHANGES.txt' }
+$imageIs   = if ($manifest) { $manifest.sha256.Substring(0, 8) } else { 'none' }
+Write-Host "plang runtime: $runtimeIs | PlangOS image: $imageIs" -ForegroundColor DarkGray
 
 # Run plang in the folder, which runs Start.goal.
 Push-Location $Root
