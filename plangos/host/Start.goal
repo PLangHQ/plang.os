@@ -29,7 +29,8 @@ Input
 / Our window's mouse and keyboard go down to PlangOS; a message from PlangOS's plang ({"guest": …})
 / is for us: what the person says to a window's agent goes to Claude.
 - set %event% to %!data%
-- condition.if(Left=%event.guest%, Operator="isempty") { goal.call(Name="ToPlangOS") }
+/ (an event with no "guest" — the mouse, a key — has it as null; "is empty" doesn't see a missing one)
+- condition.if(Left=%event.guest%, Operator="==", Right=null) { goal.call(Name="ToPlangOS") }
 - condition.if(Left=%event.guest.agent%) { goal.call(Name="ToClaude") }
 
 ToPlangOS
