@@ -13,6 +13,8 @@
   const textOf = content => typeof content === 'string' ? content : JSON.stringify(content ?? null, null, 2);
   window.Show = async ({ file, content }) => { await ready; writer.show(file, textOf(content)); return true; };
   window.Saved = async () => { await ready; writer.saved(); return true; };
+  // the files in a folder, for Open and New: paths from the app's folder (Desktop/notes.txt)
+  window.ShowList = async ({ folder, files }) => { await ready; return files_.show(folder, files); };
   // something dropped on this window (the desktop's shortcut): {name, url, image} — a page takes it
   // as an embed block
   window.Drop = async value => { await ready; return writer.take(value ?? {}); };
@@ -39,6 +41,36 @@
   .toggle button { border: 0; border-radius: 0; }
   .toggle button.on { background: var(--line); }
   [hidden] { display: none !important; }
+  header svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; vertical-align: -3px; margin-right: 6px; }
+  header button.tool { border-color: transparent; padding: 5px 9px; }
+  header button.tool:hover { background: var(--line); border-color: transparent; }
+  header button.name { font-weight: 600; border-color: transparent; padding: 4px 8px; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header button.name:hover { border-color: var(--line); background: var(--bg); }
+  header button.name::after { content: " ▾"; color: var(--dim); font-weight: normal; }
+  .sep { width: 1px; align-self: stretch; margin: 2px 2px; background: var(--line); }
+
+  /* the Open and New drop-downs, under the header */
+  .picker { position: fixed; z-index: 10; top: 46px; left: 12px; width: min(560px, calc(100% - 24px)); background: var(--bar); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 14px 40px rgba(0, 0, 0, .28); overflow: hidden; }
+  .picker.small { width: min(400px, calc(100% - 24px)); padding: 12px 14px; }
+  .picker input { width: 100%; font: 14px var(--mono); padding: 10px 14px; border: 0; border-bottom: 1px solid var(--line); background: var(--bg); color: var(--fg); outline: 0; }
+  .picker.small input { border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; }
+  .picker.small input:focus { border-color: var(--accent); }
+  .picker .row { display: flex; gap: 8px; margin-top: 8px; }
+  .picker label { font-size: 13px; color: var(--dim); }
+  .picker .note { font-size: 12px; color: var(--dim); margin-top: 6px; min-height: 1em; }
+  .picker .note.error { color: #e5484d; }
+  .picker button { font: inherit; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; white-space: nowrap; }
+  .picker button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+  .list { max-height: 340px; overflow: auto; padding: 6px; }
+  .list .folder { padding: 8px 10px 4px; font-size: 12px; color: var(--dim); }
+  .list .file { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+  .list .file.on { background: var(--line); }
+  .list .file.current { color: var(--accent); }
+  .list .file i { font: 600 10px var(--mono); font-style: normal; width: 34px; text-align: center; padding: 2px 0; border-radius: 4px; background: var(--line); color: var(--dim); }
+  .list .empty { padding: 12px 10px; color: var(--dim); }
+  .unsaved { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); font-size: 13px; }
+  .unsaved span { flex: 1; min-width: 180px; }
 
   main { flex: 1; min-height: 0; position: relative; }
   footer { display: flex; gap: 16px; padding: 4px 14px; font-size: 12px; color: var(--dim); background: var(--bar); border-top: 1px solid var(--line); }
@@ -109,13 +141,32 @@
 </head>
 <body class="text">
 <header>
+  <button class="tool" id="new" title="Ný skrá (Ctrl+N)"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3.5 3.5v9.5h-8.5z M9 1.5v3.5h3.5 M8 7.5v5 M5.5 10h5"/></svg>Nýtt</button>
+  <button class="tool" id="open" title="Opna skrá (Ctrl+O)"><svg viewBox="0 0 16 16"><path d="M1.5 3.5h4.5l1.5 1.5h7v8.5h-13z M1.5 7h13"/></svg>Opna</button>
+  <span class="sep"></span>
   <span class="kind" id="kind">…</span>
-  <span class="name" id="name">Opna…</span>
+  <button class="name" id="name" title="Opna aðra skrá">Opna…</button>
   <span class="dirty" title="Óvistaðar breytingar"></span>
   <span class="spacer"></span>
   <div class="toggle" id="jsonMode" hidden><button data-mode="tree" class="on">Tré</button><button data-mode="text">Texti</button></div>
-  <button class="primary" id="save" title="Vista (Ctrl+S)">Vista</button>
+  <button class="primary" id="save" title="Vista (Ctrl+S)"><svg viewBox="0 0 16 16"><path d="M2.5 2.5h9l2 2v9h-11z M5 2.5v3.5h5.5v-3.5 M5 13.5v-4h6v4"/></svg>Vista</button>
 </header>
+<!-- Open: like a browser's address field — the file's path, selected; below it the files Writer can
+     open from the file's folder, its folders as headings. Enter opens what is typed. -->
+<div class="picker" id="picker" hidden>
+  <input id="path" spellcheck="false" autocomplete="off" placeholder="Slóð skráar, t.d. Desktop/Start.goal">
+  <div class="list" id="list"></div>
+  <div class="unsaved" id="unsaved" hidden>
+    <span>Óvistaðar breytingar í <b id="unsavedName"></b></span>
+    <button id="keepOpen">Hætta við</button><button id="dropOpen">Henda breytingum</button><button class="primary" id="saveOpen">Vista og halda áfram</button>
+  </div>
+</div>
+<!-- New: a name for the file, in the folder of the one open now -->
+<div class="picker small" id="maker" hidden>
+  <label for="newName">Ný skrá í <b id="newFolder"></b></label>
+  <div class="row"><input id="newName" spellcheck="false" autocomplete="off"><button class="primary" id="make">Búa til</button></div>
+  <div class="note" id="newNote"></div>
+</div>
 <main id="main"><div class="waiting">Opna skrá…</div></main>
 <footer><span id="where"></span><span id="size"></span><span id="state"></span></footer>
 
@@ -596,7 +647,7 @@
       return true;
     },
 
-    fail(message) { state.textContent = message; state.className = 'error'; },
+    fail(message) { state.textContent = message; state.className = 'error'; this.after = null; },
 
     save() {
       if (!this.file) return;
@@ -615,12 +666,171 @@
       this.stored = this.text;
       state.textContent = 'Vistað'; state.className = '';
       this.status();
+      // saved on the way to another file (Open's "save and go on"): open it now
+      if (this.after) { const next = this.after; this.after = null; next(); }
     },
   };
 
-  document.getElementById('save').onclick = () => writer.save();
+  // ---- New and Open: plang lists a folder (ShowList), opens a file here (Show), makes one ---------
+  const $ = id => document.getElementById(id);
+  const ask = message => window.plang ? plang(JSON.stringify(message)) : setTimeout(() => ask(message), 100);
+  const folderOf = file => file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '';
+  const badge = file => { const x = extension(file); return ({ goal: 'PL', cs: 'C#', json: '{ }', txt: 'TXT' })[x] ?? (x.toUpperCase().slice(0, 4) || '•'); };
+
+  const files_ = {
+    folder: '', list: [], pick: 0, waiting: null,   // waiting: what asked for the list (open | new)
+
+    // ask plang for the files in the open file's folder (and its folders)
+    fetch(why) { this.waiting = why; ask({ list: folderOf(writer.file) || 'Desktop' }); },
+
+    show(folder, files) {
+      this.folder = folder ?? '';
+      this.list = (files ?? []).map(f => typeof f === 'string' ? f : (f.path ?? f.absolute ?? f.name ?? String(f)))
+        .map(p => p.replace(/^\/home\/plang\//, '').replace(/^\//, '')).sort((a, b) => a.localeCompare(b, 'is'));
+      if (this.waiting === 'open') this.draw();
+      if (this.waiting === 'new') maker.fill();
+      return this.list.length;
+    },
+
+    // the list, as typed into the field filters it; the folder's own files first, then each folder's
+    draw() {
+      const typed = $('path').value.trim().toLowerCase();
+      const filter = typed && typed !== writer.file.toLowerCase() ? typed : '';
+      const shown = this.list.filter(p => !filter || p.toLowerCase().includes(filter));
+      const groups = new Map();
+      for (const p of shown) {
+        const f = folderOf(p);
+        if (!groups.has(f)) groups.set(f, []);
+        groups.get(f).push(p);
+      }
+      const order = [...groups.keys()].sort((a, b) => (a !== this.folder) - (b !== this.folder) || a.localeCompare(b, 'is'));
+      const rows = [];
+      this.items = [];
+      for (const f of order) {
+        if (order.length > 1 || f !== this.folder) {
+          const h = document.createElement('div'); h.className = 'folder'; h.textContent = (f || '/') + '/'; rows.push(h);
+        }
+        for (const p of groups.get(f)) {
+          const row = document.createElement('div');
+          row.className = 'file' + (p === writer.file ? ' current' : '');
+          row.innerHTML = '<i></i><span></span>';
+          row.firstChild.textContent = badge(p);
+          row.lastChild.textContent = p.split('/').pop();
+          row.title = p;
+          const n = this.items.length;
+          row.onmousemove = () => { if (this.pick !== n) { this.pick = n; this.mark(); } };
+          row.onclick = () => picker.choose(p);
+          this.items.push({ row, path: p });
+          rows.push(row);
+        }
+      }
+      if (!rows.length) {
+        const none = document.createElement('div'); none.className = 'empty';
+        none.textContent = this.list.length ? 'Engin skrá passar — Enter opnar slóðina sem slegin var inn' : 'Engar skrár hér';
+        rows.push(none);
+      }
+      $('list').replaceChildren(...rows);
+      this.pick = Math.min(this.pick, Math.max(0, this.items.length - 1));
+      this.mark();
+    },
+    mark() { this.items.forEach((it, n) => it.row.classList.toggle('on', n === this.pick)); this.items[this.pick]?.row.scrollIntoView({ block: 'nearest' }); },
+  };
+
+  const dirty = () => writer.text !== writer.stored;
+  const close = () => { $('picker').hidden = $('maker').hidden = true; writer.area?.focus(); };
+
+  const picker = {
+    next: null,   // a file chosen while this one has unsaved changes
+
+    open() {
+      $('maker').hidden = true;
+      $('picker').hidden = false; $('unsaved').hidden = true; this.next = null;
+      $('path').value = writer.file;
+      $('path').focus(); $('path').select();
+      $('list').innerHTML = '<div class="empty">Sæki skrár…</div>';
+      files_.pick = 0;
+      files_.fetch('open');
+    },
+
+    choose(path) {
+      path = path.trim().replace(/^\/home\/plang\//, '').replace(/^\//, '');
+      if (!path || path === writer.file) { close(); return; }
+      if (dirty()) {   // the open file's changes: save, drop, or stay
+        this.next = path;
+        $('unsavedName').textContent = writer.file.split('/').pop();
+        $('unsaved').hidden = false; $('saveOpen').focus();
+        return;
+      }
+      this.load(path);
+    },
+
+    load(path) { close(); state.textContent = 'Opna…'; state.className = ''; ask({ load: path }); },
+  };
+
+  const maker = {
+    open() {
+      $('picker').hidden = true;
+      $('maker').hidden = false;
+      $('newFolder').textContent = (folderOf(writer.file) || 'Desktop') + '/';
+      $('newNote').textContent = ''; $('newNote').className = 'note';
+      $('newName').value = ''; $('newName').placeholder = 'Start.goal';
+      $('newName').focus();
+      files_.fetch('new');
+    },
+    // the first free name: Start.goal, else New.goal, New 2.goal, …
+    fill() {
+      if ($('newName').value) return;
+      const taken = new Set(files_.list.map(p => p.split('/').pop().toLowerCase()));
+      let name = 'Start.goal';
+      for (let n = 1; taken.has(name.toLowerCase()); n++) name = n === 1 ? 'New.goal' : `New ${n}.goal`;
+      $('newName').value = name;
+      $('newName').setSelectionRange(0, name.lastIndexOf('.') < 0 ? name.length : name.lastIndexOf('.'));
+    },
+    make() {
+      const name = $('newName').value.trim() || $('newName').placeholder;
+      const fail = why => { $('newNote').textContent = why; $('newNote').className = 'note error'; };
+      if (/[\\/:*?"<>|]/.test(name) || name.startsWith('.')) return fail('Nafnið má ekki innihalda / \\ : * ? " < > | eða byrja á punkti');
+      const path = ((folderOf(writer.file) || 'Desktop') + '/' + name);
+      if (files_.list.some(p => p.toLowerCase() === path.toLowerCase())) return fail(`${name} er þegar til — veldu annað nafn eða opnaðu hana með Opna`);
+      const go = () => { close(); state.textContent = 'Bý til…'; state.className = ''; ask({ create: path }); };
+      if (dirty()) { writer.after = go; writer.save(); } else go();
+    },
+  };
+
+  $('open').onclick = () => $('picker').hidden ? picker.open() : close();
+  $('name').onclick = () => $('picker').hidden ? picker.open() : close();
+  $('new').onclick = () => $('maker').hidden ? maker.open() : close();
+  $('make').onclick = () => maker.make();
+  $('newName').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); maker.make(); } if (e.key === 'Escape') close(); };
+  $('path').oninput = () => { files_.pick = 0; files_.draw(); };
+  $('path').onkeydown = e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (files_.items?.length) { files_.pick = (files_.pick + (e.key === 'ArrowDown' ? 1 : -1) + files_.items.length) % files_.items.length; files_.mark(); }
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // what is typed, when it isn't the open file's path and no file matches it; else the marked file
+      const typed = $('path').value.trim();
+      const marked = files_.items?.[files_.pick]?.path;
+      picker.choose(typed !== writer.file && (!marked || !marked.toLowerCase().includes(typed.toLowerCase())) ? typed : marked ?? typed);
+    }
+    if (e.key === 'Escape') close();
+  };
+  $('keepOpen').onclick = () => { $('unsaved').hidden = true; picker.next = null; $('path').focus(); };
+  $('dropOpen').onclick = () => picker.load(picker.next);
+  $('saveOpen').onclick = () => { const next = picker.next; writer.after = () => picker.load(next); writer.save(); close(); };
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('.picker, #open, #name, #new')) { $('picker').hidden = $('maker').hidden = true; }
+  });
+
+  $('save').onclick = () => writer.save();
   addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); writer.save(); }
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === 's') { e.preventDefault(); writer.save(); }
+    if (k === 'o') { e.preventDefault(); picker.open(); }
+    if (k === 'n') { e.preventDefault(); maker.open(); }
   });
   document.getElementById('jsonMode').onclick = e => {
     const mode = e.target.dataset.mode;

@@ -1,0 +1,4 @@
+Start
+/ Your first PLang program. Each line that starts with "-" is a step, written as you would say it.
+- set %name% = "world"
+- write out "Hello, %name%!"
