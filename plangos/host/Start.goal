@@ -26,7 +26,35 @@ OpenPlangOS
 - wait for %container%
 
 Input
-- send %!data% to %container%
+/ Our window's mouse and keyboard go down to PlangOS; a message from PlangOS's plang ({"guest": …})
+/ is for us: what the person says to a window's agent goes to Claude.
+- set %event% to %!data%
+- condition.if(Left=%event.guest%, Operator="isempty") { goal.call(Name="ToPlangOS") }
+- condition.if(Left=%event.guest.agent%) { goal.call(Name="ToClaude") }
+
+ToPlangOS
+- terminal.send(Data=%event%, Process=%container%)
+
+ToClaude
+/ Claude runs here, on Windows (the person's own Claude Code, no API key), started at the first
+/ message and kept: stream-json both ways, its own tools off (--tools "") — it acts only through
+/ plang goals, which PlangOS runs; we only pass the lines along.
+- if %claude% is empty, call StartClaude
+- terminal.send(Data=%event.guest.agent%, Process=%claude%)
+
+StartClaude
+- terminal.open(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--tools", ""], OnOutput=goal.call(Name="FromClaude"), OnError=goal.call(Name="ClaudeErred")); on.error(Recovery=[goal.call(Name="NoClaude")]); variable.set(Name=%claude%, Value=%!data%)
+
+FromClaude
+/ Each line Claude writes (one stream-json event) goes down to PlangOS, where the agent's panel reads it.
+- terminal.send(Data={"agent": %!data%}, Process=%container%)
+
+ClaudeErred
+- terminal.send(Data={"agent": {"type": "error", "text": %!data%}}, Process=%container%)
+
+NoClaude
+/ claude couldn't be started (not installed, or not on PATH): the panel says so, rather than waiting on
+- terminal.send(Data={"agent": {"type": "error", "text": "Claude could not be started on this computer: %!error.Message%"}}, Process=%container%)
 
 Close
 - stop %container%

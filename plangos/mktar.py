@@ -6,6 +6,9 @@ SOURCE_DATE_EPOCH, no user/group names, hardlinks kept as links.
 
 Ownership is decided here, not taken from the build machine:
   /home/plang and everything under it -> 10001:10001 (the plang user)
+  /opt/plang/os/system/plangos        -> 10001:10001 too, for now: a window's agent changes the
+                                         shell in place, and the change shows at once (plang still
+                                         asks the person: only the system writes the os folder)
   everything else                     -> 0:0
 
 Refuses (exit 1) if any file has the setuid or setgid bit. PlangOS ships none.
@@ -18,7 +21,7 @@ import sys
 import tarfile
 
 PLANG_UID = PLANG_GID = 10001
-USER_TREES = ("home/plang",)
+USER_TREES = ("home/plang", "opt/plang/os/system/plangos")
 MODE_OVERRIDES = {"tmp": 0o1777, "var/tmp": 0o1777, "root": 0o700, "home/plang": 0o750}
 
 

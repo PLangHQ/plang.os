@@ -768,9 +768,9 @@
           "index": 0,
           "text": "set %asked% to %!data%",
           "line": {
-            "number": 34
+            "number": 36
           },
-          "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}, {\"list\": folder}, {\"load\": path}, {\"create\": path},\n{\"build\": path}, {\"run\": goal}; \"from\" is the window that asked.",
+          "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}, {\"list\": folder}, {\"load\": path}, {\"create\": path},\n{\"build\": path}, {\"run\": goal}; \"from\" is the window that asked. The agent's panel (on the desktop)\nasks: {\"host\": …} — a message up to the host (Claude runs there); {\"agentCall\": {id, goal,\nparameters}} — one of the agent's goals, run here.",
           "code": [
             {
               "module": "variable",
@@ -829,7 +829,7 @@
           "index": 1,
           "text": "if %asked.open%, call Open",
           "line": {
-            "number": 35
+            "number": 37
           },
           "code": [
             {
@@ -900,7 +900,7 @@
           "index": 2,
           "text": "if %asked.window%, call Command",
           "line": {
-            "number": 36
+            "number": 38
           },
           "code": [
             {
@@ -971,7 +971,7 @@
           "index": 3,
           "text": "if %asked.files%, call Files",
           "line": {
-            "number": 37
+            "number": 39
           },
           "code": [
             {
@@ -1042,7 +1042,7 @@
           "index": 4,
           "text": "if %asked.edit%, call Edit",
           "line": {
-            "number": 38
+            "number": 40
           },
           "code": [
             {
@@ -1113,7 +1113,7 @@
           "index": 5,
           "text": "if %asked.save%, call Save",
           "line": {
-            "number": 39
+            "number": 41
           },
           "code": [
             {
@@ -1184,7 +1184,7 @@
           "index": 6,
           "text": "if %asked.list%, call List",
           "line": {
-            "number": 40
+            "number": 42
           },
           "code": [
             {
@@ -1255,7 +1255,7 @@
           "index": 7,
           "text": "if %asked.load%, call Load",
           "line": {
-            "number": 41
+            "number": 43
           },
           "code": [
             {
@@ -1326,7 +1326,7 @@
           "index": 8,
           "text": "if %asked.create%, call Create",
           "line": {
-            "number": 42
+            "number": 44
           },
           "code": [
             {
@@ -1397,7 +1397,7 @@
           "index": 9,
           "text": "if %asked.build%, call Build",
           "line": {
-            "number": 43
+            "number": 45
           },
           "code": [
             {
@@ -1468,7 +1468,7 @@
           "index": 10,
           "text": "if %asked.run%, call Run",
           "line": {
-            "number": 44
+            "number": 46
           },
           "code": [
             {
@@ -1534,13 +1534,155 @@
             }
           ],
           "waitForExecution": true
+        },
+        {
+          "index": 11,
+          "text": "condition.if(Left=%asked.host%) { goal.call(Name=\"Command\") }",
+          "line": {
+            "number": 47
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.host%",
+                  "variable": [
+                    {
+                      "text": "%asked.host%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "host"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Command\")",
+                  "line": {
+                    "number": 47
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "Command"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 12,
+          "text": "condition.if(Left=%asked.agentCall%) { goal.call(Name=\"AgentCall\") }",
+          "line": {
+            "number": 48
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.agentCall%",
+                  "variable": [
+                    {
+                      "text": "%asked.agentCall%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "agentCall"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"AgentCall\")",
+                  "line": {
+                    "number": 48
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "AgentCall"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "a3a90015ee165e93a08ad45ffe113fadb928fb29beed99bce4e1fa59f48d1c7a",
+      "hash": "5dba5dec0f66b79db734efba78327b7ca6ba9ee5b8478d4ec0f3ae2d6e88f708",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,
@@ -1553,7 +1695,7 @@
           "index": 0,
           "text": "open window %asked.open% in %browser%",
           "line": {
-            "number": 47
+            "number": 51
           },
           "code": [
             {
@@ -1628,7 +1770,7 @@
           "index": 0,
           "text": "send %asked% to %screen%",
           "line": {
-            "number": 50
+            "number": 54
           },
           "code": [
             {
@@ -1694,7 +1836,7 @@
           "index": 0,
           "text": "list files in '/Desktop', write to %files%",
           "line": {
-            "number": 55
+            "number": 59
           },
           "comment": "the desktop's files: what is in the app's Desktop/, shown as icons. A path that starts with \"/\"\nis in the app (/home/plang); without it, it would be beside this goal, in the os folder.",
           "code": [
@@ -1784,7 +1926,7 @@
           "index": 1,
           "text": "call ShowFiles files=%files% in %browser.desktop%",
           "line": {
-            "number": 56
+            "number": 60
           },
           "code": [
             {
@@ -1849,7 +1991,7 @@
           "index": 0,
           "text": "open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%",
           "line": {
-            "number": 61
+            "number": 65
           },
           "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value",
           "code": [
@@ -1941,7 +2083,7 @@
           "index": 1,
           "text": "read %asked.edit%, write to %content%",
           "line": {
-            "number": 62
+            "number": 66
           },
           "code": [
             {
@@ -2043,7 +2185,7 @@
           "index": 2,
           "text": "call Show file=%asked.edit%, content=%content% in %writer%",
           "line": {
-            "number": 63
+            "number": 67
           },
           "code": [
             {
@@ -2105,7 +2247,7 @@
           "index": 0,
           "text": "save %asked.content% to %asked.save%",
           "line": {
-            "number": 67
+            "number": 71
           },
           "comment": "Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value",
           "code": [
@@ -2164,7 +2306,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Saved\", Window=%asked.from%, Browser=%browser%)",
           "line": {
-            "number": 68
+            "number": 72
           },
           "code": [
             {
@@ -2240,7 +2382,7 @@
           "index": 0,
           "text": "list files in %asked.list% recursive, write to %files%",
           "line": {
-            "number": 72
+            "number": 76
           },
           "comment": "Writer's Open and New: the files in a folder and its folders",
           "code": [
@@ -2344,7 +2486,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"ShowList\", Window=%asked.from%, Browser=%browser%, Parameter={folder: %asked.list%, files: %files%})",
           "line": {
-            "number": 73
+            "number": 77
           },
           "code": [
             {
@@ -2427,7 +2569,7 @@
           "index": 0,
           "text": "read %asked.load%, write to %content%",
           "line": {
-            "number": 77
+            "number": 81
           },
           "comment": "Writer's Open: another file in the same window",
           "code": [
@@ -2524,7 +2666,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.load%, content: %content%})",
           "line": {
-            "number": 78
+            "number": 82
           },
           "code": [
             {
@@ -2607,7 +2749,7 @@
           "index": 0,
           "text": "file.save(Path=%asked.create%, Value=\"\")",
           "line": {
-            "number": 82
+            "number": 86
           },
           "comment": "Writer's New: an empty file, opened in the same window; the desktop shows it",
           "code": [
@@ -2652,7 +2794,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.create%, content: \"\"})",
           "line": {
-            "number": 83
+            "number": 87
           },
           "code": [
             {
@@ -2721,7 +2863,7 @@
           "index": 2,
           "text": "call Files",
           "line": {
-            "number": 84
+            "number": 88
           },
           "code": [
             {
@@ -2767,7 +2909,7 @@
           "index": 0,
           "text": "terminal.start(App=\"plang\", Parameter=[\"build\", \"--llmservice=openai\"]); on.timeout(After=\"PT10M\"); on.error(Recovery=[goal.call(Name=\"BuildFailed\")]); variable.set(Name=%built%, Value=%!data%)",
           "line": {
-            "number": 89
+            "number": 93
           },
           "comment": "Writer's ▶ (build): plang builds the app — its own process, as plang build does anywhere; what it\nwrote, and how it ended, go back to the window.",
           "code": [
@@ -2923,7 +3065,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={output: %built%, error: %built!error%, code: %built!exitCode%})",
           "line": {
-            "number": 90
+            "number": 94
           },
           "code": [
             {
@@ -3006,7 +3148,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
           "line": {
-            "number": 94
+            "number": 98
           },
           "comment": "plang couldn't be started (or timed out): the window hears it, rather than waiting on",
           "code": [
@@ -3090,7 +3232,7 @@
           "index": 0,
           "text": "terminal.start(App=\"plang\", Parameter=[%asked.run%]); on.timeout(After=\"PT5M\"); on.error(Recovery=[goal.call(Name=\"RunFailed\")]); variable.set(Name=%ran%, Value=%!data%)",
           "line": {
-            "number": 99
+            "number": 103
           },
           "comment": "Writer's ▶ (run): the goal runs in a plang of its own (this one's output is the screen); what it\nwrote goes back to the window.",
           "code": [
@@ -3260,7 +3402,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={output: %ran%, error: %ran!error%, code: %ran!exitCode%})",
           "line": {
-            "number": 100
+            "number": 104
           },
           "code": [
             {
@@ -3343,7 +3485,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
           "line": {
-            "number": 103
+            "number": 107
           },
           "code": [
             {
@@ -3420,13 +3562,439 @@
       "isTest": false
     },
     {
+      "name": "Menu",
+      "step": [
+        {
+          "index": 0,
+          "text": "window.callGoal(Name=\"AgentShow\", Window=%browser.desktop%, Parameter={window: %event.menu%, x: %event.x%, y: %event.y%, title: %event.title%, address: %event.address%})",
+          "line": {
+            "number": 113
+          },
+          "comment": "☰ on a window: its agent's chat drops down under the button ({\"menu\": id, \"x\", \"y\", \"title\",\n\"address\"}). The panel is part of the desktop page, lifted above the windows; it names its place\nitself. What the host's Claude says comes to the desktop as every window event does.",
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "AgentShow"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%browser.desktop%",
+                  "variable": [
+                    {
+                      "text": "%browser.desktop%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        },
+                        {
+                          "property": "desktop"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"window","type":{"name":"item","template":"plang"},"value":"%event.menu%","variable":[{"text":"%event.menu%","code":[{"variable":"event"},{"property":"menu"}]}]},{"name":"x","type":{"name":"item","template":"plang"},"value":"%event.x%","variable":[{"text":"%event.x%","code":[{"variable":"event"},{"property":"x"}]}]},{"name":"y","type":{"name":"item","template":"plang"},"value":"%event.y%","variable":[{"text":"%event.y%","code":[{"variable":"event"},{"property":"y"}]}]},{"name":"title","type":{"name":"item","template":"plang"},"value":"%event.title%","variable":[{"text":"%event.title%","code":[{"variable":"event"},{"property":"title"}]}]},{"name":"address","type":{"name":"item","template":"plang"},"value":"%event.address%","variable":[{"text":"%event.address%","code":[{"variable":"event"},{"property":"address"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "71e3ee20224192226a3f16fa0692a2b8b7eab3b92d0feeac48486278841b2bda",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
+      "name": "AgentCall",
+      "step": [
+        {
+          "index": 0,
+          "text": "set %agentGoal% = \"/system/plangos/agent/%asked.agentCall.goal%\"",
+          "line": {
+            "number": 118
+          },
+          "comment": "The agent asked to run one of its goals: only the agent's own (/system/plangos/agent/<goal>.goal),\nin this plang, under its permissions; the result goes back to the panel.",
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%agentGoal%",
+                  "variable": [
+                    {
+                      "text": "%agentGoal%",
+                      "code": [
+                        {
+                          "variable": "agentGoal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "text",
+                    "template": "plang"
+                  },
+                  "value": "/system/plangos/agent/%asked.agentCall.goal%",
+                  "variable": [
+                    {
+                      "text": "%asked.agentCall.goal%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "agentCall"
+                        },
+                        {
+                          "property": "goal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 1,
+          "text": "goal.call(Name=%agentGoal%, Parameter=%asked.agentCall.parameters%); on.error(Recovery=[goal.call(Name=\"AgentCallFailed\")]); variable.set(Name=%agentResult%, Value=%!data%)",
+          "line": {
+            "number": 119
+          },
+          "code": [
+            {
+              "module": "goal",
+              "name": "call",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "goal",
+                    "template": "plang"
+                  },
+                  "value": "%agentGoal%",
+                  "variable": [
+                    {
+                      "text": "%agentGoal%",
+                      "code": [
+                        {
+                          "variable": "agentGoal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list",
+                    "template": "plang"
+                  },
+                  "value": "%asked.agentCall.parameters%",
+                  "variable": [
+                    {
+                      "text": "%asked.agentCall.parameters%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "agentCall"
+                        },
+                        {
+                          "property": "parameters"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "parallel",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "on",
+              "name": "error",
+              "property": [
+                {
+                  "name": "Recovery",
+                  "type": {
+                    "name": "list",
+                    "kind": "action"
+                  },
+                  "value": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "AgentCallFailed"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "ignoreerror",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%agentResult%",
+                  "variable": [
+                    {
+                      "text": "%agentResult%",
+                      "code": [
+                        {
+                          "variable": "agentResult"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "asdefault",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        },
+        {
+          "index": 2,
+          "text": "window.callGoal(Name=\"AgentResult\", Window=%browser.desktop%, Parameter={id: %asked.agentCall.id%, result: %agentResult%})",
+          "line": {
+            "number": 120
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "AgentResult"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%browser.desktop%",
+                  "variable": [
+                    {
+                      "text": "%browser.desktop%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        },
+                        {
+                          "property": "desktop"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"id","type":{"name":"item","template":"plang"},"value":"%asked.agentCall.id%","variable":[{"text":"%asked.agentCall.id%","code":[{"variable":"asked"},{"property":"agentCall"},{"property":"id"}]}]},{"name":"result","type":{"name":"item","template":"plang"},"value":"%agentResult%","variable":[{"text":"%agentResult%","code":[{"variable":"agentResult"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "78a137e1220dec12f0290f7ecf8b5d311f7f74b967538dbff65842380bfb44b5",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
+      "name": "AgentCallFailed",
+      "step": [
+        {
+          "index": 0,
+          "text": "window.callGoal(Name=\"AgentResult\", Window=%browser.desktop%, Parameter={id: %asked.agentCall.id%, error: %!error.Message%})",
+          "line": {
+            "number": 123
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "AgentResult"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%browser.desktop%",
+                  "variable": [
+                    {
+                      "text": "%browser.desktop%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        },
+                        {
+                          "property": "desktop"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"id","type":{"name":"item","template":"plang"},"value":"%asked.agentCall.id%","variable":[{"text":"%asked.agentCall.id%","code":[{"variable":"asked"},{"property":"agentCall"},{"property":"id"}]}]},{"name":"error","type":{"name":"item","template":"plang"},"value":"%!error.Message%","variable":[{"text":"%!error.Message%","code":[{"variable":"!error"},{"property":"Message"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "821bfd695aff101fed56037e17bd04fe7c416ca6ae0d9bf1be70a909f949e8ad",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
       "name": "Window",
       "step": [
         {
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 109
+            "number": 129
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -3487,7 +4055,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 110
+            "number": 130
           },
           "code": [
             {
@@ -3542,7 +4110,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 111
+            "number": 131
           },
           "code": [
             {
@@ -3613,7 +4181,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 112
+            "number": 132
           },
           "code": [
             {
@@ -3684,7 +4252,7 @@
           "index": 4,
           "text": "if %event.tool%, call Tool",
           "line": {
-            "number": 113
+            "number": 133
           },
           "code": [
             {
@@ -3755,7 +4323,7 @@
           "index": 5,
           "text": "if %event.paste%, call Paste",
           "line": {
-            "number": 114
+            "number": 134
           },
           "code": [
             {
@@ -3821,13 +4389,84 @@
             }
           ],
           "waitForExecution": true
+        },
+        {
+          "index": 6,
+          "text": "if %event.menu%, call Menu",
+          "line": {
+            "number": 135
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%event.menu%",
+                  "variable": [
+                    {
+                      "text": "%event.menu%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        },
+                        {
+                          "property": "menu"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Menu\")",
+                  "line": {
+                    "number": 135
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "Menu"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "157dbce7a8d2a7590f0618f27c8877482bdf9e162b51a7b7035d700b26996328",
+      "hash": "a3a2dc0d73419fad8dd39c249cb2e747d60a2ba04f2ffa19b59b3704573d9773",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,
@@ -3840,7 +4479,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 117
+            "number": 138
           },
           "code": [
             {
@@ -3936,7 +4575,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 120
+            "number": 141
           },
           "code": [
             {
@@ -4011,7 +4650,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Tool\", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})",
           "line": {
-            "number": 125
+            "number": 146
           },
           "comment": "One of the app's tools in its window's title bar was clicked ({\"tool\": \"save\", \"id\"}): its page's\ngoal Tool gets it. The page named its tools itself ({\"window\": \"tools\", \"tools\": [...]}).",
           "code": [
@@ -4095,7 +4734,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Paste\", Window=%event.id%, Browser=%browser%, Parameter={value: %event.paste%})",
           "line": {
-            "number": 130
+            "number": 151
           },
           "comment": "A page asked for the clipboard as a value ({\"window\": \"paste\"}): a copy that knows where it came\nfrom, as json; its page's goal Paste gets it.",
           "code": [

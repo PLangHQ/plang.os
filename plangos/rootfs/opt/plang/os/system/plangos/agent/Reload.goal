@@ -1,0 +1,4 @@
+Reload
+/ Window %window% loads its page again from its files: a change to them shows at once.
+- window.reload(Window=%window%, Browser=%browser%)
+- return "reloaded"

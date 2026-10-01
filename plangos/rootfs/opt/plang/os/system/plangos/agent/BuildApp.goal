@@ -1,0 +1,4 @@
+BuildApp
+/ plang builds the person's app (/home/plang): what it wrote, and its exit code (0: built).
+- terminal.start(App="plang", Parameter=["build", "--llmservice=openai"]); on.timeout(After="PT10M"); variable.set(Name=%built%, Value=%!data%)
+- return {output: %built%, error: %built!error%, code: %built!exitCode%}

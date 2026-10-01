@@ -186,6 +186,8 @@ cmd_image() {
   # PlangOS's display (the Wayland compositor Chromium draws into) is part of plang: the screen
   # module's Linux provider. Nothing else to add.
   find "$ROOT/opt/plang" -name '*.pdb' -delete
+  # never shipped: the builder's traces (its LLM calls, ~40 MB) and any app store (.db: an identity)
+  find "$ROOT/opt/plang" \( -name traces -path '*/.build/traces' -o -name .db \) -type d -prune -exec rm -rf {} +
   # .NET's optional LTTng tracing provider: needs liblttng-ust, which PlangOS doesn't ship
   rm -f "$ROOT/opt/plang/libcoreclrtraceptprovider.so"
   # plang on PATH: a goal starts it as a program by its name (Writer's ▶ builds and runs goals)

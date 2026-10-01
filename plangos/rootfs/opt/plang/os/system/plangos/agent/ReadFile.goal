@@ -1,0 +1,4 @@
+ReadFile
+/ What the file at %path% holds: its text (a json file its value).
+- file.read(Path=%path%); variable.set(Name=%content%, Value=%!data%)
+- return %content%

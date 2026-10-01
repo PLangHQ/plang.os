@@ -1,0 +1,4 @@
+ListFiles
+/ The files in the folder %path% and its folders.
+- file.list(Path=%path%, Recursive=true); variable.set(Name=%files%, Value=%!data%)
+- return %files%

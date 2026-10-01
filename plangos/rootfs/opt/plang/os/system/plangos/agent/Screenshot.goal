@@ -1,0 +1,4 @@
+Screenshot
+/ How window %window% looks now (its id on the screen; 0 is the desktop): a PNG, base64.
+- window.screenshot(Window=%window%, Browser=%browser%); variable.set(Name=%png%, Value=%!data%)
+- return %png%

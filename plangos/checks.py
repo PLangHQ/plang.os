@@ -43,9 +43,12 @@ def main(root, tgz, max_mb):
     suid = [m.name for m in members if m.mode & (stat.S_ISUID | stat.S_ISGID) and not m.isdir()]
     check("1.4 no setuid/setgid files in the tarball", not suid, "\n".join(suid))
 
+    # The person's app, and — for now, named here on purpose — PlangOS's shell: a window's agent changes
+    # it in place (mktar.py's USER_TREES; plang still asks before anyone writes the os folder)
+    user_trees = ("home/plang", "opt/plang/os/system/plangos")
     wrong_owner = [m.name for m in members
-                   if (m.uid, m.gid) != (0, 0) and not m.name.startswith("home/plang")]
-    check("1.4 everything outside /home/plang is owned by root", not wrong_owner, "\n".join(wrong_owner[:20]))
+                   if (m.uid, m.gid) != (0, 0) and not any(m.name == t or m.name.startswith(t + "/") for t in user_trees)]
+    check("1.4 everything outside /home/plang (and the shell, for its agent) is owned by root", not wrong_owner, "\n".join(wrong_owner[:20]))
 
     writable = [m.name for m in members
                 if not m.name.startswith("home/plang") and not m.issym()

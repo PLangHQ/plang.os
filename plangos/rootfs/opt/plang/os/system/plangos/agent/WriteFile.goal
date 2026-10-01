@@ -1,0 +1,4 @@
+WriteFile
+/ Writes %content% to the file at %path%, all of it (a new file, or in place of what it held).
+- file.save(Path=%path%, Value=%content%)
+- return "written"

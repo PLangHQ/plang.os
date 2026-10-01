@@ -143,6 +143,43 @@
   .ask button.yes:hover { background: #f6b35a; }
   .ask button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .ask small { display: block; margin-top: 12px; color: var(--dim); font-size: 12px; }
+
+  /* a window's agent: drops down under its ☰, above every window (the screen lifts exactly this box);
+     small at first, taller as the conversation grows */
+  .agent {
+    position: absolute; width: 440px; max-height: 72vh; display: flex; flex-direction: column;
+    background: #141d2b; border: 1px solid rgba(242, 163, 58, .55); border-radius: 10px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .55); font-size: 14px; color: var(--text); overflow: hidden;
+  }
+  .agent .top { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px 14px; border-bottom: 1px solid var(--line); }
+  .agent .top b { color: var(--accent); font-size: 12px; letter-spacing: .8px; text-transform: uppercase; }
+  .agent .top span { flex: 1; color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .agent .top button { border: 0; background: none; color: var(--dim); font-size: 17px; cursor: pointer; padding: 0 4px; }
+  .agent .intro { padding: 12px 14px 4px; color: var(--dim); line-height: 1.5; font-size: 13px; }
+  .agent .talk { flex: 1; overflow: auto; padding: 4px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .agent .talk:empty { display: none; }
+  .agent .me { align-self: flex-end; max-width: 85%; background: rgba(242, 163, 58, .16); border: 1px solid rgba(242, 163, 58, .35);
+    padding: 7px 11px; border-radius: 10px 10px 2px 10px; white-space: pre-wrap; word-break: break-word; }
+  .agent .it { line-height: 1.5; word-break: break-word; }
+  .agent .it p { margin: 0 0 8px; }
+  .agent .it pre { margin: 6px 0; padding: 8px 10px; background: rgba(0, 0, 0, .35); border-radius: 6px; overflow: auto;
+    font: 12px/1.45 ui-monospace, "DejaVu Sans Mono", monospace; max-height: 220px; }
+  .agent .it code { font: 12px ui-monospace, "DejaVu Sans Mono", monospace; color: #cfe3ff; }
+  .agent .call { font: 12px ui-monospace, "DejaVu Sans Mono", monospace; color: var(--dim); display: flex; gap: 6px; align-items: baseline; }
+  .agent .call::before { content: "⚙"; color: var(--accent); }
+  .agent .call.ok::after { content: "✓"; color: #3fb950; }
+  .agent .call.bad { color: #e5484d; }
+  .agent .call img { max-width: 100%; border: 1px solid var(--line); border-radius: 4px; margin-top: 4px; }
+  .agent .busy { color: var(--dim); font-size: 13px; }
+  .agent .busy::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%;
+    border: 2px solid var(--accent); border-right-color: transparent; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .agent form { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+  .agent textarea { flex: 1; resize: none; height: 40px; max-height: 140px; border-radius: 8px; padding: 9px 11px; font: inherit;
+    background: rgba(255, 255, 255, .06); color: var(--text); border: 1px solid var(--line); outline: none; }
+  .agent textarea:focus { border-color: var(--accent); }
+  .agent form button { padding: 0 14px; border-radius: 8px; border: 0; background: var(--accent); color: #1b1203; font-weight: 600; cursor: pointer; }
+  .agent form button:disabled { opacity: .45; cursor: default; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -193,6 +230,15 @@
     <button class="yes" id="ask-send">Svara</button>
   </div>
   <small id="ask-keys">Enter: leyfa einu sinni · Esc: hafna</small>
+</div>
+
+<!-- a window's agent: Claude (on the host) working on this window's app through plang -->
+<div class="agent" id="agent" hidden role="dialog" aria-label="Aðstoð">
+  <div class="top"><b>Aðstoð</b><span id="agent-for"></span><button id="agent-close" title="Loka (Esc)">×</button></div>
+  <div class="intro" id="agent-intro">Claude vinnur hér með þér að þessu forriti. Hann getur lesið og breytt kóða þess,
+    tekið skjámynd af glugganum, byggt og keyrt — og þú sérð breytinguna strax. Hann notar aðeins plang, með þínum leyfum.</div>
+  <div class="talk" id="agent-talk"></div>
+  <form id="agent-form"><textarea id="agent-text" placeholder="Hvað á að gera?" rows="1"></textarea><button id="agent-send">Senda</button></form>
 </div>
 
 <div class="bar">
@@ -440,6 +486,7 @@
     if (e.origin !== 'plang') return;
     const m = JSON.parse(e.data);
     if (m.stats) { numbers(m.stats); return; }
+    if (m.agent !== undefined) { agent.hear(m.agent); return; }   // the host's Claude said something
     const w = windows.get(m.id);
     switch (m.window) {
       case 'opened': windows.set(m.id, { title: m.title || '', minimized: false }); break;
@@ -511,7 +558,8 @@
   function reply(text) {
     if (askBox.hidden) return;
     askBox.hidden = true;
-    const result = { text, below: { window: 'above', id: 0, w: 0 } };
+    // below the windows again — or, when the agent's panel is open, it is what is lifted again
+    const result = { text, below: agent.open ? agent.place() : { window: 'above', id: 0, w: 0 } };
     if (waiting) { const w = waiting; waiting = null; w(result); } else answered = result;
   }
   document.getElementById('ask-once').onclick = () => reply('y');
@@ -525,6 +573,195 @@
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); reply(asking ? 'n' : ''); }
   });
   askBox.addEventListener('click', e => e.stopPropagation());   // not a click on the desktop (which closes panels)
+
+  // ---- a window's agent ------------------------------------------------------------------------
+  // ☰ on a window: plang calls AgentShow({window, x, y, title, address}); the panel drops down under
+  // the button, and the screen lifts it above the windows (a second ☰ on that window closes it). What
+  // the person writes goes up to the host, where Claude runs ({"host": {"agent": <a stream-json line>}});
+  // what Claude says comes back as window events ({"agent": <its stream-json line>}). Claude has no
+  // tools of its own: it asks for plang goals in ```plang {"goal", "parameters"}``` blocks, which run
+  // here — plang runs /system/plangos/agent/<goal>.goal — and what they give goes back to it.
+  const agentBox = document.getElementById('agent'), talk = document.getElementById('agent-talk');
+  const agentText = document.getElementById('agent-text'), agentSend = document.getElementById('agent-send');
+  const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  const fence = /```plang\s*\n([\s\S]*?)```/g;
+
+  const agent = {
+    open: false, window: null, started: false, busy: false, said: '', it: null, wait: null,
+    calls: new Map(), next: 1,
+
+    show({ window: id, x, y, title, address }) {
+      if (this.open && this.window?.id === id) { this.close(); return true; }
+      this.window = { id, title: title || '', address: address || '' };
+      document.getElementById('agent-for').textContent = (title || '') + (address ? ' · ' + address : '');
+      agentBox.hidden = false;
+      this.open = true;
+      const w = agentBox.offsetWidth;
+      agentBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, x - w)) + 'px';
+      agentBox.style.top = Math.max(8, y + 2) + 'px';
+      agentText.focus();
+      this.lift();
+      return true;
+    },
+    place() {
+      const r = agentBox.getBoundingClientRect();
+      return { window: 'above', id: 0, x: Math.floor(r.left), y: Math.floor(r.top), w: Math.ceil(r.width), h: Math.ceil(r.height) };
+    },
+    // the screen lifts the panel as it is now (it grows with the talk); not while a question is up
+    lift() { if (this.open && askBox.hidden) ask(this.place()); },
+    close() {
+      agentBox.hidden = true;
+      this.open = false;
+      if (askBox.hidden) ask({ window: 'above', id: 0, w: 0 });
+    },
+
+    // ---- the talk
+    add(cls, html) {
+      const el = document.createElement('div');
+      el.className = cls;
+      el.innerHTML = html;
+      talk.append(el);
+      talk.scrollTop = talk.scrollHeight;
+      return el;
+    },
+    // Claude's words: paragraphs, code; its plang blocks are shown as the calls they are, not as text
+    render(text) {
+      return text.replace(fence, '').split(/```[\w-]*\n?/).map((part, i) => i % 2
+        ? `<pre>${esc(part.replace(/\n$/, ''))}</pre>`
+        : part.trim().split(/\n{2,}/).filter(Boolean).map(p => `<p>${esc(p).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\n/g, '<br>')}</p>`).join('')).join('');
+    },
+    working(on) {
+      this.wait?.remove();
+      this.wait = on ? this.add('busy', on === true ? 'Claude hugsar…' : esc(on)) : null;
+    },
+
+    send(text) {
+      text = text.trim();
+      if (!text || this.busy) return;
+      agentText.value = '';
+      this.add('me', esc(text));
+      document.getElementById('agent-intro').hidden = true;
+      const first = !this.started;
+      this.started = true;
+      this.user([{ type: 'text', text: first ? this.instructions() + '\n\n---\n\n' + text : text }]);
+    },
+    user(content) {
+      this.busy = true;
+      agentSend.disabled = true;
+      this.said = '';
+      this.it = null;
+      this.working(true);
+      ask({ host: { agent: JSON.stringify({ type: 'user', message: { role: 'user', content } }) } });
+    },
+    done() {
+      this.busy = false;
+      agentSend.disabled = false;
+      this.working(false);
+      agentText.focus();
+    },
+
+    // a line of Claude's (stream-json): what it says, and the end of its turn
+    hear(line) {
+      let m;
+      try { m = typeof line === 'string' ? JSON.parse(line) : line; } catch { return; }
+      if (!m) return;
+      if (m.type === 'assistant') {
+        const text = (m.message?.content ?? []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+        if (!text) return;
+        this.said += (this.said ? '\n' : '') + text;
+        this.it ??= this.add('it', '');
+        this.it.innerHTML = this.render(this.said);
+        if (this.wait) talk.append(this.wait);
+        talk.scrollTop = talk.scrollHeight;
+      } else if (m.type === 'result') this.ended(m);
+      else if (m.type === 'error') { this.add('call bad', esc(m.text ?? m.message ?? 'Villa')); this.done(); }
+    },
+
+    // its turn ended: the goals it asked for run, one after another; what they gave is its next message
+    async ended(m) {
+      if (m.is_error) { this.add('call bad', esc(m.result ?? m.subtype ?? 'Villa hjá Claude')); this.done(); return; }
+      const asked = [...this.said.matchAll(fence)].map(f => { try { return JSON.parse(f[1]); } catch (e) { return { bad: f[1], why: e.message }; } });
+      if (!asked.length) { this.done(); return; }
+      const content = [];
+      for (const call of asked) {
+        if (call.bad !== undefined || !/^[A-Za-z]+$/.test(call.goal ?? '')) {
+          content.push({ type: 'text', text: `Not a call I can run (${call.why ?? 'goal: one of the names listed'}): ${call.bad ?? JSON.stringify(call)}` });
+          continue;
+        }
+        const parameters = this.paths(call.parameters ?? {});
+        const shown = `${call.goal}(${Object.entries(parameters).map(([k, v]) => `${k}: ${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 60)}`).join(', ')})`;
+        const row = this.add('call', esc(shown));
+        this.working('Keyri ' + call.goal + '…');
+        const { result, error } = await this.run(call.goal, parameters);
+        if (error !== undefined && error !== null) {
+          row.classList.add('bad');
+          row.append(' — ' + error);
+          content.push({ type: 'text', text: `${shown} failed: ${error}` });
+        } else if (call.goal === 'Screenshot' && typeof result === 'string' && result.length > 100) {
+          row.classList.add('ok');
+          const img = document.createElement('img');
+          img.src = 'data:image/png;base64,' + result;
+          row.after(img);
+          content.push({ type: 'text', text: `${shown}:` }, { type: 'image', source: { type: 'base64', media_type: 'image/png', data: result } });
+        } else {
+          row.classList.add('ok');
+          const text = typeof result === 'string' ? result : JSON.stringify(result, null, 1);
+          content.push({ type: 'text', text: `${shown} gave:\n${String(text ?? '').slice(0, 40000)}` });
+        }
+      }
+      this.user(content);
+    },
+    run(goal, parameters) {
+      return new Promise(resolve => {
+        const id = this.next++;
+        this.calls.set(id, resolve);
+        ask({ agentCall: { id, goal, parameters } });
+      });
+    },
+    result(id, result, error) {
+      const resolve = this.calls.get(id);
+      this.calls.delete(id);
+      resolve?.({ result, error });
+    },
+    // the paths a person reads (/os/system/…) are plang's own from the app (/system/…)
+    paths(parameters) {
+      const out = { ...parameters };
+      for (const [k, v] of Object.entries(out)) if (typeof v === 'string' && v.startsWith('/os/')) out[k] = v.slice(3);
+      return out;
+    },
+
+    // what Claude is told with the first message: where it is, how to act, which goals there are
+    instructions() {
+      const w = this.window ?? { id: 0, title: 'Skjáborð', address: '' };
+      const open = [[0, 'the desktop'], ...[...windows].map(([id, v]) => [id, v.title])].map(([id, t]) => `#${id} ${t}`).join(', ');
+      return [
+        'You are the agent of a window in PlangOS, an operating system where only PLang runs. The person talks with you in a small panel under the window\'s ☰: keep your answers short, in the person\'s language.',
+        `This window: #${w.id} "${w.title}"${w.address ? ` (address ${w.address})` : ''}. Windows open now: ${open}.`,
+        'You have no tools of your own. You act only through plang: end a message with one or more blocks like',
+        '```plang\n{"goal": "ReadFile", "parameters": {"path": "/system/plangos/app/writer/start.html"}}\n```',
+        'and stop there; what the goals gave comes in the next message (a screenshot as a picture). The goals:',
+        '- Screenshot {window}: how a window looks now (its number; 0 is the desktop)',
+        '- Reload {window}: the window\'s page loads again from its files — after you change them',
+        '- ReadFile {path}, WriteFile {path, content} (the whole file: read it first, write it back whole), ListFiles {path}',
+        '- BuildApp {}: plang builds the person\'s app; RunGoal {goal}: runs one of its goals, by name from the app\'s root (Desktop/Start)',
+        'Paths: "/" is the person\'s app (/home/plang); their files are in /Desktop. PlangOS\'s own shell is under /system/plangos: Screen.goal (the shell, in PLang), desktop.html (the desktop), app/writer/start.html (Writer), agent/ (these goals). A window\'s address /os/system/plangos/… is the file /system/plangos/….',
+        'PLang\'s documentation — what its builder knows — is in /system/modules/<module>/ (module.description.md, <action>.description.md, .examples.md, .notes.md). Read it before you write PLang.',
+        'To change a page: WriteFile, then Reload its window, then Screenshot to see it. A change to a .goal of the shell needs PlangOS started again; say so.',
+      ].join('\n');
+    },
+  };
+
+  window.AgentShow = args => agent.show(args ?? {});
+  window.AgentResult = ({ id, result, error }) => { agent.result(id, result, error); return true; };
+  new ResizeObserver(() => agent.lift()).observe(agentBox);
+  document.getElementById('agent-form').onsubmit = e => { e.preventDefault(); agent.send(agentText.value); };
+  document.getElementById('agent-close').onclick = () => agent.close();
+  agentText.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); agent.send(agentText.value); }
+  });
+  agentText.addEventListener('input', () => { agentText.style.height = 'auto'; agentText.style.height = Math.min(140, agentText.scrollHeight) + 'px'; });
+  agentBox.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); agent.close(); } });
+  agentBox.addEventListener('click', e => e.stopPropagation());   // not a click on the desktop (which closes panels)
 </script>
 </body>
 </html>

@@ -1,0 +1,5 @@
+RunGoal
+/ Runs the goal %goal% of the person's app (its name from the app's root: Desktop/Start), in a plang
+/ of its own: what it wrote, and its exit code.
+- terminal.start(App="plang", Parameter=[%goal%]); on.timeout(After="PT5M"); variable.set(Name=%ran%, Value=%!data%)
+- return {output: %ran%, error: %ran!error%, code: %ran!exitCode%}
