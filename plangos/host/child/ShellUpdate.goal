@@ -1,0 +1,32 @@
+ShellUpdate
+/ PlangOS (whose %!app.parent% this app is) asks for new files for its shell: what is staged in /shell.next goes down
+/ as [{path, content}] — the path where it goes in PlangOS (/system/plangos/desktop.html) — and is removed, so each
+/ staged file goes once. Nothing staged: an empty list.
+/ Each file is staged with .staged.txt after its name (screen.pr.staged.txt): so it is read as the text it is — a .pr
+/ read as itself is a goal, an unknown kind is binary.
+- set %update% to []
+- set %files% to []
+- goal.call(Name="Staged"); on.error(Recovery=[goal.call(Name="NothingStaged")])
+- foreach %files%, call PackFile file=%item%
+- condition.if(Left=%update%, Operator="isnotempty") { file.delete(Path="/shell.next", Recursive=true) }
+- return %update%
+
+Staged
+- file.list(Path="/shell.next", Recursive=true); variable.set(Name=%files%, Value=%!data%)
+
+NothingStaged
+/ no /shell.next: nothing staged
+- set %files% to []
+
+PackFile
+/ (formal: `as text` is dropped by the builder)
+- file.read(Path=%file%); variable.set(Name=%content%, Value=%!data%, Type="text")
+/ the path from the shell's folder: shell.next/.build/screen.pr.staged.txt is .build/screen.pr (plang has no text replace
+/ yet; a path won't become text, but a text with the path in it is one)
+- set %where% to "/%file%"
+- list.split(Value=%where%, Separator="shell.next/", Empty=false); variable.set(Name=%pieces%, Value=%!data%)
+- list.last(ListName=%pieces%); variable.set(Name=%staged%, Value=%!data%)
+- list.split(Value=%staged%, Separator=".staged.txt", Empty=false); variable.set(Name=%names%, Value=%!data%)
+- list.first(ListName=%names%); variable.set(Name=%path%, Value=%!data%)
+/ where it goes in PlangOS: the shell's folder, /system/plangos
+- add {"path": "/system/plangos/%path%", "content": %content%} to %update%

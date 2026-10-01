@@ -117,6 +117,10 @@
   .menu .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .menu .about { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; gap: 12px; align-items: center; color: var(--dim); font-size: 13px; }
   .menu .about img { width: 40px; height: 40px; }
+  .menu .about .update { margin-left: auto; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .06); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+  .menu .about .update:hover { background: rgba(255, 255, 255, .14); }
+  .menu .updated { margin-top: 10px; color: var(--dim); font-size: 12px; line-height: 1.5; }
 
   /* right-click menu */
   .menu.context { bottom: auto; width: 250px; padding: 6px; border-radius: 10px; }
@@ -229,7 +233,9 @@
 <div class="menu" id="menu" hidden>
   <h2>Forrit</h2>
   <div class="apps" id="apps"></div>
-  <div class="about"><img src="plang.png" alt=""><div><b style="color:var(--text)">PlangOS</b><br>Only PLang runs here.</div></div>
+  <div class="about"><img src="plang.png" alt=""><div><b style="color:var(--text)">PlangOS</b><br>Only PLang runs here.</div>
+    <button class="update" id="update" title="New files for PlangOS's shell, from Windows">Update</button></div>
+  <div class="updated" id="updated" hidden></div>
 </div>
 
 <div class="menu context" id="context" hidden></div>
@@ -317,6 +323,17 @@
     return `<div class="tile file" style="background:${color}">${mark}</div>`;
   };
   let fileIcons = [];
+  // Update (start menu): plang asks the host for new shell files, writes them, loads this page again and tells
+  // what changed (ShowUpdated); a changed goal is used when PlangOS starts again
+  document.getElementById('update').onclick = e => { e.stopPropagation(); ask({ update: true }); };
+  window.ShowUpdated = ({ files }) => {
+    const names = (files ?? []).map(f => f.path ?? f);
+    const goals = names.some(n => /\.pr$/.test(n));
+    const box = document.getElementById('updated');
+    box.textContent = `Updated: ${names.join(', ')}` + (goals ? ' — start PlangOS again for the changed goals.' : '');
+    box.hidden = false;
+    return true;
+  };
   window.ShowFiles = ({ files }) => {
     for (const icon of fileIcons) icon.remove();
     fileIcons = (files ?? []).map(f => {

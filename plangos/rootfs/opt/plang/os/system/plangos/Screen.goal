@@ -17,6 +17,8 @@ Screen
 - channel.set(Name="error", Goal=goal.call(Name="ShowError"))
 / the desktop's files, once %browser% is known (the page itself can't ask: it loads while browser.start runs)
 - goal.call(Name="Files")
+/ new files for this shell, if the host has any — not waited for, so the shell starts anyway
+- goal.call(Name="Update", Wait=false)
 / ☰ on a window is its agent: Claude, who works on the window's app with the person, through plang.
 / (on click on #window.bot, call ShowClaude — formal until the builder learns # elements)
 - on.event(Event=%!screen.element["#window.bot"].on.click%, When="after", Action=goal.call(Name="ShowClaude"))
@@ -57,6 +59,29 @@ Desktop
 - if %asked.build%, call Build
 - if %asked.run%, call Run
 - condition.if(Left=%asked.say%) { goal.call(Name="Say") }
+- if %asked.update%, call Update, don't wait
+
+Update
+/ New files for this shell from the host (its %!app.parent%; staged on Windows in shell.next): each written into the
+/ shell's folder, then the desktop loads again. Pages show the change now; a changed goal (.build/*.pr) is used when
+/ PlangOS starts again. No image, nothing in /home/plang touched.
+- set %update% to []
+- goal.call(Name=%!app.parent.goal["ShellUpdate"]%); variable.set(Name=%update%, Value=%!data%)
+/ the system writes the system's files: os/** is written by the system actor only — a user's program writing there is asked
+- goal.call(Name="InstallAll", Parameter={files: %update%}, Actor="system")
+- condition.if(Left=%update%, Operator="isnotempty") { goal.call(Name="Updated") }
+
+InstallAll
+- foreach %files%, call Install sent=%item%
+
+Install
+/ %sent.path% is where in PlangOS (/system/plangos/desktop.html): the host says it whole
+- save %sent.content% to %sent.path%
+
+Updated
+- window.reload(Window=%browser.desktop%, Browser=%browser%)
+- goal.call(Name="Files")
+- window.callGoal(Name="ShowUpdated", Window=%browser.desktop%, Parameter={files: %update%})
 
 Open
 - open window %asked.open% in %browser%
