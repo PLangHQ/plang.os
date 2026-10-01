@@ -12,6 +12,9 @@ Screen
 / A question for the user (a permission, `ask user "…"`) is a dialog on the screen: asked on the
 / console, it would go into the screen's pipe and wait on the host's input.
 - channel.set(Name="input", Goal=goal.call(Name="Question"))
+/ ☰ on a window is its agent: Claude, who works on the window's app with the person, through plang.
+/ (on click on #window.bot, call ShowClaude — formal until the builder learns # elements)
+- on.event(Event=%!screen.element["#window.bot"].on.click%, When="after", Action=goal.call(Name="ShowClaude"))
 / The screen takes the host's input itself — no goal per event, so nothing waits behind a goal
 / (a question waiting for the click that answers it).
 - screen.listen(Screen=%screen%)
@@ -30,9 +33,8 @@ Desktop
 / The desktop page asks: {"open": url} opens a window; {"window": "focus|minimize|…", "id"}
 / goes to the screen; {"files"} shows the desktop's files; {"edit": path} opens one in Writer.
 / Writer asks: {"save": path, "text"}, {"list": folder}, {"load": path}, {"create": path},
-/ {"build": path}, {"run": goal}; "from" is the window that asked. The agent's panel (on the desktop)
-/ asks: {"host": …} — a message up to the host (Claude runs there); {"agentCall": {id, goal,
-/ parameters}} — one of the agent's goals, run here.
+/ {"build": path}, {"run": goal}; "from" is the window that asked. Claude's box (on the desktop)
+/ asks: {"say": what the person wrote, "about": {"window", "title"}}.
 - set %asked% to %!data%
 - if %asked.open%, call Open
 - if %asked.window%, call Command
@@ -44,8 +46,7 @@ Desktop
 - if %asked.create%, call Create
 - if %asked.build%, call Build
 - if %asked.run%, call Run
-- condition.if(Left=%asked.host%) { goal.call(Name="Command") }
-- condition.if(Left=%asked.agentCall%) { goal.call(Name="AgentCall") }
+- condition.if(Left=%asked.say%) { goal.call(Name="Say") }
 
 Open
 - open window %asked.open% in %browser%
@@ -106,21 +107,65 @@ Run
 RunFailed
 - window.callGoal(Name="Ran", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})
 
-Menu
-/ ☰ on a window: its agent's chat drops down under the button ({"menu": id, "x", "y", "title",
-/ "address"}). The panel is part of the desktop page, lifted above the windows; it names its place
-/ itself. What the host's Claude says comes to the desktop as every window event does.
-- window.callGoal(Name="AgentShow", Window=%browser.desktop%, Parameter={window: %event.menu%, x: %event.x%, y: %event.y%, title: %event.title%, address: %event.address%})
+ShowClaude
+/ ☰ clicked (#window.bot): Claude's box drops down under it — part of the desktop page, lifted above the
+/ windows. %!event!result% is the click: its window, where.
+- set %click% to %!event!result%
+- window.callGoal(Name="AgentShow", Window=%browser.desktop%, Parameter={window: %click.window%, x: %click.x%, y: %click.y%})
 
-AgentCall
-/ The agent asked to run one of its goals: only the agent's own (/system/plangos/agent/<goal>.goal),
-/ in this plang, under its permissions; the result goes back to the panel.
-- set %agentGoal% = "/system/plangos/agent/%asked.agentCall.goal%"
-- goal.call(Name=%agentGoal%, Parameter=%asked.agentCall.parameters%); on.error(Recovery=[goal.call(Name="AgentCallFailed")]); variable.set(Name=%agentResult%, Value=%!data%)
-- window.callGoal(Name="AgentResult", Window=%browser.desktop%, Parameter={id: %asked.agentCall.id%, result: %agentResult%})
+Say
+/ The person wrote to Claude about a window. The first time, with what Claude has to know about PlangOS
+/ and this window (agent/instructions.md); then it's a conversation.
+- condition.if(Left=%claudeStarted%, Operator="isnotempty") { goal.call(Name="NextWords") }
+- condition.if(Left=%claudeStarted%, Operator="isempty") { goal.call(Name="FirstWords") }
+- goal.call(Name="Turn", Parameter={content: %content%})
 
-AgentCallFailed
-- window.callGoal(Name="AgentResult", Window=%browser.desktop%, Parameter={id: %asked.agentCall.id%, error: %!error.Message%})
+FirstWords
+- render 'agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, write to %instructions%
+- set %content% to [{"type": "text", "text": "%instructions%\n\n---\n\n%asked.say%"}]
+- set %claudeStarted% to true
+
+NextWords
+- set %content% to [{"type": "text", "text": %asked.say%}]
+
+Turn
+/ One turn: Claude, in the host (the app that started this one), gets %content%; its words go to the box;
+/ the goals it asks for run here, and what they gave is its next turn — until it asks for none.
+- goal.call(Name=%!app.parent.goal["Claude"]%, Parameter={message: %content%}); on.error(Recovery=[goal.call(Name="ClaudeFailed")]); variable.set(Name=%reply%, Value=%!data%)
+- window.callGoal(Name="AgentSays", Window=%browser.desktop%, Parameter={text: %reply.text%, calls: %reply.calls%})
+- condition.if(Left=%reply.calls%, Operator="isnotempty") { goal.call(Name="RunCalls") }
+- condition.if(Left=%reply.calls%, Operator="isempty") { goal.call(Name="TurnDone") }
+
+ClaudeFailed
+- window.callGoal(Name="AgentSays", Window=%browser.desktop%, Parameter={error: %!error.Message%})
+- return {text: "", calls: []}
+
+TurnDone
+- window.callGoal(Name="AgentDone", Window=%browser.desktop%)
+
+RunCalls
+/ Each goal Claude asked for runs here — only its own, in agent/ — and what it gave goes into its next
+/ turn: a screenshot as a picture, anything else as text.
+- set %results% to []
+- foreach %reply.calls%, call RunCall call=%item%
+- goal.call(Name="Turn", Parameter={content: %results%})
+
+RunCall
+- set %agentGoal% to "/system/plangos/agent/%call.goal%"
+- goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name="CallFailed")]); variable.set(Name=%got%, Value=%!data%)
+- window.callGoal(Name="AgentCalled", Window=%browser.desktop%, Parameter={goal: %call.goal%, parameters: %call.parameters%, got: %got%})
+- condition.if(Left=%call.goal%, Operator="==", Right="Screenshot") { goal.call(Name="GavePicture") }
+- condition.if(Left=%call.goal%, Operator="!=", Right="Screenshot") { goal.call(Name="GaveText") }
+
+CallFailed
+- return "failed: %!error.Message%"
+
+GavePicture
+- add {"type": "text", "text": "%call.goal% gave this picture:"} to %results%
+- add {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": %got%}} to %results%
+
+GaveText
+- add {"type": "text", "text": "%call.goal% gave: %got%"} to %results%
 
 Window
 / The screen says what happened to a window: the desktop's taskbar shows it. Enter in a
@@ -132,7 +177,6 @@ Window
 - if %event.open%, call OpenPage
 - if %event.tool%, call Tool
 - if %event.paste%, call Paste
-- if %event.menu%, call Menu
 
 Navigate
 - navigate window %event.id% to %event.navigate% in %browser%

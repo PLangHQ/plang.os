@@ -233,12 +233,12 @@
 </div>
 
 <!-- a window's agent: Claude (on the host) working on this window's app through plang -->
-<div class="agent" id="agent" hidden role="dialog" aria-label="Aðstoð">
-  <div class="top"><b>Aðstoð</b><span id="agent-for"></span><button id="agent-close" title="Loka (Esc)">×</button></div>
-  <div class="intro" id="agent-intro">Claude vinnur hér með þér að þessu forriti. Hann getur lesið og breytt kóða þess,
-    tekið skjámynd af glugganum, byggt og keyrt — og þú sérð breytinguna strax. Hann notar aðeins plang, með þínum leyfum.</div>
+<div class="agent" id="agent" hidden role="dialog" aria-label="Claude">
+  <div class="top"><b>Claude</b><span id="agent-for"></span><button id="agent-close" title="Close (Esc)">×</button></div>
+  <div class="intro" id="agent-intro">Claude works on this app with you. He can read and change its code, take a
+    screenshot of the window, build and run — and you see the change right away. He acts only through plang, with your permissions.</div>
   <div class="talk" id="agent-talk"></div>
-  <form id="agent-form"><textarea id="agent-text" placeholder="Hvað á að gera?" rows="1"></textarea><button id="agent-send">Senda</button></form>
+  <form id="agent-form"><textarea id="agent-text" placeholder="What should we do?" rows="1"></textarea><button id="agent-send">Send</button></form>
 </div>
 
 <div class="bar">
@@ -486,7 +486,6 @@
     if (e.origin !== 'plang') return;
     const m = JSON.parse(e.data);
     if (m.stats) { numbers(m.stats); return; }
-    if (m.agent !== undefined) { agent.hear(m.agent); return; }   // the host's Claude said something
     const w = windows.get(m.id);
     switch (m.window) {
       case 'opened': windows.set(m.id, { title: m.title || '', minimized: false }); break;
@@ -575,25 +574,23 @@
   askBox.addEventListener('click', e => e.stopPropagation());   // not a click on the desktop (which closes panels)
 
   // ---- a window's agent ------------------------------------------------------------------------
-  // ☰ on a window: plang calls AgentShow({window, x, y, title, address}); the panel drops down under
-  // the button, and the screen lifts it above the windows (a second ☰ on that window closes it). What
-  // the person writes goes up to the host, where Claude runs ({"host": {"agent": <a stream-json line>}});
-  // what Claude says comes back as window events ({"agent": <its stream-json line>}). Claude has no
-  // tools of its own: it asks for plang goals in ```plang {"goal", "parameters"}``` blocks, which run
-  // here — plang runs /system/plangos/agent/<goal>.goal — and what they give goes back to it.
+  // A view: the conversation is plang's (Screen.goal). ☰ on a window (#window.bot) — plang calls
+  // AgentShow({window, x, y}); the box drops down under the button, and the screen lifts it above the
+  // windows (a second ☰ on that window closes it). What the person writes goes to plang ({say, about:
+  // {window, title}}); plang calls back AgentSays({text, calls} | {error}), AgentCalled({goal, parameters, got})
+  // for each goal Claude asked for, and AgentDone when Claude asks for none.
   const agentBox = document.getElementById('agent'), talk = document.getElementById('agent-talk');
   const agentText = document.getElementById('agent-text'), agentSend = document.getElementById('agent-send');
   const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-  const fence = /```plang\s*\n([\s\S]*?)```/g;
 
   const agent = {
-    open: false, window: null, started: false, busy: false, said: '', it: null, wait: null,
-    calls: new Map(), next: 1,
+    open: false, window: null, busy: false, wait: null,
 
-    show({ window: id, x, y, title, address }) {
+    show({ window: id, x, y }) {
       if (this.open && this.window?.id === id) { this.close(); return true; }
-      this.window = { id, title: title || '', address: address || '' };
-      document.getElementById('agent-for').textContent = (title || '') + (address ? ' · ' + address : '');
+      const title = windows.get(id)?.title ?? (id === 0 ? 'Desktop' : '');
+      this.window = { id, title };
+      document.getElementById('agent-for').textContent = title;
       agentBox.hidden = false;
       this.open = true;
       const w = agentBox.offsetWidth;
@@ -624,15 +621,15 @@
       talk.scrollTop = talk.scrollHeight;
       return el;
     },
-    // Claude's words: paragraphs, code; its plang blocks are shown as the calls they are, not as text
+    // Claude's words: paragraphs, code
     render(text) {
-      return text.replace(fence, '').split(/```[\w-]*\n?/).map((part, i) => i % 2
+      return String(text ?? '').split(/```[\w-]*\n?/).map((part, i) => i % 2
         ? `<pre>${esc(part.replace(/\n$/, ''))}</pre>`
         : part.trim().split(/\n{2,}/).filter(Boolean).map(p => `<p>${esc(p).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\n/g, '<br>')}</p>`).join('')).join('');
     },
     working(on) {
       this.wait?.remove();
-      this.wait = on ? this.add('busy', on === true ? 'Claude hugsar…' : esc(on)) : null;
+      this.wait = on ? this.add('busy', on === true ? 'Claude is thinking…' : esc(on)) : null;
     },
 
     send(text) {
@@ -641,17 +638,29 @@
       agentText.value = '';
       this.add('me', esc(text));
       document.getElementById('agent-intro').hidden = true;
-      const first = !this.started;
-      this.started = true;
-      this.user([{ type: 'text', text: first ? this.instructions() + '\n\n---\n\n' + text : text }]);
-    },
-    user(content) {
       this.busy = true;
       agentSend.disabled = true;
-      this.said = '';
-      this.it = null;
       this.working(true);
-      ask({ host: { agent: JSON.stringify({ type: 'user', message: { role: 'user', content } }) } });
+      // "about", not "window": {"window": …} is a command for the screen
+      ask({ say: text, about: { window: this.window?.id ?? 0, title: this.window?.title ?? '' } });
+    },
+
+    // what plang tells the box
+    says({ text, calls, error }) {
+      if (error) { this.add('call bad', esc(error)); this.done(); return; }
+      if (text) this.add('it', this.render(text));
+      if (calls?.length) this.working('Running ' + calls.map(c => c.goal).join(', ') + '…');
+    },
+    called({ goal, parameters, got }) {
+      const shown = `${goal}(${Object.entries(parameters ?? {}).map(([k, v]) => `${k}: ${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 60)}`).join(', ')})`;
+      const failed = typeof got === 'string' && got.startsWith('failed: ');
+      const row = this.add('call ' + (failed ? 'bad' : 'ok'), esc(shown) + (failed ? ' — ' + esc(got.slice(8)) : ''));
+      if (!failed && goal === 'Screenshot' && typeof got === 'string' && got.length > 100) {
+        const img = document.createElement('img');
+        img.src = 'data:image/png;base64,' + got;
+        row.after(img);
+      }
+      this.working(true);
     },
     done() {
       this.busy = false;
@@ -659,100 +668,12 @@
       this.working(false);
       agentText.focus();
     },
-
-    // a line of Claude's (stream-json): what it says, and the end of its turn
-    hear(line) {
-      let m;
-      try { m = typeof line === 'string' ? JSON.parse(line) : line; } catch { return; }
-      if (!m) return;
-      if (m.type === 'assistant') {
-        const text = (m.message?.content ?? []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-        if (!text) return;
-        this.said += (this.said ? '\n' : '') + text;
-        this.it ??= this.add('it', '');
-        this.it.innerHTML = this.render(this.said);
-        if (this.wait) talk.append(this.wait);
-        talk.scrollTop = talk.scrollHeight;
-      } else if (m.type === 'result') this.ended(m);
-      else if (m.type === 'error') { this.add('call bad', esc(m.text ?? m.message ?? 'Villa')); this.done(); }
-    },
-
-    // its turn ended: the goals it asked for run, one after another; what they gave is its next message
-    async ended(m) {
-      if (m.is_error) { this.add('call bad', esc(m.result ?? m.subtype ?? 'Villa hjá Claude')); this.done(); return; }
-      const asked = [...this.said.matchAll(fence)].map(f => { try { return JSON.parse(f[1]); } catch (e) { return { bad: f[1], why: e.message }; } });
-      if (!asked.length) { this.done(); return; }
-      const content = [];
-      for (const call of asked) {
-        if (call.bad !== undefined || !/^[A-Za-z]+$/.test(call.goal ?? '')) {
-          content.push({ type: 'text', text: `Not a call I can run (${call.why ?? 'goal: one of the names listed'}): ${call.bad ?? JSON.stringify(call)}` });
-          continue;
-        }
-        const parameters = this.paths(call.parameters ?? {});
-        const shown = `${call.goal}(${Object.entries(parameters).map(([k, v]) => `${k}: ${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 60)}`).join(', ')})`;
-        const row = this.add('call', esc(shown));
-        this.working('Keyri ' + call.goal + '…');
-        const { result, error } = await this.run(call.goal, parameters);
-        if (error !== undefined && error !== null) {
-          row.classList.add('bad');
-          row.append(' — ' + error);
-          content.push({ type: 'text', text: `${shown} failed: ${error}` });
-        } else if (call.goal === 'Screenshot' && typeof result === 'string' && result.length > 100) {
-          row.classList.add('ok');
-          const img = document.createElement('img');
-          img.src = 'data:image/png;base64,' + result;
-          row.after(img);
-          content.push({ type: 'text', text: `${shown}:` }, { type: 'image', source: { type: 'base64', media_type: 'image/png', data: result } });
-        } else {
-          row.classList.add('ok');
-          const text = typeof result === 'string' ? result : JSON.stringify(result, null, 1);
-          content.push({ type: 'text', text: `${shown} gave:\n${String(text ?? '').slice(0, 40000)}` });
-        }
-      }
-      this.user(content);
-    },
-    run(goal, parameters) {
-      return new Promise(resolve => {
-        const id = this.next++;
-        this.calls.set(id, resolve);
-        ask({ agentCall: { id, goal, parameters } });
-      });
-    },
-    result(id, result, error) {
-      const resolve = this.calls.get(id);
-      this.calls.delete(id);
-      resolve?.({ result, error });
-    },
-    // the paths a person reads (/os/system/…) are plang's own from the app (/system/…)
-    paths(parameters) {
-      const out = { ...parameters };
-      for (const [k, v] of Object.entries(out)) if (typeof v === 'string' && v.startsWith('/os/')) out[k] = v.slice(3);
-      return out;
-    },
-
-    // what Claude is told with the first message: where it is, how to act, which goals there are
-    instructions() {
-      const w = this.window ?? { id: 0, title: 'Skjáborð', address: '' };
-      const open = [[0, 'the desktop'], ...[...windows].map(([id, v]) => [id, v.title])].map(([id, t]) => `#${id} ${t}`).join(', ');
-      return [
-        'You are the agent of a window in PlangOS, an operating system where only PLang runs. The person talks with you in a small panel under the window\'s ☰: keep your answers short, in the person\'s language.',
-        `This window: #${w.id} "${w.title}"${w.address ? ` (address ${w.address})` : ''}. Windows open now: ${open}.`,
-        'You have no tools of your own. You act only through plang: end a message with one or more blocks like',
-        '```plang\n{"goal": "ReadFile", "parameters": {"path": "/system/plangos/app/writer/start.html"}}\n```',
-        'and stop there; what the goals gave comes in the next message (a screenshot as a picture). The goals:',
-        '- Screenshot {window}: how a window looks now (its number; 0 is the desktop)',
-        '- Reload {window}: the window\'s page loads again from its files — after you change them',
-        '- ReadFile {path}, WriteFile {path, content} (the whole file: read it first, write it back whole), ListFiles {path}',
-        '- BuildApp {}: plang builds the person\'s app; RunGoal {goal}: runs one of its goals, by name from the app\'s root (Desktop/Start)',
-        'Paths: "/" is the person\'s app (/home/plang); their files are in /Desktop. PlangOS\'s own shell is under /system/plangos: Screen.goal (the shell, in PLang), desktop.html (the desktop), app/writer/start.html (Writer), agent/ (these goals). A window\'s address /os/system/plangos/… is the file /system/plangos/….',
-        'PLang\'s documentation — what its builder knows — is in /system/modules/<module>/ (module.description.md, <action>.description.md, .examples.md, .notes.md). Read it before you write PLang.',
-        'To change a page: WriteFile, then Reload its window, then Screenshot to see it. A change to a .goal of the shell needs PlangOS started again; say so.',
-      ].join('\n');
-    },
   };
 
   window.AgentShow = args => agent.show(args ?? {});
-  window.AgentResult = ({ id, result, error }) => { agent.result(id, result, error); return true; };
+  window.AgentSays = args => { agent.says(args ?? {}); return true; };
+  window.AgentCalled = args => { agent.called(args ?? {}); return true; };
+  window.AgentDone = () => { agent.done(); return true; };
   new ResizeObserver(() => agent.lift()).observe(agentBox);
   document.getElementById('agent-form').onsubmit = e => { e.preventDefault(); agent.send(agentText.value); };
   document.getElementById('agent-close').onclick = () => agent.close();
