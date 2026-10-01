@@ -27,38 +27,25 @@ OpenPlangOS
 
 Input
 / Our window's mouse and keyboard go down to PlangOS; a message from PlangOS's plang ({"guest": …})
-/ is for us: what the person says to a window's agent goes to Claude.
+/ is for us: PlangOS calling one of our goals ({"call": {id, goal, parameters}} — %!app.parent% there).
 - set %event% to %!data%
 / (an event with no "guest" — the mouse, a key — has it as null; "is empty" doesn't see a missing one)
 - condition.if(Left=%event.guest%, Operator="==", Right=null) { goal.call(Name="ToPlangOS") }
-- condition.if(Left=%event.guest.agent%) { goal.call(Name="ToClaude") }
+/ a call runs beside the input — a turn with Claude takes a while, and the mouse mustn't wait for it
+- condition.if(Left=%event.guest.call%) { goal.call(Name="ChildCalls", Parameter={called: %event.guest.call%}, Parallel=true) }
 
 ToPlangOS
 - terminal.send(Data=%event%, Process=%container%)
 
-ToClaude
-/ Claude runs here, on Windows (the person's own Claude Code, no API key), started at the first
-/ message and kept: stream-json both ways, no tools at all — its own off (--tools ""), and no MCP
-/ servers (--strict-mcp-config with none), so it can't act on this computer; it acts only through
-/ plang goals, which PlangOS runs. We only pass the lines along. The first start asks here, in this
-/ console, whether claude may run (y/n/a).
-- if %claude% is empty, call StartClaude
-- terminal.send(Data=%event.guest.agent%, Process=%claude%)
+ChildCalls
+/ PlangOS calls one of our goals — only those in child/, what this app gives the apps it starts (Claude:
+/ child/Claude.goal). What it gives goes back down as the call's answer; so does its error.
+- set %calledGoal% to "/child/%called.goal%"
+- goal.call(Name=%calledGoal%, Parameter=%called.parameters%); on.error(Recovery=[goal.call(Name="ChildCallFailed")]); variable.set(Name=%calledResult%, Value=%!data%)
+- terminal.send(Data={"reply": {"id": %called.id%, "result": %calledResult%}}, Process=%container%)
 
-StartClaude
-- write out 'Starting Claude for PlangOS (if asked below whether claude may run, answer a)'
-- terminal.open(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--tools", "", "--strict-mcp-config", "--mcp-config", "{\"mcpServers\":{}}", "--no-session-persistence"], OnOutput=goal.call(Name="FromClaude"), OnError=goal.call(Name="ClaudeErred")); on.error(Recovery=[goal.call(Name="NoClaude")]); variable.set(Name=%claude%, Value=%!data%)
-
-FromClaude
-/ Each line Claude writes (one stream-json event) goes down to PlangOS, where the agent's panel reads it.
-- terminal.send(Data={"agent": %!data%}, Process=%container%)
-
-ClaudeErred
-- terminal.send(Data={"agent": {"type": "error", "text": %!data%}}, Process=%container%)
-
-NoClaude
-/ claude couldn't be started (not installed, or not on PATH): the panel says so, rather than waiting on
-- terminal.send(Data={"agent": {"type": "error", "text": "Claude could not be started on this computer: %!error.Message%"}}, Process=%container%)
+ChildCallFailed
+- terminal.send(Data={"reply": {"id": %called.id%, "error": %!error.Message%}}, Process=%container%)
 
 Close
 - stop %container%
