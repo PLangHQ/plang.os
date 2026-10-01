@@ -361,8 +361,9 @@
     panel = el;
     if (el) el.hidden = false;
     const r = el?.getBoundingClientRect();
+    // no panel: the agent's box, when open, is what stays lifted (else it would sink behind the windows, still open)
     ask(el ? { window: 'above', id: 0, x: Math.floor(r.left), y: Math.floor(r.top), w: Math.ceil(r.width), h: Math.ceil(r.height) }
-           : { window: 'above', id: 0, w: 0 });
+           : window.agentPlace?.() ?? { window: 'above', id: 0, w: 0 });
   }
   function closePanel() {
     if (!panel) return;
@@ -568,8 +569,8 @@
   tick();
   setInterval(tick, 1000);
 
-  // the desktop's files: asked for once plang's door is there (it comes as the desktop is shown)
-  (function askFiles() { window.plang ? ask({ files: true }) : setTimeout(askFiles, 100); })();
+  // the desktop's files: the shell shows them (ShowFiles) once it is set up — asked from here, as the page
+  // loads, the shell couldn't answer yet
 
   // ---- a question from plang (a permission, or `ask user "…"`) ---------------------------------
   // plang calls AskShow({question}): the dialog shows, and its place comes back (for the screen to
@@ -681,7 +682,13 @@
     },
     working(on) {
       this.wait?.remove();
+      clearInterval(this.ticking);
       this.wait = on ? this.add('busy', on === true ? 'Claude is thinking…' : esc(on)) : null;
+      // the seconds it has waited: a long wait is seen as one, not as nothing happening
+      if (this.wait) {
+        const since = Date.now(), text = this.wait.textContent;
+        this.ticking = setInterval(() => { if (this.wait) this.wait.textContent = `${text} ${Math.round((Date.now() - since) / 1000)} s`; }, 1000);
+      }
     },
 
     send(text) {
@@ -734,6 +741,7 @@
     },
   };
 
+  window.agentPlace = () => agent.open ? agent.place() : null;
   window.AgentShow = args => agent.show(args ?? {});
   window.AgentSays = args => { agent.says(args ?? {}); return true; };
   window.AgentCalling = args => { agent.calling(args ?? {}); return true; };

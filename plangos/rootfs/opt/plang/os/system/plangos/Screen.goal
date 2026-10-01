@@ -15,6 +15,8 @@ Screen
 / Every error — in the shell's goals, a click's or a window's callback, the system's own — shows on the desktop's
 / taskbar: nothing fails where no one sees it.
 - channel.set(Name="error", Goal=goal.call(Name="ShowError"))
+/ the desktop's files, once %browser% is known (the page itself can't ask: it loads while browser.start runs)
+- goal.call(Name="Files")
 / ☰ on a window is its agent: Claude, who works on the window's app with the person, through plang.
 / (on click on #window.bot, call ShowClaude — formal until the builder learns # elements)
 - on.event(Event=%!screen.element["#window.bot"].on.click%, When="after", Action=goal.call(Name="ShowClaude"))
@@ -126,7 +128,9 @@ Say
 / and this window (agent/instructions.md); then it's a conversation.
 - condition.if(Left=%claudeStarted%, Operator="isnotempty") { goal.call(Name="NextWords") }
 - condition.if(Left=%claudeStarted%, Operator="isempty") { goal.call(Name="FirstWords") }
-- goal.call(Name="Turn", Parameter={content: %content%})
+/ the conversation runs on its own: a turn waits minutes for Claude, and the screen's clicks (☰ among them) must not
+/ wait behind it
+- call Turn content=%content%, don't wait
 
 FirstWords
 - render 'agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, write to %instructions%

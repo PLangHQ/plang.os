@@ -31,8 +31,9 @@ Input
 - set %event% to %!data%
 / (an event with no "guest" — the mouse, a key — has it as null; "is empty" doesn't see a missing one)
 - condition.if(Left=%event.guest%, Operator="==", Right=null) { goal.call(Name="ToPlangOS") }
-/ a call runs beside the input — a turn with Claude takes a while, and the mouse mustn't wait for it
-- condition.if(Left=%event.guest.call%) { goal.call(Name="ChildCalls", Parameter={called: %event.guest.call%}, Parallel=true) }
+/ a call runs on its own, not waited for — a turn with Claude takes minutes, and the mouse mustn't wait for it
+/ (Parallel only says it is safe beside others; Wait=false is what doesn't wait)
+- condition.if(Left=%event.guest.call%) { goal.call(Name="ChildCalls", Parameter={called: %event.guest.call%}, Wait=false) }
 
 ToPlangOS
 - terminal.send(Data=%event%, Process=%container%)

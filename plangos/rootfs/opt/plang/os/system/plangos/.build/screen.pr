@@ -393,9 +393,42 @@
     },
     {
       "index": 4,
+      "text": "goal.call(Name=\"Files\")",
+      "line": {
+        "number": 19
+      },
+      "comment": "the desktop's files, once %browser% is known (the page itself can't ask: it loads while browser.start runs)",
+      "code": [
+        {
+          "module": "goal",
+          "name": "call",
+          "property": [
+            {
+              "name": "Name",
+              "type": {
+                "name": "goal"
+              },
+              "value": "Files"
+            }
+          ],
+          "default": [
+            {
+              "name": "parallel",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    },
+    {
+      "index": 5,
       "text": "on.event(Event=%!screen.element[\"#window.bot\"].on.click%, When=\"after\", Action=goal.call(Name=\"ShowClaude\"))",
       "line": {
-        "number": 20
+        "number": 22
       },
       "comment": "☰ on a window is its agent: Claude, who works on the window's app with the person, through plang.\n(on click on #window.bot, call ShowClaude — formal until the builder learns # elements)",
       "code": [
@@ -487,10 +520,10 @@
       "waitForExecution": true
     },
     {
-      "index": 5,
+      "index": 6,
       "text": "screen.listen(Screen=%screen%)",
       "line": {
-        "number": 23
+        "number": 25
       },
       "comment": "The screen takes the host's input itself — no goal per event, so nothing waits behind a goal\n(a question waiting for the click that answers it).",
       "code": [
@@ -522,10 +555,10 @@
       "waitForExecution": true
     },
     {
-      "index": 6,
+      "index": 7,
       "text": "stop %browser%",
       "line": {
-        "number": 24
+        "number": 26
       },
       "code": [
         {
@@ -564,7 +597,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"AskShow\", Window=%browser.desktop%, Parameter={question: %message%}); variable.set(Name=%above%, Value=%!data%)",
           "line": {
-            "number": 29
+            "number": 31
           },
           "comment": "The question in a dialog on the desktop, lifted above every window; the answer is what the person\nchose (a permission: y, a or n; a question: what they typed). The question is %message%.",
           "code": [
@@ -672,7 +705,7 @@
           "index": 1,
           "text": "send %above% to %screen%",
           "line": {
-            "number": 30
+            "number": 32
           },
           "code": [
             {
@@ -724,7 +757,7 @@
           "index": 2,
           "text": "window.callGoal(Name=\"AskAnswer\", Window=%browser.desktop%); variable.set(Name=%answer%, Value=%!data%)",
           "line": {
-            "number": 31
+            "number": 33
           },
           "code": [
             {
@@ -824,7 +857,7 @@
           "index": 3,
           "text": "send %answer.below% to %screen%",
           "line": {
-            "number": 32
+            "number": 34
           },
           "code": [
             {
@@ -879,7 +912,7 @@
           "index": 4,
           "text": "return %answer.text%",
           "line": {
-            "number": 33
+            "number": 35
           },
           "code": [
             {
@@ -939,7 +972,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"ErrorShow\", Window=%browser.desktop%, Parameter={error: %message%})",
           "line": {
-            "number": 38
+            "number": 40
           },
           "comment": "An error written to an error channel is %message%: the desktop lists it (what, where, when) and counts it on\nthe taskbar.",
           "code": [
@@ -1005,7 +1038,7 @@
           "index": 0,
           "text": "set %asked% to %!data%",
           "line": {
-            "number": 46
+            "number": 48
           },
           "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}, {\"list\": folder}, {\"load\": path}, {\"create\": path},\n{\"build\": path}, {\"run\": goal}; \"from\" is the window that asked. Claude's box (on the desktop)\nasks: {\"say\": what the person wrote, \"about\": {\"window\", \"title\"}}.",
           "code": [
@@ -1072,7 +1105,7 @@
           "index": 1,
           "text": "if %asked.open%, call Open",
           "line": {
-            "number": 47
+            "number": 49
           },
           "code": [
             {
@@ -1143,7 +1176,7 @@
           "index": 2,
           "text": "if %asked.window%, call Command",
           "line": {
-            "number": 48
+            "number": 50
           },
           "code": [
             {
@@ -1214,7 +1247,7 @@
           "index": 3,
           "text": "if %asked.files%, call Files",
           "line": {
-            "number": 49
+            "number": 51
           },
           "code": [
             {
@@ -1285,7 +1318,7 @@
           "index": 4,
           "text": "if %asked.edit%, call Edit",
           "line": {
-            "number": 50
+            "number": 52
           },
           "code": [
             {
@@ -1356,7 +1389,7 @@
           "index": 5,
           "text": "if %asked.save%, call Save",
           "line": {
-            "number": 51
+            "number": 53
           },
           "code": [
             {
@@ -1427,7 +1460,7 @@
           "index": 6,
           "text": "if %asked.list%, call List",
           "line": {
-            "number": 52
+            "number": 54
           },
           "code": [
             {
@@ -1498,7 +1531,7 @@
           "index": 7,
           "text": "if %asked.load%, call Load",
           "line": {
-            "number": 53
+            "number": 55
           },
           "code": [
             {
@@ -1569,7 +1602,7 @@
           "index": 8,
           "text": "if %asked.create%, call Create",
           "line": {
-            "number": 54
+            "number": 56
           },
           "code": [
             {
@@ -1640,7 +1673,7 @@
           "index": 9,
           "text": "if %asked.build%, call Build",
           "line": {
-            "number": 55
+            "number": 57
           },
           "code": [
             {
@@ -1711,7 +1744,7 @@
           "index": 10,
           "text": "if %asked.run%, call Run",
           "line": {
-            "number": 56
+            "number": 58
           },
           "code": [
             {
@@ -1782,7 +1815,7 @@
           "index": 11,
           "text": "condition.if(Left=%asked.say%) { goal.call(Name=\"Say\") }",
           "line": {
-            "number": 57
+            "number": 59
           },
           "code": [
             {
@@ -1867,7 +1900,7 @@
           "index": 0,
           "text": "open window %asked.open% in %browser%",
           "line": {
-            "number": 60
+            "number": 62
           },
           "code": [
             {
@@ -1942,7 +1975,7 @@
           "index": 0,
           "text": "send %asked% to %screen%",
           "line": {
-            "number": 63
+            "number": 65
           },
           "code": [
             {
@@ -2008,7 +2041,7 @@
           "index": 0,
           "text": "list files in '/Desktop', write to %files%",
           "line": {
-            "number": 68
+            "number": 70
           },
           "comment": "the desktop's files: what is in the app's Desktop/, shown as icons. A path that starts with \"/\"\nis in the app (/home/plang); without it, it would be beside this goal, in the os folder.",
           "code": [
@@ -2104,7 +2137,7 @@
           "index": 1,
           "text": "call ShowFiles files=%files% in %browser.desktop%",
           "line": {
-            "number": 69
+            "number": 71
           },
           "code": [
             {
@@ -2169,7 +2202,7 @@
           "index": 0,
           "text": "open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%",
           "line": {
-            "number": 74
+            "number": 76
           },
           "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value",
           "code": [
@@ -2271,7 +2304,7 @@
           "index": 1,
           "text": "read %asked.edit%, write to %content%",
           "line": {
-            "number": 75
+            "number": 77
           },
           "code": [
             {
@@ -2381,7 +2414,7 @@
           "index": 2,
           "text": "call Show file=%asked.edit%, content=%content% in %writer%",
           "line": {
-            "number": 76
+            "number": 78
           },
           "code": [
             {
@@ -2443,7 +2476,7 @@
           "index": 0,
           "text": "save %asked.content% to %asked.save%",
           "line": {
-            "number": 80
+            "number": 82
           },
           "comment": "Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value",
           "code": [
@@ -2502,7 +2535,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Saved\", Window=%asked.from%, Browser=%browser%)",
           "line": {
-            "number": 81
+            "number": 83
           },
           "code": [
             {
@@ -2578,7 +2611,7 @@
           "index": 0,
           "text": "list files in %asked.list% recursive, write to %files%",
           "line": {
-            "number": 85
+            "number": 87
           },
           "comment": "Writer's Open and New: the files in a folder and its folders",
           "code": [
@@ -2688,7 +2721,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"ShowList\", Window=%asked.from%, Browser=%browser%, Parameter={folder: %asked.list%, files: %files%})",
           "line": {
-            "number": 86
+            "number": 88
           },
           "code": [
             {
@@ -2771,7 +2804,7 @@
           "index": 0,
           "text": "read %asked.load%, write to %content%",
           "line": {
-            "number": 90
+            "number": 92
           },
           "comment": "Writer's Open: another file in the same window",
           "code": [
@@ -2874,7 +2907,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.load%, content: %content%})",
           "line": {
-            "number": 91
+            "number": 93
           },
           "code": [
             {
@@ -2957,7 +2990,7 @@
           "index": 0,
           "text": "file.save(Path=%asked.create%, Value=\"\")",
           "line": {
-            "number": 95
+            "number": 97
           },
           "comment": "Writer's New: an empty file, opened in the same window; the desktop shows it",
           "code": [
@@ -3002,7 +3035,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.create%, content: \"\"})",
           "line": {
-            "number": 96
+            "number": 98
           },
           "code": [
             {
@@ -3071,7 +3104,7 @@
           "index": 2,
           "text": "call Files",
           "line": {
-            "number": 97
+            "number": 99
           },
           "code": [
             {
@@ -3117,7 +3150,7 @@
           "index": 0,
           "text": "terminal.start(App=\"plang\", Parameter=[\"build\", \"--llmservice=openai\"]); on.timeout(After=\"PT10M\"); on.error(Recovery=[goal.call(Name=\"BuildFailed\")]); variable.set(Name=%built%, Value=%!data%)",
           "line": {
-            "number": 102
+            "number": 104
           },
           "comment": "Writer's ▶ (build): plang builds the app — its own process, as plang build does anywhere; what it\nwrote, and how it ended, go back to the window.",
           "code": [
@@ -3279,7 +3312,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={output: %built%, error: %built!error%, code: %built!exitCode%})",
           "line": {
-            "number": 103
+            "number": 105
           },
           "code": [
             {
@@ -3362,7 +3395,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
           "line": {
-            "number": 107
+            "number": 109
           },
           "comment": "plang couldn't be started (or timed out): the window hears it, rather than waiting on",
           "code": [
@@ -3446,7 +3479,7 @@
           "index": 0,
           "text": "terminal.start(App=\"plang\", Parameter=[%asked.run%]); on.timeout(After=\"PT5M\"); on.error(Recovery=[goal.call(Name=\"RunFailed\")]); variable.set(Name=%ran%, Value=%!data%)",
           "line": {
-            "number": 112
+            "number": 114
           },
           "comment": "Writer's ▶ (run): the goal runs in a plang of its own (this one's output is the screen); what it\nwrote goes back to the window.",
           "code": [
@@ -3622,7 +3655,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={output: %ran%, error: %ran!error%, code: %ran!exitCode%})",
           "line": {
-            "number": 113
+            "number": 115
           },
           "code": [
             {
@@ -3705,7 +3738,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
           "line": {
-            "number": 116
+            "number": 118
           },
           "code": [
             {
@@ -3788,7 +3821,7 @@
           "index": 0,
           "text": "set %click% to %!event!result%",
           "line": {
-            "number": 121
+            "number": 123
           },
           "comment": "☰ clicked (#window.bot): Claude's box drops down under it — part of the desktop page, lifted above the\nwindows. %!event!result% is the click: its window, where.",
           "code": [
@@ -3852,7 +3885,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"AgentShow\", Window=%browser.desktop%, Parameter={window: %click.window%, x: %click.x%, y: %click.y%})",
           "line": {
-            "number": 122
+            "number": 124
           },
           "code": [
             {
@@ -3917,7 +3950,7 @@
           "index": 0,
           "text": "condition.if(Left=%claudeStarted%, Operator=\"isnotempty\") { goal.call(Name=\"NextWords\") }",
           "line": {
-            "number": 127
+            "number": 129
           },
           "comment": "The person wrote to Claude about a window. The first time, with what Claude has to know about PlangOS\nand this window (agent/instructions.md); then it's a conversation.",
           "code": [
@@ -3994,7 +4027,7 @@
           "index": 1,
           "text": "condition.if(Left=%claudeStarted%, Operator=\"isempty\") { goal.call(Name=\"FirstWords\") }",
           "line": {
-            "number": 128
+            "number": 130
           },
           "code": [
             {
@@ -4068,10 +4101,11 @@
         },
         {
           "index": 2,
-          "text": "goal.call(Name=\"Turn\", Parameter={content: %content%})",
+          "text": "call Turn content=%content%, don't wait",
           "line": {
-            "number": 129
+            "number": 133
           },
+          "comment": "the conversation runs on its own: a turn waits minutes for Claude, and the screen's clicks (☰ among them) must not\nwait behind it",
           "code": [
             {
               "module": "goal",
@@ -4090,6 +4124,13 @@
                     "name": "list"
                   },
                   "value": [{"name":"content","type":{"name":"item","template":"plang"},"value":"%content%","variable":[{"text":"%content%","code":[{"variable":"content"}]}]}]
+                },
+                {
+                  "name": "Wait",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
                 }
               ],
               "default": [
@@ -4110,7 +4151,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "f756a3303480038950f3a5ac7da2955d0475b5a1c11ac7d54217df959bd19a9d",
+      "hash": "e607d8558e2c0130bbc4cc2a53475ef4de962e3bc8e46f4d88082d00caed9689",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,
@@ -4123,7 +4164,7 @@
           "index": 0,
           "text": "render 'agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, write to %instructions%",
           "line": {
-            "number": 132
+            "number": 136
           },
           "code": [
             {
@@ -4203,7 +4244,7 @@
           "index": 1,
           "text": "file.read(Path=\"/system/llm/agent.md\"); variable.set(Name=%standard%, Value=%!data%, Type=\"text\")",
           "line": {
-            "number": 135
+            "number": 139
           },
           "comment": "how every agent in PLang reports back (plang's own: /system/llm/agent.md)\n(formal: `as text` is dropped by the builder, and a file in a text is its name, not what it holds)",
           "code": [
@@ -4293,7 +4334,7 @@
           "index": 2,
           "text": "set %content% to [{\"type\": \"text\", \"text\": \"%instructions%\\n\\n%standard%\\n\\n---\\n\\n%asked.say%\"}]",
           "line": {
-            "number": 136
+            "number": 140
           },
           "code": [
             {
@@ -4372,7 +4413,7 @@
           "index": 3,
           "text": "set %claudeStarted% to true",
           "line": {
-            "number": 137
+            "number": 141
           },
           "code": [
             {
@@ -4435,7 +4476,7 @@
           "index": 0,
           "text": "set %content% to [{\"type\": \"text\", \"text\": %asked.say%}]",
           "line": {
-            "number": 140
+            "number": 144
           },
           "code": [
             {
@@ -4512,7 +4553,7 @@
           "index": 0,
           "text": "goal.call(Name=%!app.parent.goal[\"Claude\"]%, Parameter={message: %content%}); on.error(Recovery=[goal.call(Name=\"ClaudeFailed\")]); variable.set(Name=%reply%, Value=%!data%)",
           "line": {
-            "number": 145
+            "number": 149
           },
           "comment": "One turn: Claude, in the host (the app that started this one), gets %content%; its words go to the box;\nthe goals it asks for run here, and what they gave is its next turn — until it asks for none.",
           "code": [
@@ -4670,7 +4711,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"AgentSays\", Window=%browser.desktop%, Parameter={text: %reply.text%, status: %reply.status%, calls: %reply.calls%})",
           "line": {
-            "number": 146
+            "number": 150
           },
           "code": [
             {
@@ -4721,7 +4762,7 @@
           "index": 2,
           "text": "condition.if(Left=%reply.calls%, Operator=\"isnotempty\") { goal.call(Name=\"RunCalls\") }",
           "line": {
-            "number": 147
+            "number": 151
           },
           "code": [
             {
@@ -4800,7 +4841,7 @@
           "index": 3,
           "text": "condition.if(Left=%reply.calls%, Operator=\"isempty\") { goal.call(Name=\"TurnDone\") }",
           "line": {
-            "number": 148
+            "number": 152
           },
           "code": [
             {
@@ -4893,7 +4934,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"AgentSays\", Window=%browser.desktop%, Parameter={error: %!error.Message%})",
           "line": {
-            "number": 151
+            "number": 155
           },
           "code": [
             {
@@ -4944,7 +4985,7 @@
           "index": 1,
           "text": "return {text: \"\", calls: []}",
           "line": {
-            "number": 152
+            "number": 156
           },
           "code": [
             {
@@ -4982,7 +5023,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"AgentDone\", Window=%browser.desktop%)",
           "line": {
-            "number": 155
+            "number": 159
           },
           "code": [
             {
@@ -5040,7 +5081,7 @@
           "index": 0,
           "text": "set %results% to []",
           "line": {
-            "number": 160
+            "number": 164
           },
           "comment": "Each goal Claude asked for runs here — only its own, in agent/ — and what it gave goes into its next\nturn: a screenshot as a picture, anything else as text.",
           "code": [
@@ -5090,7 +5131,7 @@
           "index": 1,
           "text": "foreach %reply.calls%, call RunCall call=%item%",
           "line": {
-            "number": 161
+            "number": 165
           },
           "code": [
             {
@@ -5175,7 +5216,7 @@
           "index": 2,
           "text": "goal.call(Name=\"Turn\", Parameter={content: %results%})",
           "line": {
-            "number": 162
+            "number": 166
           },
           "code": [
             {
@@ -5228,7 +5269,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"AgentCalling\", Window=%browser.desktop%, Parameter={goal: %call.goal%, parameters: %call.parameters%, why: %call.why%})",
           "line": {
-            "number": 166
+            "number": 170
           },
           "comment": "the box shows the call as it starts (what, and why Claude asked for it), and what it gave when it ends",
           "code": [
@@ -5280,7 +5321,7 @@
           "index": 1,
           "text": "set %agentGoal% to \"/system/plangos/agent/%call.goal%\"",
           "line": {
-            "number": 167
+            "number": 171
           },
           "code": [
             {
@@ -5343,7 +5384,7 @@
           "index": 2,
           "text": "goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name=\"CallFailed\")]); variable.set(Name=%got%, Value=%!data%)",
           "line": {
-            "number": 168
+            "number": 172
           },
           "code": [
             {
@@ -5503,7 +5544,7 @@
           "index": 3,
           "text": "window.callGoal(Name=\"AgentCalled\", Window=%browser.desktop%, Parameter={goal: %call.goal%, got: %got%})",
           "line": {
-            "number": 169
+            "number": 173
           },
           "code": [
             {
@@ -5554,7 +5595,7 @@
           "index": 4,
           "text": "condition.if(Left=%call.goal%, Operator=\"==\", Right=\"Screenshot\") { goal.call(Name=\"GavePicture\") }",
           "line": {
-            "number": 170
+            "number": 174
           },
           "code": [
             {
@@ -5640,7 +5681,7 @@
           "index": 5,
           "text": "condition.if(Left=%call.goal%, Operator=\"!=\", Right=\"Screenshot\") { goal.call(Name=\"GaveText\") }",
           "line": {
-            "number": 171
+            "number": 175
           },
           "code": [
             {
@@ -5740,7 +5781,7 @@
           "index": 0,
           "text": "return \"failed: %!error.Message%\"",
           "line": {
-            "number": 174
+            "number": 178
           },
           "code": [
             {
@@ -5800,7 +5841,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave this picture:\"} to %results%",
           "line": {
-            "number": 177
+            "number": 181
           },
           "code": [
             {
@@ -5863,7 +5904,7 @@
           "index": 1,
           "text": "add {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": %got%}} to %results%",
           "line": {
-            "number": 178
+            "number": 182
           },
           "code": [
             {
@@ -5937,7 +5978,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave: %got%\"} to %results%",
           "line": {
-            "number": 181
+            "number": 185
           },
           "code": [
             {
@@ -6022,7 +6063,7 @@
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 187
+            "number": 191
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -6089,7 +6130,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 188
+            "number": 192
           },
           "code": [
             {
@@ -6144,7 +6185,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 189
+            "number": 193
           },
           "code": [
             {
@@ -6215,7 +6256,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 190
+            "number": 194
           },
           "code": [
             {
@@ -6286,7 +6327,7 @@
           "index": 4,
           "text": "if %event.tool%, call Tool",
           "line": {
-            "number": 191
+            "number": 195
           },
           "code": [
             {
@@ -6357,7 +6398,7 @@
           "index": 5,
           "text": "if %event.paste%, call Paste",
           "line": {
-            "number": 192
+            "number": 196
           },
           "code": [
             {
@@ -6442,7 +6483,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 195
+            "number": 199
           },
           "code": [
             {
@@ -6538,7 +6579,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 198
+            "number": 202
           },
           "code": [
             {
@@ -6613,7 +6654,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Tool\", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})",
           "line": {
-            "number": 203
+            "number": 207
           },
           "comment": "One of the app's tools in its window's title bar was clicked ({\"tool\": \"save\", \"id\"}): its page's\ngoal Tool gets it. The page named its tools itself ({\"window\": \"tools\", \"tools\": [...]}).",
           "code": [
@@ -6697,7 +6738,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Paste\", Window=%event.id%, Browser=%browser%, Parameter={value: %event.paste%})",
           "line": {
-            "number": 208
+            "number": 212
           },
           "comment": "A page asked for the clipboard as a value ({\"window\": \"paste\"}): a copy that knows where it came\nfrom, as json; its page's goal Paste gets it.",
           "code": [
@@ -6778,7 +6819,7 @@
   "visibility": "Public",
   "path": "/system/plangos/Screen.goal",
   "prPath": "/system/plangos/.build/screen.pr",
-  "hash": "42135d1bbd8b70e7c20a47533c95cbbc2485d2dc496ca147286d4bbfe0959d9e",
+  "hash": "ecf250c2d7be636388ab7f70a2c100f43f21f4973d1c6874da1a2985d02a137f",
   "isSetup": false,
   "isEvent": false,
   "isSystem": true,
