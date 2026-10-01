@@ -12,6 +12,9 @@ Screen
 / A question for the user (a permission, `ask user "…"`) is a dialog on the screen: asked on the
 / console, it would go into the screen's pipe and wait on the host's input.
 - channel.set(Name="input", Goal=goal.call(Name="Question"))
+/ Every error — in the shell's goals, a click's or a window's callback, the system's own — shows on the desktop's
+/ taskbar: nothing fails where no one sees it.
+- channel.set(Name="error", Goal=goal.call(Name="ShowError"))
 / ☰ on a window is its agent: Claude, who works on the window's app with the person, through plang.
 / (on click on #window.bot, call ShowClaude — formal until the builder learns # elements)
 - on.event(Event=%!screen.element["#window.bot"].on.click%, When="after", Action=goal.call(Name="ShowClaude"))
@@ -28,6 +31,11 @@ Question
 - window.callGoal(Name="AskAnswer", Window=%browser.desktop%); variable.set(Name=%answer%, Value=%!data%)
 - send %answer.below% to %screen%
 - return %answer.text%
+
+ShowError
+/ An error written to an error channel is %message%: the desktop lists it (what, where, when) and counts it on
+/ the taskbar.
+- window.callGoal(Name="ErrorShow", Window=%browser.desktop%, Parameter={error: %message%})
 
 Desktop
 / The desktop page asks: {"open": url} opens a window; {"window": "focus|minimize|…", "id"}
@@ -122,7 +130,10 @@ Say
 
 FirstWords
 - render 'agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, write to %instructions%
-- set %content% to [{"type": "text", "text": "%instructions%\n\n---\n\n%asked.say%"}]
+/ how every agent in PLang reports back (plang's own: /system/llm/agent.md)
+/ (formal: `as text` is dropped by the builder, and a file in a text is its name, not what it holds)
+- file.read(Path="/system/llm/agent.md"); variable.set(Name=%standard%, Value=%!data%, Type="text")
+- set %content% to [{"type": "text", "text": "%instructions%\n\n%standard%\n\n---\n\n%asked.say%"}]
 - set %claudeStarted% to true
 
 NextWords
@@ -132,7 +143,7 @@ Turn
 / One turn: Claude, in the host (the app that started this one), gets %content%; its words go to the box;
 / the goals it asks for run here, and what they gave is its next turn — until it asks for none.
 - goal.call(Name=%!app.parent.goal["Claude"]%, Parameter={message: %content%}); on.error(Recovery=[goal.call(Name="ClaudeFailed")]); variable.set(Name=%reply%, Value=%!data%)
-- window.callGoal(Name="AgentSays", Window=%browser.desktop%, Parameter={text: %reply.text%, calls: %reply.calls%})
+- window.callGoal(Name="AgentSays", Window=%browser.desktop%, Parameter={text: %reply.text%, status: %reply.status%, calls: %reply.calls%})
 - condition.if(Left=%reply.calls%, Operator="isnotempty") { goal.call(Name="RunCalls") }
 - condition.if(Left=%reply.calls%, Operator="isempty") { goal.call(Name="TurnDone") }
 
@@ -151,9 +162,11 @@ RunCalls
 - goal.call(Name="Turn", Parameter={content: %results%})
 
 RunCall
+/ the box shows the call as it starts (what, and why Claude asked for it), and what it gave when it ends
+- window.callGoal(Name="AgentCalling", Window=%browser.desktop%, Parameter={goal: %call.goal%, parameters: %call.parameters%, why: %call.why%})
 - set %agentGoal% to "/system/plangos/agent/%call.goal%"
 - goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name="CallFailed")]); variable.set(Name=%got%, Value=%!data%)
-- window.callGoal(Name="AgentCalled", Window=%browser.desktop%, Parameter={goal: %call.goal%, parameters: %call.parameters%, got: %got%})
+- window.callGoal(Name="AgentCalled", Window=%browser.desktop%, Parameter={goal: %call.goal%, got: %got%})
 - condition.if(Left=%call.goal%, Operator="==", Right="Screenshot") { goal.call(Name="GavePicture") }
 - condition.if(Left=%call.goal%, Operator="!=", Right="Screenshot") { goal.call(Name="GaveText") }
 

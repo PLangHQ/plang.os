@@ -93,13 +93,19 @@
           ],
           "default": [
             {
-              "name": "asdefault",
+              "name": "default",
               "type": {
                 "name": "bool"
               },
               "value": false
             }
           ]
+        }
+      ],
+      "warning": [
+        {
+          "key": "Reopened",
+          "message": "step 0's saved code no longer holds — rebuilt: step 0 'window.screenshot(Window=%window%, Browser=%browser%); variable.set(Name=%png%, Value=%!data%)': variable.set: the default frozen for 'asdefault' is no option of this action any more."
         }
       ],
       "waitForExecution": true

@@ -92,6 +92,15 @@
   .kpi i { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
   .kpi.good i { background: #4ade80; } .kpi.fair i { background: var(--accent); } .kpi.slow i { background: #e5484d; }
   .menu.stats { left: auto; right: 12px; width: 340px; }
+  /* errors: every error in PlangOS's shell and what it runs comes here — a count on the taskbar, the list above it */
+  .bar .errs { font-size: 13px; gap: 6px; color: #ff8a8d; }
+  .bar .errs.seen { color: var(--dim); }
+  .menu.errors { left: auto; right: 12px; width: 520px; max-height: 60vh; overflow: auto; }
+  .errors .err { padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.45; word-break: break-word; }
+  .errors .err b { color: #ff8a8d; font-weight: 600; }
+  .errors .err small { display: block; color: var(--dim); font: 12px ui-monospace, "DejaVu Sans Mono", monospace; }
+  .errors .none { color: var(--dim); font-size: 13px; }
+  .errors h2 button { float: right; border: 0; background: none; color: var(--dim); font: inherit; cursor: pointer; text-transform: none; }
   .stats table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   .stats th { text-align: left; font-weight: 500; color: var(--dim); padding: 4px 0; white-space: nowrap; }
   .stats td { text-align: right; padding: 4px 0 4px 12px; white-space: nowrap; }
@@ -169,6 +178,10 @@
   .agent .call::before { content: "⚙"; color: var(--accent); }
   .agent .call.ok::after { content: "✓"; color: #3fb950; }
   .agent .call.bad { color: #e5484d; }
+  .agent .call { flex-wrap: wrap; }
+  .agent .call small { flex-basis: 100%; padding-left: 18px; color: var(--dim); font: 12px system-ui, sans-serif; }
+  .agent .call.running::after { content: "…"; color: var(--accent); }
+  .agent .it.failed { color: #ff8a8d; }
   .agent .call img { max-width: 100%; border: 1px solid var(--line); border-radius: 4px; margin-top: 4px; }
   .agent .busy { color: var(--dim); font-size: 13px; }
   .agent .busy::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%;
@@ -206,6 +219,11 @@
     <tr><th>Tími að teikna</th><td id="s-apply">–</td></tr>
   </table>
   <small>Mælt á Windows: frá smelli eða takka þar til myndin sem svarar er komin, í ms.</small>
+</div>
+
+<div class="menu errors" id="errors" hidden>
+  <h2>Errors <button id="errors-clear">Clear</button></h2>
+  <div id="errors-list"><div class="none">No errors.</div></div>
 </div>
 
 <div class="menu" id="menu" hidden>
@@ -246,6 +264,7 @@
   <div id="pins" style="display:flex;gap:2px"></div>
   <div class="windows" id="windows"></div>
   <div class="spacer"></div>
+  <button class="errs" id="errs" title="Errors" hidden>⚠<span>0</span></button>
   <button class="kpi" id="kpi" title="Frá inntaki að mynd (p50)"><i></i><span>– ms</span></button>
   <div class="tray"><div id="clock"></div><small id="day"></small></div>
 </div>
@@ -353,6 +372,39 @@
   const toggle = el => e => { e.stopPropagation(); if (panel === el) closePanel(); else showPanel(el); };
   document.getElementById('start').onclick = toggle(menu);
   document.getElementById('kpi').onclick = toggle(stats);
+
+  // Errors: plang calls ErrorShow({error}) for every error in the shell and what it runs (its error channels);
+  // the taskbar counts the ones not looked at yet, the panel lists them, newest first.
+  const errorsPanel = document.getElementById('errors'), errorsList = document.getElementById('errors-list');
+  const errs = document.getElementById('errs');
+  let errorCount = 0, unseen = 0;
+  const field = (e, ...names) => { for (const n of names) { const v = n.split('.').reduce((o, k) => o?.[k] ?? o?.[k[0].toUpperCase() + k.slice(1)], e); if (v !== undefined && v !== null && v !== '') return v; } return ''; };
+  window.ErrorShow = ({ error }) => {
+    const e = typeof error === 'string' ? { message: error } : (error ?? {});
+    const row = document.createElement('div');
+    row.className = 'err';
+    const where = [field(e, 'goal.name', 'goal'), field(e, 'step.text', 'step')].filter(Boolean).join(' · ');
+    row.innerHTML = '<b></b> <span></span><small></small>';
+    row.children[0].textContent = field(e, 'key') || 'Error';
+    row.children[1].textContent = field(e, 'message') || JSON.stringify(e).slice(0, 400);
+    row.children[2].textContent = new Date().toLocaleTimeString() + (where ? ' · ' + where : '');
+    if (!errorCount) errorsList.replaceChildren();
+    errorsList.prepend(row);
+    errorCount++;
+    if (panel !== errorsPanel) unseen++;
+    errs.hidden = false;
+    errs.classList.toggle('seen', unseen === 0);
+    errs.lastChild.textContent = String(unseen || errorCount);
+    return true;
+  };
+  errs.onclick = e => { unseen = 0; errs.classList.add('seen'); errs.lastChild.textContent = String(errorCount); toggle(errorsPanel)(e); };
+  document.getElementById('errors-clear').onclick = e => {
+    e.stopPropagation();
+    errorCount = unseen = 0;
+    errorsList.innerHTML = '<div class="none">No errors.</div>';
+    errs.hidden = true;
+    closePanel();
+  };
   document.addEventListener('click', e => { if (panel && !panel.contains(e.target)) closePanel(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
   window.addEventListener('blur', closePanel);   // a window was clicked
@@ -646,19 +698,31 @@
     },
 
     // what plang tells the box
-    says({ text, calls, error }) {
+    // Claude's turn (the agent standard, /system/llm/agent.md): its words, and whether it goes on (working) or
+    // has stopped (done, question, failed). Its calls show themselves as they run.
+    says({ text, status, calls, error }) {
       if (error) { this.add('call bad', esc(error)); this.done(); return; }
-      if (text) this.add('it', this.render(text));
-      if (calls?.length) this.working('Running ' + calls.map(c => c.goal).join(', ') + '…');
+      if (text) this.add('it' + (status === 'failed' ? ' failed' : ''), this.render(text));
+      if (!calls?.length) this.done();
     },
-    called({ goal, parameters, got }) {
+    // a call starts: what it is and why Claude asked for it, running
+    calling({ goal, parameters, why }) {
       const shown = `${goal}(${Object.entries(parameters ?? {}).map(([k, v]) => `${k}: ${String(typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 60)}`).join(', ')})`;
+      this.running = this.add('call running', esc(shown) + (why ? `<small>${esc(why)}</small>` : ''));
+      this.working(true);
+    },
+    // …and ends: ✓ with what it gave (a screenshot as the picture), or ✗ with why
+    called({ goal, got }) {
+      const row = this.running ?? this.add('call', esc(goal));
+      this.running = null;
       const failed = typeof got === 'string' && got.startsWith('failed: ');
-      const row = this.add('call ' + (failed ? 'bad' : 'ok'), esc(shown) + (failed ? ' — ' + esc(got.slice(8)) : ''));
-      if (!failed && goal === 'Screenshot' && typeof got === 'string' && got.length > 100) {
+      row.classList.remove('running');
+      row.classList.add(failed ? 'bad' : 'ok');
+      if (failed) row.append(' — ' + got.slice(8));
+      else if (goal === 'Screenshot' && typeof got === 'string' && got.length > 100) {
         const img = document.createElement('img');
         img.src = 'data:image/png;base64,' + got;
-        row.after(img);
+        row.append(img);
       }
       this.working(true);
     },
@@ -672,6 +736,7 @@
 
   window.AgentShow = args => agent.show(args ?? {});
   window.AgentSays = args => { agent.says(args ?? {}); return true; };
+  window.AgentCalling = args => { agent.calling(args ?? {}); return true; };
   window.AgentCalled = args => { agent.called(args ?? {}); return true; };
   window.AgentDone = () => { agent.done(); return true; };
   new ResizeObserver(() => agent.lift()).observe(agentBox);

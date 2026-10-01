@@ -91,13 +91,19 @@
           ],
           "default": [
             {
-              "name": "asdefault",
+              "name": "default",
               "type": {
                 "name": "bool"
               },
               "value": false
             }
           ]
+        }
+      ],
+      "warning": [
+        {
+          "key": "Reopened",
+          "message": "step 0's saved code no longer holds — rebuilt: step 0 'file.list(Path=%path%, Recursive=true); variable.set(Name=%files%, Value=%!data%)': variable.set: the default frozen for 'asdefault' is no option of this action any more."
         }
       ],
       "waitForExecution": true
