@@ -1,11 +1,14 @@
 Screen
-/ PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The
+/ PlangOS's shell: part of the system (plang's os folder, read-only, comes with the image), run in
+/ the person's app, /home/plang — their files, their .db. Host plang starts it (wsl … --cd
+/ /home/plang … /opt/plang/plang system/plangos/Screen).
+/ PlangOS's side of the screen. The
 / screen is PlangOS's display: programs draw onto it, and its frames go to this app's output —
 / the pipe to host plang. Input from the host comes down on stdin, one line per event, and goes
 / to the screen. Ends when the host closes the pipe.
 / The first page is the desktop; every app opens in a window of its own.
 - screen.open(ToOutput=true, OnWindow=goal.call(Name="Window")); variable.set(Name=%screen%, Value=%!data%)
-- browser.start(Url="file:///home/plang/desktop.html", Screen=%screen%, OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
+- browser.start(Url="file:///opt/plang/os/system/plangos/desktop.html", Screen=%screen%, OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
 / A question for the user (a permission, `ask user "…"`) is a dialog on the screen: asked on the
 / console, it would go into the screen's pipe and wait on the host's input.
 - channel.set(Name="input", Goal=goal.call(Name="Question"))
@@ -45,14 +48,15 @@ Command
 - send %asked% to %screen%
 
 Files
-/ the desktop's files: what is in Desktop/, shown as icons
-- list files in 'Desktop', write to %files%
+/ the desktop's files: what is in the app's Desktop/, shown as icons. A path that starts with "/"
+/ is in the app (/home/plang); without it, it would be beside this goal, in the os folder.
+- list files in '/Desktop', write to %files%
 - call ShowFiles files=%files% in %browser.desktop%
 
 Edit
 / a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file
 / its value
-- open window 'file:///home/plang/app/writer/start.html' in %browser%, write to %writer%
+- open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%
 - read %asked.edit%, write to %content%
 - call Show file=%asked.edit%, content=%content% in %writer%
 

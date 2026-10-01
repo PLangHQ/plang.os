@@ -5,9 +5,9 @@
       "index": 0,
       "text": "screen.open(ToOutput=true, OnWindow=goal.call(Name=\"Window\")); variable.set(Name=%screen%, Value=%!data%)",
       "line": {
-        "number": 7
+        "number": 10
       },
-      "comment": "PlangOS's side of the screen. Host plang starts this (wsl … /opt/plang/plang Screen). The\nscreen is PlangOS's display: programs draw onto it, and its frames go to this app's output —\nthe pipe to host plang. Input from the host comes down on stdin, one line per event, and goes\nto the screen. Ends when the host closes the pipe.\nThe first page is the desktop; every app opens in a window of its own.",
+      "comment": "PlangOS's shell: part of the system (plang's os folder, read-only, comes with the image), run in\nthe person's app, /home/plang — their files, their .db. Host plang starts it (wsl … --cd\n/home/plang … /opt/plang/plang system/plangos/Screen).\nPlangOS's side of the screen. The\nscreen is PlangOS's display: programs draw onto it, and its frames go to this app's output —\nthe pipe to host plang. Input from the host comes down on stdin, one line per event, and goes\nto the screen. Ends when the host closes the pipe.\nThe first page is the desktop; every app opens in a window of its own.",
       "code": [
         {
           "module": "screen",
@@ -128,9 +128,9 @@
     },
     {
       "index": 1,
-      "text": "browser.start(Url=\"file:///home/plang/desktop.html\", Screen=%screen%, OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)",
+      "text": "browser.start(Url=\"file:///opt/plang/os/system/plangos/desktop.html\", Screen=%screen%, OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)",
       "line": {
-        "number": 8
+        "number": 11
       },
       "code": [
         {
@@ -142,7 +142,7 @@
               "type": {
                 "name": "text"
               },
-              "value": "file:///home/plang/desktop.html"
+              "value": "file:///opt/plang/os/system/plangos/desktop.html"
             },
             {
               "name": "Screen",
@@ -174,7 +174,7 @@
                   {
                     "name": "Name",
                     "type": {
-                      "name": "text"
+                      "name": "goal"
                     },
                     "value": "Desktop"
                   }
@@ -279,7 +279,7 @@
       "index": 2,
       "text": "channel.set(Name=\"input\", Goal=goal.call(Name=\"Question\"))",
       "line": {
-        "number": 11
+        "number": 14
       },
       "comment": "A question for the user (a permission, `ask user \"…\"`) is a dialog on the screen: asked on the\nconsole, it would go into the screen's pipe and wait on the host's input.",
       "code": [
@@ -331,7 +331,7 @@
       "index": 3,
       "text": "screen.listen(Screen=%screen%)",
       "line": {
-        "number": 14
+        "number": 17
       },
       "comment": "The screen takes the host's input itself — no goal per event, so nothing waits behind a goal\n(a question waiting for the click that answers it).",
       "code": [
@@ -366,7 +366,7 @@
       "index": 4,
       "text": "stop %browser%",
       "line": {
-        "number": 15
+        "number": 18
       },
       "code": [
         {
@@ -405,7 +405,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"AskShow\", Window=%browser.desktop%, Parameter={question: %message%}); variable.set(Name=%above%, Value=%!data%)",
           "line": {
-            "number": 20
+            "number": 23
           },
           "comment": "The question in a dialog on the desktop, lifted above every window; the answer is what the person\nchose (a permission: y, a or n; a question: what they typed). The question is %message%.",
           "code": [
@@ -507,7 +507,7 @@
           "index": 1,
           "text": "send %above% to %screen%",
           "line": {
-            "number": 21
+            "number": 24
           },
           "code": [
             {
@@ -559,7 +559,7 @@
           "index": 2,
           "text": "window.callGoal(Name=\"AskAnswer\", Window=%browser.desktop%); variable.set(Name=%answer%, Value=%!data%)",
           "line": {
-            "number": 22
+            "number": 25
           },
           "code": [
             {
@@ -653,7 +653,7 @@
           "index": 3,
           "text": "send %answer.below% to %screen%",
           "line": {
-            "number": 23
+            "number": 26
           },
           "code": [
             {
@@ -708,7 +708,7 @@
           "index": 4,
           "text": "return %answer.text%",
           "line": {
-            "number": 24
+            "number": 27
           },
           "code": [
             {
@@ -753,12 +753,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "29d441a25b983b3aed586367fb0e5cad1cdc7cf40f5d0582489381321dc3ccfe",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -768,7 +768,7 @@
           "index": 0,
           "text": "set %asked% to %!data%",
           "line": {
-            "number": 31
+            "number": 34
           },
           "comment": "The desktop page asks: {\"open\": url} opens a window; {\"window\": \"focus|minimize|…\", \"id\"}\ngoes to the screen; {\"files\"} shows the desktop's files; {\"edit\": path} opens one in Writer.\nWriter asks: {\"save\": path, \"text\"}, {\"list\": folder}, {\"load\": path}, {\"create\": path}; \"from\"\nis the window that asked.",
           "code": [
@@ -829,7 +829,7 @@
           "index": 1,
           "text": "if %asked.open%, call Open",
           "line": {
-            "number": 32
+            "number": 35
           },
           "code": [
             {
@@ -900,7 +900,7 @@
           "index": 2,
           "text": "if %asked.window%, call Command",
           "line": {
-            "number": 33
+            "number": 36
           },
           "code": [
             {
@@ -971,7 +971,7 @@
           "index": 3,
           "text": "if %asked.files%, call Files",
           "line": {
-            "number": 34
+            "number": 37
           },
           "code": [
             {
@@ -1042,7 +1042,7 @@
           "index": 4,
           "text": "if %asked.edit%, call Edit",
           "line": {
-            "number": 35
+            "number": 38
           },
           "code": [
             {
@@ -1113,7 +1113,7 @@
           "index": 5,
           "text": "if %asked.save%, call Save",
           "line": {
-            "number": 36
+            "number": 39
           },
           "code": [
             {
@@ -1184,7 +1184,7 @@
           "index": 6,
           "text": "if %asked.list%, call List",
           "line": {
-            "number": 37
+            "number": 40
           },
           "code": [
             {
@@ -1255,7 +1255,7 @@
           "index": 7,
           "text": "if %asked.load%, call Load",
           "line": {
-            "number": 38
+            "number": 41
           },
           "code": [
             {
@@ -1326,7 +1326,7 @@
           "index": 8,
           "text": "if %asked.create%, call Create",
           "line": {
-            "number": 39
+            "number": 42
           },
           "code": [
             {
@@ -1396,12 +1396,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "f0c9fe4e513e3e7476a5c36655c29070c88c8f290f97f3a888149213e31cb016",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -1411,7 +1411,7 @@
           "index": 0,
           "text": "open window %asked.open% in %browser%",
           "line": {
-            "number": 42
+            "number": 45
           },
           "code": [
             {
@@ -1471,12 +1471,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "0f4ca79325ff286a4e5eb3aa287cbb10df5fd39d7c968f8e20d8faef1a70cfac",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -1486,7 +1486,7 @@
           "index": 0,
           "text": "send %asked% to %screen%",
           "line": {
-            "number": 45
+            "number": 48
           },
           "code": [
             {
@@ -1537,12 +1537,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "762988d1c2ab3ef923cd4ceb9ff07af432bfa8337ea10106a38adf1c54e92084",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -1550,11 +1550,11 @@
       "step": [
         {
           "index": 0,
-          "text": "list files in 'Desktop', write to %files%",
+          "text": "list files in '/Desktop', write to %files%",
           "line": {
-            "number": 49
+            "number": 53
           },
-          "comment": "the desktop's files: what is in Desktop/, shown as icons",
+          "comment": "the desktop's files: what is in the app's Desktop/, shown as icons. A path that starts with \"/\"\nis in the app (/home/plang); without it, it would be beside this goal, in the os folder.",
           "code": [
             {
               "module": "file",
@@ -1565,7 +1565,7 @@
                   "type": {
                     "name": "path"
                   },
-                  "value": "Desktop"
+                  "value": "/Desktop"
                 }
               ],
               "default": [
@@ -1642,7 +1642,7 @@
           "index": 1,
           "text": "call ShowFiles files=%files% in %browser.desktop%",
           "line": {
-            "number": 50
+            "number": 54
           },
           "code": [
             {
@@ -1692,12 +1692,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
-      "hash": "2d96e04c6a1d3e2366f04286832fb546cd1be14a012f011515a1cb020bbc79b6",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "b14ae6a3a0dc272dae94eba405da64966a7db9f177b158de13a38212a45e46c8",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -1705,9 +1705,9 @@
       "step": [
         {
           "index": 0,
-          "text": "open window 'file:///home/plang/app/writer/start.html' in %browser%, write to %writer%",
+          "text": "open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%",
           "line": {
-            "number": 55
+            "number": 59
           },
           "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value",
           "code": [
@@ -1720,7 +1720,7 @@
                   "type": {
                     "name": "text"
                   },
-                  "value": "file:///home/plang/app/writer/start.html"
+                  "value": "file:///opt/plang/os/system/plangos/app/writer/start.html"
                 },
                 {
                   "name": "Browser",
@@ -1799,7 +1799,7 @@
           "index": 1,
           "text": "read %asked.edit%, write to %content%",
           "line": {
-            "number": 56
+            "number": 60
           },
           "code": [
             {
@@ -1901,7 +1901,7 @@
           "index": 2,
           "text": "call Show file=%asked.edit%, content=%content% in %writer%",
           "line": {
-            "number": 57
+            "number": 61
           },
           "code": [
             {
@@ -1948,12 +1948,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
-      "hash": "4fadd983073f3fdd6af49d9c097959167541ede67337f5841ccaf801be1f5aff",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "f3ae7ab5601eccc498cd700f362c9ce00087eba6fc9e27deea4f3c33f178e594",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -1963,7 +1963,7 @@
           "index": 0,
           "text": "save %asked.content% to %asked.save%",
           "line": {
-            "number": 61
+            "number": 65
           },
           "comment": "Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value",
           "code": [
@@ -2022,7 +2022,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Saved\", Window=%asked.from%, Browser=%browser%)",
           "line": {
-            "number": 62
+            "number": 66
           },
           "code": [
             {
@@ -2083,12 +2083,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "1e1dbfab23c3527a46315b38c12c937550c2b2f7ccc7a29cb304cd32916286ad",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -2098,7 +2098,7 @@
           "index": 0,
           "text": "list files in %asked.list% recursive, write to %files%",
           "line": {
-            "number": 66
+            "number": 70
           },
           "comment": "Writer's Open and New: the files in a folder and its folders",
           "code": [
@@ -2202,7 +2202,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"ShowList\", Window=%asked.from%, Browser=%browser%, Parameter={folder: %asked.list%, files: %files%})",
           "line": {
-            "number": 67
+            "number": 71
           },
           "code": [
             {
@@ -2270,12 +2270,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "72625979e16a2721084c07e3c33d8df6867872c9a419c414957d0eef78d65b46",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -2285,7 +2285,7 @@
           "index": 0,
           "text": "read %asked.load%, write to %content%",
           "line": {
-            "number": 71
+            "number": 75
           },
           "comment": "Writer's Open: another file in the same window",
           "code": [
@@ -2382,7 +2382,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.load%, content: %content%})",
           "line": {
-            "number": 72
+            "number": 76
           },
           "code": [
             {
@@ -2450,12 +2450,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "cf9249fe28826a6aee79ffd8675bfe80b0633bad29707bd131d7130bf2fe7482",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -2465,7 +2465,7 @@
           "index": 0,
           "text": "file.save(Path=%asked.create%, Value=\"\")",
           "line": {
-            "number": 76
+            "number": 80
           },
           "comment": "Writer's New: an empty file, opened in the same window; the desktop shows it",
           "code": [
@@ -2510,7 +2510,7 @@
           "index": 1,
           "text": "window.callGoal(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.create%, content: \"\"})",
           "line": {
-            "number": 77
+            "number": 81
           },
           "code": [
             {
@@ -2579,7 +2579,7 @@
           "index": 2,
           "text": "call Files",
           "line": {
-            "number": 78
+            "number": 82
           },
           "code": [
             {
@@ -2610,12 +2610,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "83144cea6e78e7527d8065556174275860d37d59180b49e41c46038e0f76b2c7",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -2625,7 +2625,7 @@
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 84
+            "number": 88
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -2686,7 +2686,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 85
+            "number": 89
           },
           "code": [
             {
@@ -2741,7 +2741,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 86
+            "number": 90
           },
           "code": [
             {
@@ -2812,7 +2812,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 87
+            "number": 91
           },
           "code": [
             {
@@ -2882,12 +2882,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "dc5e47790cb91007f5487fcc04d4c0116c54e8907de1fc0ccaf5dc0491c2705f",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -2897,7 +2897,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 90
+            "number": 94
           },
           "code": [
             {
@@ -2978,12 +2978,12 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "134256ebf502ad5d8fbae4fcc57a17e07b23158c15a57039c7e788c235e7fe23",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     },
     {
@@ -2993,7 +2993,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 93
+            "number": 97
           },
           "code": [
             {
@@ -3053,21 +3053,21 @@
       ],
       "child": [],
       "visibility": "Private",
-      "path": "/Screen.goal",
-      "prPath": "/.build/screen.pr",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
       "hash": "1682fef342d1d8b4710295eba50a0e79dc5d798697220d492bba13b81dc729e3",
       "isSetup": false,
       "isEvent": false,
-      "isSystem": false,
+      "isSystem": true,
       "isTest": false
     }
   ],
   "visibility": "Public",
-  "path": "/Screen.goal",
-  "prPath": "/.build/screen.pr",
-  "hash": "e9aeac77b9c0260c40fac7484818f71aa0202ca5374ba740d54fbd42a4cac96d",
+  "path": "/system/plangos/Screen.goal",
+  "prPath": "/system/plangos/.build/screen.pr",
+  "hash": "54392e04188abf696f339354def13e886df74096de75c1bac80d84964cbd65fb",
   "isSetup": false,
   "isEvent": false,
-  "isSystem": false,
+  "isSystem": true,
   "isTest": false
 }

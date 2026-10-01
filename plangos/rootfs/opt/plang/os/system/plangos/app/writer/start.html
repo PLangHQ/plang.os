@@ -13,7 +13,7 @@
   const textOf = content => typeof content === 'string' ? content : JSON.stringify(content ?? null, null, 2);
   window.Show = async ({ file, content }) => { await ready; writer.show(file, textOf(content)); return true; };
   window.Saved = async () => { await ready; writer.saved(); return true; };
-  // the files in a folder, for Open and New: paths from the app's folder (Desktop/notes.txt)
+  // the files in a folder, for Open and New: paths in the app, from its root (/Desktop/notes.txt)
   window.ShowList = async ({ folder, files }) => { await ready; return files_.show(folder, files); };
   // something dropped on this window (the desktop's shortcut): {name, url, image} — a page takes it
   // as an embed block
@@ -154,7 +154,7 @@
 <!-- Open: like a browser's address field — the file's path, selected; below it the files Writer can
      open from the file's folder, its folders as headings. Enter opens what is typed. -->
 <div class="picker" id="picker" hidden>
-  <input id="path" spellcheck="false" autocomplete="off" placeholder="Slóð skráar, t.d. Desktop/Start.goal">
+  <input id="path" spellcheck="false" autocomplete="off" placeholder="Slóð skráar, t.d. /Desktop/Start.goal">
   <div class="list" id="list"></div>
   <div class="unsaved" id="unsaved" hidden>
     <span>Óvistaðar breytingar í <b id="unsavedName"></b></span>
@@ -336,7 +336,7 @@
     const changed = () => onChange(page.write(blocks));
     const folder = file.includes('/') ? file.slice(0, file.lastIndexOf('/') + 1) : '';
     const resolve = path => /^[a-z]+:/i.test(path ?? '') ? path
-      : new URL(path ?? '', new URL(folder, 'file:///home/plang/')).href;
+      : new URL(path ?? '', new URL(folder.replace(/^\//, ''), 'file:///home/plang/')).href;
 
     function draw(focus, caret) {
       list.replaceChildren(...blocks.map(element));
@@ -675,18 +675,24 @@
   const $ = id => document.getElementById(id);
   const ask = message => window.plang ? plang(JSON.stringify(message)) : setTimeout(() => ask(message), 100);
   const folderOf = file => file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '';
+  // a path in the app, from its root: "/Desktop/notes.txt" (the app is /home/plang)
+  const inApp = p => {
+    const s = String(typeof p === 'string' ? p : (p?.path ?? p?.absolute ?? p?.name ?? p)).replace(/\\/g, '/');
+    const rel = s.startsWith('/home/plang/') ? s.slice('/home/plang'.length) : s;
+    return rel.startsWith('/') ? rel : '/' + rel;
+  };
   const badge = file => { const x = extension(file); return ({ goal: 'PL', cs: 'C#', json: '{ }', txt: 'TXT' })[x] ?? (x.toUpperCase().slice(0, 4) || '•'); };
 
   const files_ = {
     folder: '', list: [], pick: 0, waiting: null,   // waiting: what asked for the list (open | new)
 
     // ask plang for the files in the open file's folder (and its folders)
-    fetch(why) { this.waiting = why; ask({ list: folderOf(writer.file) || 'Desktop' }); },
+    fetch(why) { this.waiting = why; ask({ list: folderOf(writer.file) || '/Desktop' }); },
 
     show(folder, files) {
       this.folder = folder ?? '';
       this.list = (files ?? []).map(f => typeof f === 'string' ? f : (f.path ?? f.absolute ?? f.name ?? String(f)))
-        .map(p => p.replace(/^\/home\/plang\//, '').replace(/^\//, '')).sort((a, b) => a.localeCompare(b, 'is'));
+        .map(inApp).sort((a, b) => a.localeCompare(b, 'is'));
       if (this.waiting === 'open') this.draw();
       if (this.waiting === 'new') maker.fill();
       return this.list.length;
@@ -753,7 +759,7 @@
     },
 
     choose(path) {
-      path = path.trim().replace(/^\/home\/plang\//, '').replace(/^\//, '');
+      path = path.trim() && inApp(path.trim());
       if (!path || path === writer.file) { close(); return; }
       if (dirty()) {   // the open file's changes: save, drop, or stay
         this.next = path;
@@ -771,7 +777,7 @@
     open() {
       $('picker').hidden = true;
       $('maker').hidden = false;
-      $('newFolder').textContent = (folderOf(writer.file) || 'Desktop') + '/';
+      $('newFolder').textContent = (folderOf(writer.file) || '/Desktop') + '/';
       $('newNote').textContent = ''; $('newNote').className = 'note';
       $('newName').value = ''; $('newName').placeholder = 'Start.goal';
       $('newName').focus();
@@ -790,7 +796,7 @@
       const name = $('newName').value.trim() || $('newName').placeholder;
       const fail = why => { $('newNote').textContent = why; $('newNote').className = 'note error'; };
       if (/[\\/:*?"<>|]/.test(name) || name.startsWith('.')) return fail('Nafnið má ekki innihalda / \\ : * ? " < > | eða byrja á punkti');
-      const path = ((folderOf(writer.file) || 'Desktop') + '/' + name);
+      const path = ((folderOf(writer.file) || '/Desktop') + '/' + name);
       if (files_.list.some(p => p.toLowerCase() === path.toLowerCase())) return fail(`${name} er þegar til — veldu annað nafn eða opnaðu hana með Opna`);
       const go = () => { close(); state.textContent = 'Bý til…'; state.className = ''; ask({ create: path }); };
       if (dirty()) { writer.after = go; writer.save(); } else go();

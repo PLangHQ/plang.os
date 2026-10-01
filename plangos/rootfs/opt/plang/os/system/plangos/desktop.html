@@ -255,7 +255,10 @@
   window.ShowFiles = ({ files }) => {
     for (const icon of fileIcons) icon.remove();
     fileIcons = (files ?? []).map(f => {
-      const path = typeof f === 'string' ? f : (f.path ?? f.absolute ?? f.name ?? String(f));
+      // a path in the app, from its root (/Desktop/notes.txt): the app is /home/plang
+      const raw = String(typeof f === 'string' ? f : (f.path ?? f.absolute ?? f.name ?? f)).replace(/\\/g, '/');
+      const local = raw.startsWith('/home/plang/') ? raw.slice('/home/plang'.length) : raw;
+      const path = local.startsWith('/') ? local : '/' + local;
       const name = path.split('/').pop();
       const icon = document.createElement('div');
       icon.className = 'icon';

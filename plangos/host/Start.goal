@@ -19,7 +19,9 @@ OpenPlangOS
 - open screen titled 'PlangOS desktop', size 1920x1080, on input call Input, on close call Close, write to %screen%
 / Formal: in words, the builder took the 'Screen' among the parameters for a goal to call on every
 / message (60 a second, a goal that doesn't exist: "Screen" in the console, and the pipe held up).
-- terminal.open(App="wsl.exe", Parameter=["-d", "PlangOS", "--cd", "/home/plang", "--exec", "/opt/plang/plang", "Screen"], Binary=true, OutputTo=%screen%); variable.set(Name=%container%, Value=%!data%)
+/ The shell is a system goal (plang's os folder, from the image); it runs in the person's app,
+/ /home/plang.
+- terminal.open(App="wsl.exe", Parameter=["-d", "PlangOS", "--cd", "/home/plang", "--exec", "/opt/plang/plang", "system/plangos/Screen"], Binary=true, OutputTo=%screen%); variable.set(Name=%container%, Value=%!data%)
 - wait for %container%
 
 Input
@@ -70,12 +72,13 @@ ReplaceImage
 - condition.if(Left=%import!exitCode%, Operator="==", Right=0) { goal.call(Name="RestoreHome") }
 
 KeepHome
-/ /home/plang holds the person's files (Desktop\, their programs), the browser's profile (logins)
-/ and .db. Windows' own tar copies it out through \\wsl.localhost (PlangOS has no shell or tar) to
-/ distro\home.tar — kept after the update too, as the copy of the last one. The image's own files
-/ (its goals, the desktop page, the apps, their builds) come from the new image, not from here; nor
-/ do the browser's caches and its lock. If the copy fails, nothing is removed.
-- terminal.start(App="tar.exe", Parameter=["-c", "-f", "distro/home.tar", "-C", "\\\\wsl.localhost\\PlangOS\\home", "--exclude", "plang/Screen.goal", "--exclude", "plang/Start.goal", "--exclude", "plang/desktop.html", "--exclude", "plang/plang.png", "--exclude", "plang/.build", "--exclude", "plang/app", "--exclude", "*/Cache", "--exclude", "*/Code Cache", "--exclude", "*/GPUCache", "--exclude", "*/Singleton*", "plang"]); on.timeout(After="PT10M"); on.error(Recovery=[goal.call(Name="KeepFailed")]); variable.set(Name=%kept%, Value=%!data%)
+/ /home/plang is the person's app, all of it theirs: their files (Desktop\), their goals, the
+/ browser's profile (logins) and .db. The system (the shell, its pages) is in plang's os folder and
+/ comes with the image. Windows' own tar copies it out through \\wsl.localhost (PlangOS has no shell
+/ or tar) to distro\home.tar — kept after the update too, as the copy of the last one. The browser's
+/ caches and its lock stay behind; so does the shell images before the split kept in /home/plang
+/ (Screen.goal, desktop.html, plang.png, app, .build/screen.pr). If the copy fails, nothing is removed.
+- terminal.start(App="tar.exe", Parameter=["-c", "-f", "distro/home.tar", "-C", "\\\\wsl.localhost\\PlangOS\\home", "--exclude", "plang/Screen.goal", "--exclude", "plang/desktop.html", "--exclude", "plang/plang.png", "--exclude", "plang/app", "--exclude", "plang/.build/screen.pr", "--exclude", "*/Cache", "--exclude", "*/Code Cache", "--exclude", "*/GPUCache", "--exclude", "*/Singleton*", "plang"]); on.timeout(After="PT10M"); on.error(Recovery=[goal.call(Name="KeepFailed")]); variable.set(Name=%kept%, Value=%!data%)
 - if %kept!exitCode% is not 0, call KeepFailed
 
 KeepFailed
