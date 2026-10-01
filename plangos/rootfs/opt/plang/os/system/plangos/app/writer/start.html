@@ -17,6 +17,8 @@
   window.ShowList = async ({ folder, files }) => { await ready; return files_.show(folder, files); };
   // one of Writer's tools in the window's title bar was clicked: new, open, save
   window.Tool = async ({ tool }) => { await ready; return writer.tool(tool); };
+  // the clipboard as a value (Ctrl+Shift+V asked for it): a copy that knows where it came from
+  window.Paste = async ({ value }) => { await ready; return writer.paste(value); };
   // something dropped on this window (the desktop's shortcut): {name, url, image} — a page takes it
   // as an embed block
   window.Drop = async value => { await ready; return writer.take(value ?? {}); };
@@ -602,7 +604,20 @@
       this.render();
       // the window: its tools in the title bar, and its address — the file, as a path in the app
       ask({ window: 'tools', tools: ['new', 'open', 'save'] });
-      ask({ window: 'url', url: { path: file, source: 'file:///home/plang' + file } });
+      // origin: this page; plang adds the step, goal and .pr the address passes through
+      const page = decodeURIComponent(location.pathname).replace(/^\/opt\/plang\/os\//, '/os/');
+      ask({ window: 'url', url: { path: file, source: 'file:///home/plang' + file, origin: { page } } });
+    },
+
+    // at the caret, as if typed (undo works); where the caret was when Ctrl+Shift+V was pressed
+    paste(value) {
+      const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+      const into = this.pasteInto;
+      this.pasteInto = null;
+      if (into && document.contains(into)) into.focus();
+      if (this.kind === 'json' && this.mode === 'tree') { this.mode = 'text'; this.modes(); this.render(); this.area?.focus(); }
+      document.execCommand('insertText', false, text);
+      return true;
     },
 
     tool(name) {
@@ -843,6 +858,8 @@
     if (!(e.ctrlKey || e.metaKey)) return;
     const k = e.key.toLowerCase();
     if (k === 's') { e.preventDefault(); writer.save(); }
+    // Ctrl+Shift+V: the clipboard as a value (a copy with where it came from), not its text
+    if (k === 'v' && e.shiftKey) { e.preventDefault(); writer.pasteInto = document.activeElement; ask({ window: 'paste' }); }
     if (k === 'o') { e.preventDefault(); picker.open(); }
     if (k === 'n') { e.preventDefault(); maker.open(); }
   });

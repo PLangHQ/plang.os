@@ -2949,13 +2949,84 @@
             }
           ],
           "waitForExecution": true
+        },
+        {
+          "index": 5,
+          "text": "if %event.paste%, call Paste",
+          "line": {
+            "number": 93
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%event.paste%",
+                  "variable": [
+                    {
+                      "text": "%event.paste%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        },
+                        {
+                          "property": "paste"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"Paste\")",
+                  "line": {
+                    "number": 93
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "Paste"
+                        }
+                      ],
+                      "default": [
+                        {
+                          "name": "parallel",
+                          "type": {
+                            "name": "bool"
+                          },
+                          "value": false
+                        }
+                      ]
+                    }
+                  ],
+                  "waitForExecution": true
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "3a948c37b2cdb18eec966d3bb0731f5d70a463f9e54a01688904119ae0a7e752",
+      "hash": "157dbce7a8d2a7590f0618f27c8877482bdf9e162b51a7b7035d700b26996328",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,
@@ -2968,7 +3039,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 95
+            "number": 96
           },
           "code": [
             {
@@ -3064,7 +3135,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 98
+            "number": 99
           },
           "code": [
             {
@@ -3139,7 +3210,7 @@
           "index": 0,
           "text": "window.callGoal(Name=\"Tool\", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})",
           "line": {
-            "number": 103
+            "number": 104
           },
           "comment": "One of the app's tools in its window's title bar was clicked ({\"tool\": \"save\", \"id\"}): its page's\ngoal Tool gets it. The page named its tools itself ({\"window\": \"tools\", \"tools\": [...]}).",
           "code": [
@@ -3211,6 +3282,90 @@
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
       "hash": "abd88d1b044f87c6e84ff17b0c07e2816af1c60517e187acaf34eae38ec697d6",
+      "isSetup": false,
+      "isEvent": false,
+      "isSystem": true,
+      "isTest": false
+    },
+    {
+      "name": "Paste",
+      "step": [
+        {
+          "index": 0,
+          "text": "window.callGoal(Name=\"Paste\", Window=%event.id%, Browser=%browser%, Parameter={value: %event.paste%})",
+          "line": {
+            "number": 109
+          },
+          "comment": "A page asked for the clipboard as a value ({\"window\": \"paste\"}): a copy that knows where it came\nfrom, as json; its page's goal Paste gets it.",
+          "code": [
+            {
+              "module": "window",
+              "name": "callGoal",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "Paste"
+                },
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%event.id%",
+                  "variable": [
+                    {
+                      "text": "%event.id%",
+                      "code": [
+                        {
+                          "variable": "event"
+                        },
+                        {
+                          "property": "id"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Parameter",
+                  "type": {
+                    "name": "list"
+                  },
+                  "value": [{"name":"value","type":{"name":"item","template":"plang"},"value":"%event.paste%","variable":[{"text":"%event.paste%","code":[{"variable":"event"},{"property":"paste"}]}]}]
+                }
+              ]
+            }
+          ],
+          "waitForExecution": true
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/system/plangos/Screen.goal",
+      "prPath": "/system/plangos/.build/screen.pr",
+      "hash": "dbf69217d933638b476c6752c9a203373b963921f1e68dc6936b9862249dcfe2",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,
