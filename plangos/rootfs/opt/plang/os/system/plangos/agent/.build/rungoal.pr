@@ -1,0 +1,200 @@
+{
+  "name": "RunGoal",
+  "step": [
+    {
+      "index": 0,
+      "text": "terminal.start(App=\"plang\", Parameter=[%goal%]); on.timeout(After=\"PT5M\"); variable.set(Name=%ran%, Value=%!data%)",
+      "line": {
+        "number": 4
+      },
+      "comment": "Runs the goal %goal% of the person's app (its name from the app's root: Desktop/Start), in a plang\nof its own: what it wrote, and its exit code.",
+      "code": [
+        {
+          "module": "terminal",
+          "name": "start",
+          "property": [
+            {
+              "name": "App",
+              "type": {
+                "name": "text"
+              },
+              "value": "plang"
+            },
+            {
+              "name": "Parameter",
+              "type": {
+                "name": "list",
+                "template": "plang"
+              },
+              "value": ["%goal%"],
+              "variable": [
+                {
+                  "text": "%goal%",
+                  "code": [
+                    {
+                      "variable": "goal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "interactive",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            },
+            {
+              "name": "administrator",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            }
+          ]
+        },
+        {
+          "module": "on",
+          "name": "timeout",
+          "property": [
+            {
+              "name": "After",
+              "type": {
+                "name": "duration"
+              },
+              "value": "PT5M"
+            }
+          ]
+        },
+        {
+          "module": "variable",
+          "name": "set",
+          "property": [
+            {
+              "name": "Name",
+              "type": {
+                "name": "variable"
+              },
+              "value": "%ran%",
+              "variable": [
+                {
+                  "text": "%ran%",
+                  "code": [
+                    {
+                      "variable": "ran"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Value",
+              "type": {
+                "name": "item",
+                "template": "plang"
+              },
+              "value": "%!data%",
+              "variable": [
+                {
+                  "text": "%!data%",
+                  "code": [
+                    {
+                      "variable": "!data"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "asdefault",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    },
+    {
+      "index": 1,
+      "text": "return {output: %ran%, error: %ran!error%, code: %ran!exitCode%}",
+      "line": {
+        "number": 5
+      },
+      "code": [
+        {
+          "module": "goal",
+          "name": "return",
+          "property": [
+            {
+              "name": "Data",
+              "type": {
+                "name": "dict",
+                "template": "plang"
+              },
+              "value": {"output":"%ran%","error":"%ran!error%","code":"%ran!exitCode%"},
+              "variable": [
+                {
+                  "text": "%ran%",
+                  "code": [
+                    {
+                      "variable": "ran"
+                    }
+                  ]
+                },
+                {
+                  "text": "%ran!error%",
+                  "code": [
+                    {
+                      "variable": "ran"
+                    },
+                    {
+                      "property": "!error"
+                    }
+                  ]
+                },
+                {
+                  "text": "%ran!exitCode%",
+                  "code": [
+                    {
+                      "variable": "ran"
+                    },
+                    {
+                      "property": "!exitCode"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "depth",
+              "type": {
+                "name": "number"
+              },
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    }
+  ],
+  "child": [],
+  "visibility": "Public",
+  "path": "/system/plangos/agent/RunGoal.goal",
+  "prPath": "/system/plangos/agent/.build/rungoal.pr",
+  "hash": "681c42250a6722d79d0ece0f0c9f9db6722b50f42b6c14745cc868bf0d54575f",
+  "isSetup": false,
+  "isEvent": false,
+  "isSystem": true,
+  "isTest": false
+}

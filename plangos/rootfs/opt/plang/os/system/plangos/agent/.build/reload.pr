@@ -1,0 +1,99 @@
+{
+  "name": "Reload",
+  "step": [
+    {
+      "index": 0,
+      "text": "window.reload(Window=%window%, Browser=%browser%)",
+      "line": {
+        "number": 3
+      },
+      "comment": "Window %window% loads its page again from its files: a change to them shows at once.",
+      "code": [
+        {
+          "module": "window",
+          "name": "reload",
+          "property": [
+            {
+              "name": "Window",
+              "type": {
+                "name": "item",
+                "template": "plang"
+              },
+              "value": "%window%",
+              "variable": [
+                {
+                  "text": "%window%",
+                  "code": [
+                    {
+                      "variable": "window"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Browser",
+              "type": {
+                "name": "browser",
+                "template": "plang"
+              },
+              "value": "%browser%",
+              "variable": [
+                {
+                  "text": "%browser%",
+                  "code": [
+                    {
+                      "variable": "browser"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    },
+    {
+      "index": 1,
+      "text": "return \"reloaded\"",
+      "line": {
+        "number": 4
+      },
+      "code": [
+        {
+          "module": "goal",
+          "name": "return",
+          "property": [
+            {
+              "name": "Data",
+              "type": {
+                "name": "text"
+              },
+              "value": "reloaded"
+            }
+          ],
+          "default": [
+            {
+              "name": "depth",
+              "type": {
+                "name": "number"
+              },
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    }
+  ],
+  "child": [],
+  "visibility": "Public",
+  "path": "/system/plangos/agent/Reload.goal",
+  "prPath": "/system/plangos/agent/.build/reload.pr",
+  "hash": "a4b77b6dcf11b891e11ca4808e72fc60e42bac5e5b8a086b34327d71640f0d99",
+  "isSetup": false,
+  "isEvent": false,
+  "isSystem": true,
+  "isTest": false
+}

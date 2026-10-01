@@ -1,0 +1,158 @@
+{
+  "name": "ListFiles",
+  "step": [
+    {
+      "index": 0,
+      "text": "file.list(Path=%path%, Recursive=true); variable.set(Name=%files%, Value=%!data%)",
+      "line": {
+        "number": 3
+      },
+      "comment": "The files in the folder %path% and its folders.",
+      "code": [
+        {
+          "module": "file",
+          "name": "list",
+          "property": [
+            {
+              "name": "Path",
+              "type": {
+                "name": "path",
+                "template": "plang"
+              },
+              "value": "%path%",
+              "variable": [
+                {
+                  "text": "%path%",
+                  "code": [
+                    {
+                      "variable": "path"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Recursive",
+              "type": {
+                "name": "bool"
+              },
+              "value": true
+            }
+          ],
+          "default": [
+            {
+              "name": "pattern",
+              "type": {
+                "name": "text"
+              },
+              "value": "*"
+            }
+          ]
+        },
+        {
+          "module": "variable",
+          "name": "set",
+          "property": [
+            {
+              "name": "Name",
+              "type": {
+                "name": "variable"
+              },
+              "value": "%files%",
+              "variable": [
+                {
+                  "text": "%files%",
+                  "code": [
+                    {
+                      "variable": "files"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Value",
+              "type": {
+                "name": "item",
+                "template": "plang"
+              },
+              "value": "%!data%",
+              "variable": [
+                {
+                  "text": "%!data%",
+                  "code": [
+                    {
+                      "variable": "!data"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "asdefault",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    },
+    {
+      "index": 1,
+      "text": "return %files%",
+      "line": {
+        "number": 4
+      },
+      "code": [
+        {
+          "module": "goal",
+          "name": "return",
+          "property": [
+            {
+              "name": "Data",
+              "type": {
+                "name": "item",
+                "template": "plang"
+              },
+              "value": "%files%",
+              "variable": [
+                {
+                  "text": "%files%",
+                  "code": [
+                    {
+                      "variable": "files"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "depth",
+              "type": {
+                "name": "number"
+              },
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    }
+  ],
+  "child": [],
+  "visibility": "Public",
+  "path": "/system/plangos/agent/ListFiles.goal",
+  "prPath": "/system/plangos/agent/.build/listfiles.pr",
+  "hash": "84ff558a5e3fb02000178b7f998d5b680700f703a6b650a1f8d2b5844fd8d92d",
+  "isSetup": false,
+  "isEvent": false,
+  "isSystem": true,
+  "isTest": false
+}

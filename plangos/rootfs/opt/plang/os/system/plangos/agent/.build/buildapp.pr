@@ -1,0 +1,189 @@
+{
+  "name": "BuildApp",
+  "step": [
+    {
+      "index": 0,
+      "text": "terminal.start(App=\"plang\", Parameter=[\"build\", \"--llmservice=openai\"]); on.timeout(After=\"PT10M\"); variable.set(Name=%built%, Value=%!data%)",
+      "line": {
+        "number": 3
+      },
+      "comment": "plang builds the person's app (/home/plang): what it wrote, and its exit code (0: built).",
+      "code": [
+        {
+          "module": "terminal",
+          "name": "start",
+          "property": [
+            {
+              "name": "App",
+              "type": {
+                "name": "text"
+              },
+              "value": "plang"
+            },
+            {
+              "name": "Parameter",
+              "type": {
+                "name": "list"
+              },
+              "value": ["build","--llmservice=openai"]
+            }
+          ],
+          "default": [
+            {
+              "name": "interactive",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            },
+            {
+              "name": "administrator",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            }
+          ]
+        },
+        {
+          "module": "on",
+          "name": "timeout",
+          "property": [
+            {
+              "name": "After",
+              "type": {
+                "name": "duration"
+              },
+              "value": "PT10M"
+            }
+          ]
+        },
+        {
+          "module": "variable",
+          "name": "set",
+          "property": [
+            {
+              "name": "Name",
+              "type": {
+                "name": "variable"
+              },
+              "value": "%built%",
+              "variable": [
+                {
+                  "text": "%built%",
+                  "code": [
+                    {
+                      "variable": "built"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Value",
+              "type": {
+                "name": "item",
+                "template": "plang"
+              },
+              "value": "%!data%",
+              "variable": [
+                {
+                  "text": "%!data%",
+                  "code": [
+                    {
+                      "variable": "!data"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "asdefault",
+              "type": {
+                "name": "bool"
+              },
+              "value": false
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    },
+    {
+      "index": 1,
+      "text": "return {output: %built%, error: %built!error%, code: %built!exitCode%}",
+      "line": {
+        "number": 4
+      },
+      "code": [
+        {
+          "module": "goal",
+          "name": "return",
+          "property": [
+            {
+              "name": "Data",
+              "type": {
+                "name": "dict",
+                "template": "plang"
+              },
+              "value": {"output":"%built%","error":"%built!error%","code":"%built!exitCode%"},
+              "variable": [
+                {
+                  "text": "%built%",
+                  "code": [
+                    {
+                      "variable": "built"
+                    }
+                  ]
+                },
+                {
+                  "text": "%built!error%",
+                  "code": [
+                    {
+                      "variable": "built"
+                    },
+                    {
+                      "property": "!error"
+                    }
+                  ]
+                },
+                {
+                  "text": "%built!exitCode%",
+                  "code": [
+                    {
+                      "variable": "built"
+                    },
+                    {
+                      "property": "!exitCode"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "name": "depth",
+              "type": {
+                "name": "number"
+              },
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "waitForExecution": true
+    }
+  ],
+  "child": [],
+  "visibility": "Public",
+  "path": "/system/plangos/agent/BuildApp.goal",
+  "prPath": "/system/plangos/agent/.build/buildapp.pr",
+  "hash": "66632563c63c19ae547b5c272a8877ffeed46e75656f9effb52bcfed406c221e",
+  "isSetup": false,
+  "isEvent": false,
+  "isSystem": true,
+  "isTest": false
+}
