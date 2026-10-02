@@ -31,7 +31,8 @@ OpenPlangOS
 Input
 / Our window's mouse and keyboard go down to PlangOS; a message from PlangOS's plang ({"guest": …})
 / is for us: PlangOS calling one of our goals ({"call": {id, goal, parameters}} — %!app.parent% there).
-- set %event% to %!data%
+/ (formal, as a dict: the window's line arrives as JSON text, and text isn't navigated into — %event.guest%)
+- variable.set(Name=%event%, Value=%!data%, Type="dict")
 / (an event with no "guest" — the mouse, a key — has it as null; "is empty" doesn't see a missing one)
 - condition.if(Left=%event.guest%, Operator="==", Right=null) { goal.call(Name="ToPlangOS") }
 / a call runs on its own, not waited for — a turn with Claude takes minutes, and the mouse mustn't wait for it
