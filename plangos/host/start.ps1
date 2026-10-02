@@ -93,7 +93,7 @@ if (Test-Path $next) {
     $using   = if (Test-Path $inUse) { (Get-Content $inUse -Raw | ConvertFrom-Json).sha256 } else { '' }
     if ($waiting.sha256 -ne $using) {
         Write-Host "==> A new PlangOS image waits in image.next ($($waiting.sha256.Substring(0, 8))) - not used yet." -ForegroundColor Yellow
-        Write-Host '    Using it replaces PlangOS, and /home/plang (your files) is not kept.' -ForegroundColor Yellow
+        Write-Host '    Using it replaces PlangOS (your files are kept only on the data disk, data.vhd).' -ForegroundColor Yellow
     }
 }
 
@@ -103,16 +103,48 @@ if (Test-Path $manifestPath) {
     $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
     $marker   = Join-Path $Root "distro\$($manifest.sha256).imported"
     if (-not (Test-Path $marker)) {   # not imported yet: Start.goal will import it
+        $importing = $true
         $tar = Join-Path $Root "image\$($manifest.file)"
         if (-not (Test-Path $tar)) { Fail "image file missing: $tar" }
         Write-Host ''
-        Write-Host "==> NEW PLANGOS IMAGE ($($manifest.sha256.Substring(0, 8))): PlangOS is replaced, /home/plang (your files) is not kept" -ForegroundColor Cyan
+        $kept = if (Test-Path (Join-Path $Root 'data.vhd')) { 'your files stay on the data disk' } else { '/home/plang (your files) is not kept' }
+        Write-Host "==> NEW PLANGOS IMAGE ($($manifest.sha256.Substring(0, 8))): PlangOS is replaced, $kept" -ForegroundColor Cyan
         Write-Host "==> Verifying $($manifest.file) ($([math]::Round($manifest.size / 1MB)) MB)" -ForegroundColor Cyan
         $hash = (Get-FileHash $tar -Algorithm SHA256).Hash.ToLower()
         if ($hash -ne $manifest.sha256) {
             Fail "image hash does not match the manifest. Not starting.`n  manifest $($manifest.sha256)`n  file     $hash"
         }
     }
+}
+
+# The data disk: /home/plang (the person's files) on a disk of its own, data.vhd beside this script, so a new
+# image never touches it. WSL attaches it to its VM (`wsl --mount --vhd --bare`, which needs administrator
+# rights: one UAC prompt, until Windows restarts or WSL shuts down); PlangOS's /etc/fstab mounts it on
+# /home/plang when the distro starts. Whether it is in use is asked of PlangOS itself (its mount table).
+$dataDisk = Join-Path $Root 'data.vhd'
+function Test-DataMounted {
+    $mounts = & wsl.exe -d PlangOS -u root -e /usr/bin/mount 2>$null
+    return ($LASTEXITCODE -eq 0) -and (($mounts -join "`n") -match ' on /home/plang type ext4')
+}
+if (Test-Path $dataDisk) {
+    if (-not (Test-DataMounted)) {
+        Write-Host '==> Attaching the data disk (your files). Windows asks for administrator rights once.' -ForegroundColor Cyan
+        try {
+            $attach = Start-Process wsl.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden `
+                -ArgumentList @('--mount', '--vhd', "`"$dataDisk`"", '--bare')
+            # nonzero is also "already attached": what PlangOS mounts below is the answer
+            if ($attach.ExitCode -ne 0) { Write-Host "    wsl --mount said exit $($attach.ExitCode) (it may have been attached already)" -ForegroundColor DarkGray }
+        } catch {
+            Write-Host "    Not attached: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+        # the distro mounts /etc/fstab when it starts: stop it, so the next start mounts the disk
+        & wsl.exe --terminate PlangOS 2>$null | Out-Null
+        if ($importing) { Write-Host '    The new image mounts it when it starts.' -ForegroundColor Cyan }
+        elseif (Test-DataMounted) { Write-Host '    Your files are on the data disk.' -ForegroundColor Cyan }
+        else { Write-Host '==> The data disk is not in use: PlangOS starts with the image''s /home/plang (not kept). Your files on data.vhd are untouched.' -ForegroundColor Yellow }
+    }
+} else {
+    Write-Host '==> No data disk (data.vhd): /home/plang is the image''s, and a new image replaces it.' -ForegroundColor Yellow
 }
 
 # What runs, said every start: the runtime (its CHANGES.txt's first line) and the image.

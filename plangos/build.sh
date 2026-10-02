@@ -202,7 +202,8 @@ cmd_image() {
     cp -a "$PLANGOS_WIDEVINE/." "$ROOT/usr/lib/chromium/WidevineCdm/"
     log "added Widevine $(grep -o '"version": *"[^"]*"' "$PLANGOS_WIDEVINE/manifest.json")"
   fi
-  : > "$ROOT/etc/fstab"
+  # /etc/fstab is rootfs/'s (the data disk on /home/plang); empty only if it has none
+  [ -f "$HERE/rootfs/etc/fstab" ] || : > "$ROOT/etc/fstab"
   ln -sf ../usr/share/zoneinfo/Etc/UTC "$ROOT/etc/localtime"
   echo "Etc/UTC" > "$ROOT/etc/timezone"
   mkdir -p "$ROOT/home/plang" "$ROOT/root" "$ROOT/tmp" "$ROOT/var/tmp" "$ROOT/run" \
@@ -248,6 +249,10 @@ trim() {
   # shell scripts are dead weight without a shell: Debian's chromium launcher
   # (plang starts /usr/lib/chromium/chromium directly) and update-ca-certificates
   rm -f "$ROOT"/usr/bin/chromium "$ROOT"/usr/sbin/update-ca-certificates
+  # mount: WSL's init runs `mount -a` (as root, at distro start) for /etc/fstab — the data disk on
+  # /home/plang. Only that binary stays, and not setuid: no one else mounts anything.
+  rm -f "$ROOT"/usr/bin/umount "$ROOT"/usr/sbin/losetup "$ROOT"/usr/sbin/swapon "$ROOT"/usr/sbin/swapoff
+  chmod u-s,g-s "$ROOT"/usr/bin/mount
 }
 
 write_manifest() {

@@ -84,7 +84,7 @@ ReplaceImage
 / A new image: remove the old distro, then import. /home/plang (the person's app) is NOT carried
 / over yet: Windows can't reach into PlangOS (no \\wsl.localhost share), so the way is the container
 / as an app that writes its own files (todo: "The container as an app").
-- write out 'New PlangOS image %manifest.version%: replacing the installed one. Files in PlangOS are not kept yet.'
+- write out 'New PlangOS image %manifest.version%: replacing the installed one. Your files are kept on the data disk (data.vhd), when there is one.'
 / A PlangOS still running (an earlier window) can make --unregister hang: stop it first. Neither
 / may hang the start: if WSL doesn't answer, say so and stop.
 - terminal.start(App="wsl.exe", Parameter=["--terminate", "PlangOS"], Environment={"WSL_UTF8": 1}); on.timeout(After="PT1M"); on.error(Recovery=[goal.call(Name="WslStuck")]); variable.set(Name=%stopped%, Value=%!data%)

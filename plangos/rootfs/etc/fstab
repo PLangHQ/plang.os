@@ -1,0 +1,6 @@
+# PlangOS: what WSL's init mounts at distro start (wsl.conf [automount] mountFsTab = true).
+#
+# The person's app, /home/plang, lives on a disk of its own (data.vhdx, attached by start.ps1 with
+# `wsl --mount --vhd --bare`), so a new PlangOS image never touches it. nofail: without the disk,
+# the image's own /home/plang is used.
+LABEL=plangos-data  /home/plang  ext4  defaults,nofail,nodev,nosuid  0  0
