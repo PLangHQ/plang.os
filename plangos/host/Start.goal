@@ -23,6 +23,9 @@ OpenPlangOS
 / /home/plang. The LLM keys plang build needs inside (Writer's ▶) come from this Windows session's
 / environment, through WSL's WSLENV — never into the image. (Later: llm.plang.is, no key.)
 - terminal.open(App="wsl.exe", Parameter=["-d", "PlangOS", "--cd", "/home/plang", "--exec", "/opt/plang/plang", "system/plangos/Screen"], Environment={"WSLENV": "TYPESAFE_API_KEY/u:OPENAI_API_KEY/u"}, Binary=true, OutputTo=%screen%); variable.set(Name=%container%, Value=%!data%)
+/ From now on our questions ("Allow User to execute claude? (y/n/a)") are asked in PlangOS, where the person is
+/ looking — its Question goal shows them in its dialog — not in this console, behind PlangOS's window.
+- channel.set(Name="input", Goal=goal.call(Name=%container.goal["Question"]%, Parameter={message: %message%}))
 - wait for %container%
 
 Input
