@@ -37,8 +37,8 @@ Question
 - return %answer.text%
 
 ShowError
-/ An error written to an error channel is %message%, and where it happened %where% (goal · step): the desktop
-/ lists it (what, where, when) and counts it on the taskbar.
+/ An error written to an error channel is %message%, and where it happened %where% ({goal, step}; there only when
+/ it happened in a goal): the desktop lists it (what, where, when) and counts it on the taskbar.
 - window.callGoal(Name="ErrorShow", Window=%browser.desktop%, Parameter={error: %message%, where: %where%})
 
 Desktop

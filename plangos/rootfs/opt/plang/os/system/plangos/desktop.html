@@ -401,7 +401,9 @@
     const e = typeof error === 'string' ? { message: error } : (error ?? {});
     const row = document.createElement('div');
     row.className = 'err';
-    const where = at || [field(e, 'goal.name', 'goal'), field(e, 'step.text', 'step')].filter(Boolean).join(' · ');
+    // where it happened: {goal, step} from the error channel (%where%), else what the error itself says
+    const where = (at && typeof at === 'object' ? [at.goal, at.step] : [at])
+      .concat(at ? [] : [field(e, 'goal.name', 'goal'), field(e, 'step.text', 'step')]).filter(Boolean).join(' · ');
     row.innerHTML = '<b></b> <span></span><small></small>';
     row.children[0].textContent = field(e, 'key') || 'Error';
     row.children[1].textContent = field(e, 'message') || JSON.stringify(e).slice(0, 400);

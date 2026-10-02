@@ -129,8 +129,7 @@
           "key": "Reopened",
           "message": "step 0's saved code no longer holds — rebuilt: step 0 'screen.open(ToOutput=true, OnWindow=goal.call(Name=\"Window\")); variable.set(Name=%screen%, Value=%!data%)': variable.set: the default frozen for 'asdefault' is no option of this action any more."
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 1,
@@ -284,8 +283,7 @@
           "key": "Reopened",
           "message": "step 1's saved code no longer holds — rebuilt: step 1 'browser.start(Url=\"file:///opt/plang/os/system/plangos/desktop.html\", Screen=%screen%, OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)': variable.set: the default frozen for 'asdefault' is no option of this action any more."
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 2,
@@ -336,8 +334,7 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 3,
@@ -388,8 +385,7 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 4,
@@ -421,8 +417,7 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 5,
@@ -461,8 +456,7 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 6,
@@ -556,8 +550,7 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 7,
@@ -591,8 +584,7 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 8,
@@ -625,8 +617,7 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     }
   ],
   "child": [
@@ -738,8 +729,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'window.callGoal(Name=\"AskShow\", Window=%browser.desktop%, Parameter={question: %message%}); variable.set(Name=%above%, Value=%!data%)': variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -790,8 +780,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -890,8 +879,7 @@
               "key": "Reopened",
               "message": "step 2's saved code no longer holds — rebuilt: step 2 'window.callGoal(Name=\"AskAnswer\", Window=%browser.desktop%); variable.set(Name=%answer%, Value=%!data%)': variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 3,
@@ -945,8 +933,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 4,
@@ -991,8 +978,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -1014,7 +1000,7 @@
           "line": {
             "number": 42
           },
-          "comment": "An error written to an error channel is %message%, and where it happened %where% (goal · step): the desktop\nlists it (what, where, when) and counts it on the taskbar.",
+          "comment": "An error written to an error channel is %message%, and where it happened %where% ({goal, step}; there only when\nit happened in a goal): the desktop lists it (what, where, when) and counts it on the taskbar.",
           "code": [
             {
               "module": "window",
@@ -1057,15 +1043,14 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "f3538e6baa75c047fd2a6b177312291e62f66694384718f974245abe18adc27c",
+      "hash": "959d851b57b0eb264066eaf6ab48c51611a231ddf16907a4976b946d9f0aa0a9",
       "isSetup": false,
       "isEvent": false,
       "isSystem": true,
@@ -1138,8 +1123,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'set %asked% to %!data%': variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -1204,13 +1188,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -1275,13 +1257,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 3,
@@ -1346,13 +1326,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 4,
@@ -1417,13 +1395,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 5,
@@ -1488,13 +1464,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 6,
@@ -1559,13 +1533,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 7,
@@ -1630,13 +1602,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 8,
@@ -1701,13 +1671,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 9,
@@ -1772,13 +1740,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 10,
@@ -1843,13 +1809,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 11,
@@ -1914,13 +1878,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 12,
@@ -1992,13 +1954,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -2061,8 +2021,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -2172,8 +2131,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -2227,8 +2185,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 3,
@@ -2305,13 +2262,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -2413,8 +2368,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -2486,8 +2440,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -2555,8 +2508,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -2594,8 +2546,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -2645,8 +2596,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -2720,8 +2670,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'open window %asked.open% in %browser%': browser.open: module 'browser' exists but action 'open' not found. Did you mean: send, stop, start?"
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -2786,8 +2735,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -2896,8 +2844,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'list files in '/Desktop', write to %files%': variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -2947,8 +2894,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -3063,8 +3009,7 @@
               "key": "Unsure",
               "message": "step 0 uses window.open, which the decider was not sure of (0.99)"
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -3101,7 +3046,7 @@
               ],
               "default": [
                 {
-                  "name": "template",
+                  "name": "variables",
                   "type": {
                     "name": "bool"
                   },
@@ -3172,9 +3117,16 @@
             {
               "key": "Unsure",
               "message": "step 1 uses file.read, which the decider was not sure of (0.89)"
+            },
+            {
+              "key": "Reopened",
+              "message": "step 1's saved code no longer holds — rebuilt: step 1 'read %asked.edit%, write to %content%': file.read: the default frozen for 'template' is no option of this action any more."
+            },
+            {
+              "key": "Unsure",
+              "message": "step 1 uses file.read, which the decider was not sure of (0.89)"
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -3221,8 +3173,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -3294,8 +3245,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -3356,8 +3306,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -3480,8 +3429,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'list files in %asked.list% recursive, write to %files%': variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -3549,8 +3497,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -3602,7 +3549,7 @@
               ],
               "default": [
                 {
-                  "name": "template",
+                  "name": "variables",
                   "type": {
                     "name": "bool"
                   },
@@ -3665,9 +3612,12 @@
             {
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'read %asked.load%, write to %content%': file.read: the default frozen for 'resolvevariables' is no option of this action any more.; variable.set: the default frozen for 'asdefault' is no option of this action any more."
+            },
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'read %asked.load%, write to %content%': file.read: the default frozen for 'template' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -3735,8 +3685,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -3794,8 +3743,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -3863,8 +3811,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -3895,8 +3842,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -4071,8 +4017,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'terminal.start(App=\"plang\", Parameter=[\"build\", \"--llmservice=openai\"]); on.timeout(After=\"PT10M\"); on.error(Recovery=[goal.call(Name=\"BuildFailed\")]); variable.set(Name=%built%, Value=%!data%)': on.error: the default frozen for 'ignoreerror' is no option of this action any more.; variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -4140,8 +4085,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -4224,8 +4168,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -4414,8 +4357,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'terminal.start(App=\"plang\", Parameter=[%asked.run%]); on.timeout(After=\"PT5M\"); on.error(Recovery=[goal.call(Name=\"RunFailed\")]); variable.set(Name=%ran%, Value=%!data%)': on.error: the default frozen for 'ignoreerror' is no option of this action any more.; variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -4483,8 +4425,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -4566,8 +4507,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -4644,8 +4584,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -4695,8 +4634,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -4781,13 +4719,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -4857,13 +4793,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -4909,8 +4843,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -5003,8 +4936,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -5028,7 +4960,7 @@
               ],
               "default": [
                 {
-                  "name": "template",
+                  "name": "variables",
                   "type": {
                     "name": "bool"
                   },
@@ -5094,7 +5026,12 @@
               ]
             }
           ],
-          "waitForExecution": true
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 1's saved code no longer holds — rebuilt: step 1 'file.read(Path=\"/system/llm/agent.md\"); variable.set(Name=%standard%, Value=%!data%, Type=\"text\")': file.read: the default frozen for 'template' is no option of this action any more."
+            }
+          ]
         },
         {
           "index": 2,
@@ -5172,8 +5109,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 3,
@@ -5221,8 +5157,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -5298,8 +5233,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -5470,8 +5404,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -5521,8 +5454,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -5595,13 +5527,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 3,
@@ -5674,13 +5604,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -5744,8 +5672,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -5768,8 +5695,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -5826,8 +5752,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -5890,8 +5815,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -5975,8 +5899,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -6014,8 +5937,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -6080,8 +6002,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -6143,8 +6064,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -6303,8 +6223,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 3,
@@ -6354,8 +6273,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 4,
@@ -6435,13 +6353,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 5,
@@ -6521,13 +6437,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -6586,8 +6500,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -6663,8 +6576,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -6723,8 +6635,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -6808,8 +6719,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -6889,8 +6799,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'set %event% to %!data%': variable.set: the default frozen for 'asdefault' is no option of this action any more."
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 1,
@@ -6944,8 +6853,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 2,
@@ -7010,13 +6918,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 3,
@@ -7081,13 +6987,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 4,
@@ -7152,13 +7056,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         },
         {
           "index": 5,
@@ -7223,13 +7125,11 @@
                         }
                       ]
                     }
-                  ],
-                  "waitForExecution": true
+                  ]
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -7324,8 +7224,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'navigate window %event.id% to %event.navigate% in %browser%': browser.navigate: module 'browser' exists but action 'navigate' not found. Did you mean: start, stop, send?"
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -7399,8 +7298,7 @@
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'open window %event.open% in %browser%': browser.open: module 'browser' exists but action 'open' not found. Did you mean: send, stop, start?"
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -7483,8 +7381,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
@@ -7567,8 +7464,7 @@
                 }
               ]
             }
-          ],
-          "waitForExecution": true
+          ]
         }
       ],
       "child": [],
