@@ -26,11 +26,11 @@ PackFile
 - set %written% to "/%file%"
 / on Windows the path is written with \ (shell.next\agent\x.md): made / first, or the cut below finds nothing and the
 / whole Windows path becomes the file's name in PlangOS
-- list.split(Value=%written%, Separator="\\", Empty=false); variable.set(Name=%parts%, Value=%!data%)
+- list.split(Value=%written%, Separator="\\", Empty="drop"); variable.set(Name=%parts%, Value=%!data%)
 - list.join(ListName=%parts%, Separator="/"); variable.set(Name=%where%, Value=%!data%)
-- list.split(Value=%where%, Separator="shell.next/", Empty=false); variable.set(Name=%pieces%, Value=%!data%)
+- list.split(Value=%where%, Separator="shell.next/", Empty="drop"); variable.set(Name=%pieces%, Value=%!data%)
 - list.last(ListName=%pieces%); variable.set(Name=%staged%, Value=%!data%)
-- list.split(Value=%staged%, Separator=".staged.txt", Empty=false); variable.set(Name=%names%, Value=%!data%)
+- list.split(Value=%staged%, Separator=".staged.txt", Empty="drop"); variable.set(Name=%names%, Value=%!data%)
 - list.first(ListName=%names%); variable.set(Name=%path%, Value=%!data%)
 / where it goes in PlangOS: the shell's folder, /system/plangos
 - add {"path": "/system/plangos/%path%", "content": %content%} to %update%
