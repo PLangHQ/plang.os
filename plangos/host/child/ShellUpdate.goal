@@ -21,16 +21,10 @@ NothingStaged
 PackFile
 / (formal: `as text` is dropped by the builder)
 - file.read(Path=%file%); variable.set(Name=%content%, Value=%!data%, Type="text")
-/ the path from the shell's folder: shell.next/.build/screen.pr.staged.txt is .build/screen.pr (plang has no text replace
-/ yet; a path won't become text, but a text with the path in it is one)
-- set %written% to "/%file%"
-/ on Windows the path is written with \ (shell.next\agent\x.md): made / first, or the cut below finds nothing and the
-/ whole Windows path becomes the file's name in PlangOS
-- list.split(Value=%written%, Separator="\\", Empty="drop"); variable.set(Name=%parts%, Value=%!data%)
-- list.join(ListName=%parts%, Separator="/"); variable.set(Name=%where%, Value=%!data%)
-- list.split(Value=%where%, Separator="shell.next/", Empty="drop"); variable.set(Name=%pieces%, Value=%!data%)
-- list.last(ListName=%pieces%); variable.set(Name=%staged%, Value=%!data%)
-- list.split(Value=%staged%, Separator=".staged.txt", Empty="drop"); variable.set(Name=%names%, Value=%!data%)
-- list.first(ListName=%names%); variable.set(Name=%path%, Value=%!data%)
+/ the path from the shell's folder: /shell.next/.build/screen.pr.staged.txt is .build/screen.pr. %file!relative% is the
+/ path from this app's root, written with / on Windows too (%file% itself has \ there)
+- variable.set(Name=%relative%, Value=%file!relative%)
+- variable.set(Name=%inside%, Value=%relative.replace("/shell.next/", "")%)
+- variable.set(Name=%path%, Value=%inside.replace(".staged.txt", "")%)
 / where it goes in PlangOS: the shell's folder, /system/plangos
 - add {"path": "/system/plangos/%path%", "content": %content%} to %update%
