@@ -17,8 +17,8 @@ Screen
 - channel.set(Name="error", Goal=goal.call(Name="ShowError"))
 / the desktop's files, once %browser% is known (the page itself can't ask: it loads while browser.start runs)
 - goal.call(Name="Files")
-/ new files for this shell, if the host has any — not waited for, so the shell starts anyway
-- goal.call(Name="Update", Wait=false)
+/ new files for this shell, if the host has any — in parallel, so the shell starts anyway
+- goal.call(Name="Update", Parallel=true)
 / ☰ on a window is its agent: Claude, who works on the window's app with the person, through plang.
 / (on click on #window.bot, call ShowClaude — formal until the builder learns # elements)
 - on.event(Event=%!screen.element["#window.bot"].on.click%, When="after", Action=goal.call(Name="ShowClaude"))
@@ -59,7 +59,7 @@ Desktop
 - if %asked.build%, call Build
 - if %asked.run%, call Run
 - condition.if(Left=%asked.say%) { goal.call(Name="Say") }
-- if %asked.update%, call Update, don't wait
+- if %asked.update%, call Update in parallel
 
 Update
 / New files for this shell from the host (its %!app.parent%; staged on Windows in shell.next): each written into the
@@ -159,7 +159,7 @@ Say
 - condition.if(Left=%claudeStarted%, Operator="isempty") { goal.call(Name="FirstWords") }
 / the conversation runs on its own: a turn waits minutes for Claude, and the screen's clicks (☰ among them) must not
 / wait behind it
-- call Turn content=%content%, don't wait
+- call Turn content=%content% in parallel
 
 FirstWords
 - render 'agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, app=%asked.about.app%, write to %instructions%

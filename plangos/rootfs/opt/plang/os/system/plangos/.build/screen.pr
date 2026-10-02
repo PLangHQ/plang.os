@@ -985,11 +985,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "29d441a25b983b3aed586367fb0e5cad1cdc7cf40f5d0582489381321dc3ccfe",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "29d441a25b983b3aed586367fb0e5cad1cdc7cf40f5d0582489381321dc3ccfe"
     },
     {
       "name": "ShowError",
@@ -1050,11 +1046,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "959d851b57b0eb264066eaf6ab48c51611a231ddf16907a4976b946d9f0aa0a9",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "959d851b57b0eb264066eaf6ab48c51611a231ddf16907a4976b946d9f0aa0a9"
     },
     {
       "name": "Desktop",
@@ -1965,11 +1957,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "b98132f987a43af9d7ff369bc5c1135360e094050d81d4c3df881569ba0881cd",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "b98132f987a43af9d7ff369bc5c1135360e094050d81d4c3df881569ba0881cd"
     },
     {
       "name": "Update",
@@ -2273,11 +2261,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "b21caa18a7ca33010eb34a068ce5758696dbfd18cfe3bca7642eb836ab7a71c0",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "b21caa18a7ca33010eb34a068ce5758696dbfd18cfe3bca7642eb836ab7a71c0"
     },
     {
       "name": "InstallAll",
@@ -2375,11 +2359,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "27a9f0338c44a26d72968e014fe247dbc394b70565fb886791483a1c735ae9db",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "27a9f0338c44a26d72968e014fe247dbc394b70565fb886791483a1c735ae9db"
     },
     {
       "name": "Install",
@@ -2447,11 +2427,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "08303d95c90a413f00aacc92255b5ca0c0b01ffc15b9334f47e92756938985ad",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "08303d95c90a413f00aacc92255b5ca0c0b01ffc15b9334f47e92756938985ad"
     },
     {
       "name": "Updated",
@@ -2603,11 +2579,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "778c6570709fed42dcc14889bd28ce98ad86a4a1c2a952f36f7bcc30e38a4301",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "778c6570709fed42dcc14889bd28ce98ad86a4a1c2a952f36f7bcc30e38a4301"
     },
     {
       "name": "Open",
@@ -2677,11 +2649,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "0f4ca79325ff286a4e5eb3aa287cbb10df5fd39d7c968f8e20d8faef1a70cfac",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "0f4ca79325ff286a4e5eb3aa287cbb10df5fd39d7c968f8e20d8faef1a70cfac"
     },
     {
       "name": "Command",
@@ -2742,11 +2710,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "762988d1c2ab3ef923cd4ceb9ff07af432bfa8337ea10106a38adf1c54e92084",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "762988d1c2ab3ef923cd4ceb9ff07af432bfa8337ea10106a38adf1c54e92084"
     },
     {
       "name": "Files",
@@ -2901,11 +2865,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "b14ae6a3a0dc272dae94eba405da64966a7db9f177b158de13a38212a45e46c8",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "b14ae6a3a0dc272dae94eba405da64966a7db9f177b158de13a38212a45e46c8"
     },
     {
       "name": "Edit",
@@ -3043,15 +3003,6 @@
                     }
                   ]
                 }
-              ],
-              "default": [
-                {
-                  "name": "variables",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": false
-                }
               ]
             },
             {
@@ -3125,6 +3076,14 @@
             {
               "key": "Unsure",
               "message": "step 1 uses file.read, which the decider was not sure of (0.89)"
+            },
+            {
+              "key": "Reopened",
+              "message": "step 1's saved code no longer holds — rebuilt: step 1 'read %asked.edit%, write to %content%': file.read: the default frozen for 'variables' is no option of this action any more."
+            },
+            {
+              "key": "Unsure",
+              "message": "step 1 uses file.read, which the decider was not sure of (0.87)"
             }
           ]
         },
@@ -3180,11 +3139,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "f3ae7ab5601eccc498cd700f362c9ce00087eba6fc9e27deea4f3c33f178e594",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "f3ae7ab5601eccc498cd700f362c9ce00087eba6fc9e27deea4f3c33f178e594"
     },
     {
       "name": "Save",
@@ -3313,11 +3268,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "1e1dbfab23c3527a46315b38c12c937550c2b2f7ccc7a29cb304cd32916286ad",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "1e1dbfab23c3527a46315b38c12c937550c2b2f7ccc7a29cb304cd32916286ad"
     },
     {
       "name": "List",
@@ -3504,11 +3455,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "72625979e16a2721084c07e3c33d8df6867872c9a419c414957d0eef78d65b46",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "72625979e16a2721084c07e3c33d8df6867872c9a419c414957d0eef78d65b46"
     },
     {
       "name": "Load",
@@ -3545,15 +3492,6 @@
                       ]
                     }
                   ]
-                }
-              ],
-              "default": [
-                {
-                  "name": "variables",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": false
                 }
               ]
             },
@@ -3616,6 +3554,10 @@
             {
               "key": "Reopened",
               "message": "step 0's saved code no longer holds — rebuilt: step 0 'read %asked.load%, write to %content%': file.read: the default frozen for 'template' is no option of this action any more."
+            },
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'read %asked.load%, write to %content%': file.read: the default frozen for 'variables' is no option of this action any more."
             }
           ]
         },
@@ -3692,11 +3634,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "cf9249fe28826a6aee79ffd8675bfe80b0633bad29707bd131d7130bf2fe7482",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "cf9249fe28826a6aee79ffd8675bfe80b0633bad29707bd131d7130bf2fe7482"
     },
     {
       "name": "Create",
@@ -3849,11 +3787,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "83144cea6e78e7527d8065556174275860d37d59180b49e41c46038e0f76b2c7",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "83144cea6e78e7527d8065556174275860d37d59180b49e41c46038e0f76b2c7"
     },
     {
       "name": "Build",
@@ -4092,11 +4026,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "139e87cae3f20a6ec49c57ad2e9a9d6b44df9c66fc18492d604e0ed7c5106c52",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "139e87cae3f20a6ec49c57ad2e9a9d6b44df9c66fc18492d604e0ed7c5106c52"
     },
     {
       "name": "BuildFailed",
@@ -4175,11 +4105,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "ed7359e45c9a32094a6f627ee71704406df551687b3d36be503a1a7c3b4d6ee4",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "ed7359e45c9a32094a6f627ee71704406df551687b3d36be503a1a7c3b4d6ee4"
     },
     {
       "name": "Run",
@@ -4432,11 +4358,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "fdc046927d5a09816ac42826f37172f05f25967ba299d0b527f4d33f4292b8e5",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "fdc046927d5a09816ac42826f37172f05f25967ba299d0b527f4d33f4292b8e5"
     },
     {
       "name": "RunFailed",
@@ -4514,11 +4436,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "4dc31e2bccd9e73e55856c69bca3e41b5d9cf19639344419dcf8f77362d9797b",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "4dc31e2bccd9e73e55856c69bca3e41b5d9cf19639344419dcf8f77362d9797b"
     },
     {
       "name": "ShowClaude",
@@ -4724,11 +4642,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "06a9beacebdfb825b846ce2bb5cba5cc1c4693abd6cacca9672e2f0ce11e2813",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "06a9beacebdfb825b846ce2bb5cba5cc1c4693abd6cacca9672e2f0ce11e2813"
     },
     {
       "name": "Say",
@@ -4998,11 +4912,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "98850c8f167076fc5ee9cb995e98dfb5799c94302ec34ef3c7eab8082857c56e",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "98850c8f167076fc5ee9cb995e98dfb5799c94302ec34ef3c7eab8082857c56e"
     },
     {
       "name": "FirstWords",
@@ -5118,15 +5028,6 @@
                   },
                   "value": "/system/llm/agent.md"
                 }
-              ],
-              "default": [
-                {
-                  "name": "variables",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": false
-                }
               ]
             },
             {
@@ -5191,6 +5092,10 @@
             {
               "key": "Reopened",
               "message": "step 1's saved code no longer holds — rebuilt: step 1 'file.read(Path=\"/system/llm/agent.md\"); variable.set(Name=%standard%, Value=%!data%, Type=\"text\")': file.read: the default frozen for 'template' is no option of this action any more."
+            },
+            {
+              "key": "Reopened",
+              "message": "step 1's saved code no longer holds — rebuilt: step 1 'file.read(Path=\"/system/llm/agent.md\"); variable.set(Name=%standard%, Value=%!data%, Type=\"text\")': file.read: the default frozen for 'variables' is no option of this action any more."
             }
           ]
         },
@@ -5325,11 +5230,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "050d9dd22f614eec4f19315daffe5386d17fcd5548de6e91454ab28f4b6c8153",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "050d9dd22f614eec4f19315daffe5386d17fcd5548de6e91454ab28f4b6c8153"
     },
     {
       "name": "NextWords",
@@ -5401,11 +5302,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "84b192280da0c9ba57c304bac3ae2c64447f2d1e1d82a66acbee39b3e69b85e7",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "84b192280da0c9ba57c304bac3ae2c64447f2d1e1d82a66acbee39b3e69b85e7"
     },
     {
       "name": "Turn",
@@ -5776,11 +5673,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "87e7b93140acd99b071afedc114305dcf1544d715b4037c1d6ec6b02bd6e0cbc",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "87e7b93140acd99b071afedc114305dcf1544d715b4037c1d6ec6b02bd6e0cbc"
     },
     {
       "name": "ClaudeFailed",
@@ -5863,11 +5756,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "3283c5afc8560a7eb8adcbd2815cb5e6c33737bfb5c54caaa3a143d4dd2df164",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "3283c5afc8560a7eb8adcbd2815cb5e6c33737bfb5c54caaa3a143d4dd2df164"
     },
     {
       "name": "TurnDone",
@@ -5920,11 +5809,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "4529b96ea1f242e166afe0215325ee0f21a519914359ee33d7fa53dae150a51b",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "4529b96ea1f242e166afe0215325ee0f21a519914359ee33d7fa53dae150a51b"
     },
     {
       "name": "AgentWriting",
@@ -5985,11 +5870,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "31dc2fcae6bf94e9932612561379e55cb0d8d7e934fac04f74b6e8c9a45635a5",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "31dc2fcae6bf94e9932612561379e55cb0d8d7e934fac04f74b6e8c9a45635a5"
     },
     {
       "name": "RunCalls",
@@ -6170,11 +6051,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "2e184546041d8175664ca34abc813f49e62fe11b14a6580b5babdba80b4915fd",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "2e184546041d8175664ca34abc813f49e62fe11b14a6580b5babdba80b4915fd"
     },
     {
       "name": "RunCall",
@@ -6756,11 +6633,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "c69410bfa92ea917511984e59f28d4be4f9600b787e8cf00455a48dbe95927c2",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "c69410bfa92ea917511984e59f28d4be4f9600b787e8cf00455a48dbe95927c2"
     },
     {
       "name": "IntoApp",
@@ -6857,11 +6730,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "707064d98547709dd74f7ca5a55abe4b3172f1439a8f53941ab8fdccfb1419f5",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "707064d98547709dd74f7ca5a55abe4b3172f1439a8f53941ab8fdccfb1419f5"
     },
     {
       "name": "PathIntoApp",
@@ -6965,11 +6834,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "9d311f5e87c154cfe605381f63e30d8b3de9564513eebc09fa83b8557e6e02db",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "9d311f5e87c154cfe605381f63e30d8b3de9564513eebc09fa83b8557e6e02db"
     },
     {
       "name": "AppPath",
@@ -7118,11 +6983,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "60904b5e2a9c678fa243126d72b8223a936bf762a4f83e0b8f53358a5a2eab2c",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "60904b5e2a9c678fa243126d72b8223a936bf762a4f83e0b8f53358a5a2eab2c"
     },
     {
       "name": "CallFailed",
@@ -7177,11 +7038,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "9aeae09a1042ddce9ba5ddee51b99e4793e4cc0ccd9eff44c9996e97b19221bd",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "9aeae09a1042ddce9ba5ddee51b99e4793e4cc0ccd9eff44c9996e97b19221bd"
     },
     {
       "name": "GavePicture",
@@ -7312,11 +7169,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "2fa56f03e3863b04393a3be94f59b3c746bde309a4ae0b037b3203bd60f99acf",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "2fa56f03e3863b04393a3be94f59b3c746bde309a4ae0b037b3203bd60f99acf"
     },
     {
       "name": "GaveText",
@@ -7396,11 +7249,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "e3da2ca4926fb4c07b43d65e20ff874a7809c602ca219b6bbc113cb1cb87cc1d",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "e3da2ca4926fb4c07b43d65e20ff874a7809c602ca219b6bbc113cb1cb87cc1d"
     },
     {
       "name": "Window",
@@ -7806,11 +7655,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "157dbce7a8d2a7590f0618f27c8877482bdf9e162b51a7b7035d700b26996328",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "157dbce7a8d2a7590f0618f27c8877482bdf9e162b51a7b7035d700b26996328"
     },
     {
       "name": "Navigate",
@@ -7901,11 +7746,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "134256ebf502ad5d8fbae4fcc57a17e07b23158c15a57039c7e788c235e7fe23",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "134256ebf502ad5d8fbae4fcc57a17e07b23158c15a57039c7e788c235e7fe23"
     },
     {
       "name": "OpenPage",
@@ -7975,11 +7816,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "1682fef342d1d8b4710295eba50a0e79dc5d798697220d492bba13b81dc729e3",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "1682fef342d1d8b4710295eba50a0e79dc5d798697220d492bba13b81dc729e3"
     },
     {
       "name": "Tool",
@@ -8058,11 +7895,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "abd88d1b044f87c6e84ff17b0c07e2816af1c60517e187acaf34eae38ec697d6",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "abd88d1b044f87c6e84ff17b0c07e2816af1c60517e187acaf34eae38ec697d6"
     },
     {
       "name": "Paste",
@@ -8141,19 +7974,11 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "dbf69217d933638b476c6752c9a203373b963921f1e68dc6936b9862249dcfe2",
-      "isSetup": false,
-      "isEvent": false,
-      "isSystem": true,
-      "isTest": false
+      "hash": "dbf69217d933638b476c6752c9a203373b963921f1e68dc6936b9862249dcfe2"
     }
   ],
   "visibility": "Public",
   "path": "/system/plangos/Screen.goal",
   "prPath": "/system/plangos/.build/screen.pr",
-  "hash": "efcd2214a417b072e45366abd9b0f44166e0af756fa04b3c99c0f859c3ac3a7f",
-  "isSetup": false,
-  "isEvent": false,
-  "isSystem": true,
-  "isTest": false
+  "hash": "efcd2214a417b072e45366abd9b0f44166e0af756fa04b3c99c0f859c3ac3a7f"
 }

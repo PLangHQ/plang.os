@@ -31,15 +31,6 @@
                 }
               ]
             }
-          ],
-          "default": [
-            {
-              "name": "template",
-              "type": {
-                "name": "bool"
-              },
-              "value": false
-            }
           ]
         },
         {
@@ -97,9 +88,16 @@
         {
           "key": "Reopened",
           "message": "step 0's saved code no longer holds — rebuilt: step 0 'file.read(Path=%path%); variable.set(Name=%content%, Value=%!data%)': file.read: the default frozen for 'resolvevariables' is no option of this action any more.; variable.set: the default frozen for 'asdefault' is no option of this action any more."
+        },
+        {
+          "key": "Reopened",
+          "message": "step 0's saved code no longer holds — rebuilt: step 0 'file.read(Path=%path%); variable.set(Name=%content%, Value=%!data%)': file.read: the default frozen for 'template' is no option of this action any more."
+        },
+        {
+          "key": "Reopened",
+          "message": "step 0's saved code no longer holds — rebuilt: step 0 'file.read(Path=%path%); variable.set(Name=%content%, Value=%!data%)': file.read: the default frozen for 'variables' is no option of this action any more."
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
       "index": 1,
@@ -141,17 +139,12 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     }
   ],
   "child": [],
   "visibility": "Public",
   "path": "/system/plangos/agent/ReadFile.goal",
   "prPath": "/system/plangos/agent/.build/readfile.pr",
-  "hash": "6408926da7eb12feb1af79f784fd7aa6382c5f310e92f7ac6073c138f1e669ff",
-  "isSetup": false,
-  "isEvent": false,
-  "isSystem": true,
-  "isTest": false
+  "hash": "6408926da7eb12feb1af79f784fd7aa6382c5f310e92f7ac6073c138f1e669ff"
 }

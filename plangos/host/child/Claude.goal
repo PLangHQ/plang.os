@@ -32,8 +32,8 @@ ClaudeLine
 Writing
 - variable.set(Name=%claudeEvent%, Value=%claudeLine%, Type="dict")
 - set %claudePartial% to "%claudePartial%%claudeEvent.event.delta.partial_json%"
-/ not waited for: Claude goes on writing while PlangOS shows it
-- goal.call(Name=%container.goal["AgentWriting"]%, Parameter={partial: %claudePartial%}, Wait=false)
+/ in parallel: Claude goes on writing while PlangOS shows it
+- goal.call(Name=%container.goal["AgentWriting"]%, Parameter={partial: %claudePartial%}, Parallel=true)
 
 KeepResult
 - set %claudeSaid% to %claudeLine%
