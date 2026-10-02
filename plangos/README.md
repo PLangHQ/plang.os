@@ -53,9 +53,24 @@ So every file in the image comes from a locked `.deb`, from plang, or from `root
 | Path | Owner | What |
 |---|---|---|
 | `/opt/plang` | root | plang runtime + `os/` system goals; `os-packages.txt` lists every unpacked package |
-| `/home/plang` | plang (10001) | the user's apps and data (`.db`) — the only writable tree besides `/tmp` |
+| `/home/plang` | plang (10001) | the user's apps and data (`.db`) — the only writable tree besides `/tmp`; on the data disk when it is attached |
 | `/usr/lib/chromium/chromium` | root | the browser, started directly by plang (Debian's launcher script is removed: no shell) |
-| `/etc/wsl.conf` | root | interop off, automount off, default user `plang`, no boot command |
+| `/etc/wsl.conf` | root | interop off, automount off, `mountFsTab = true` (the data disk), default user `plang`, no boot command |
+| `/etc/fstab` | root | `LABEL=plangos-data` on `/home/plang`, `nofail` (no disk: the image's own home) |
+| `/usr/bin/mount` | root | for WSL's init (`mount -a` at distro start) only; not setuid, the package's other tools removed |
+
+## The data disk
+
+`/home/plang` lives on a disk of its own, so a new image never touches the person's files (Ingi, 2026-10-02).
+
+- `data.vhd` beside start.ps1: a dynamic VHD, ext4 labelled `plangos-data`, made once by
+  `datadisk/mkdisk.sh <rootfs> data.vhd [GB]` (seeded with the image's `/home/plang`, all 10001:10001, root 0750;
+  32 GB virtual, ~63 MB on disk). It ships in the host install zip; start.ps1 never replaces one that is there.
+- start.ps1 asks PlangOS's mount table whether `/home/plang` is the disk (`wsl -d PlangOS -u root -e /usr/bin/mount`,
+  no admin). If not, it attaches it (`wsl --mount --vhd data.vhd --bare`, one UAC prompt per Windows boot — an
+  attach lasts until Windows restarts or `wsl --shutdown`) and restarts the distro so `/etc/fstab` mounts it.
+- No disk, or not attached: PlangOS starts with the image's own `/home/plang` (not kept), and says so.
+- An existing in-distro `/home/plang` is not moved onto the disk (Ingi: "no need, we can lose it").
 
 ## On Windows (until host plang exists)
 

@@ -55,7 +55,16 @@ if (-not (Test-Path $Plang)) {
         Remove-Item $zip
         Fail "Checksum mismatch on $file. Download removed; run again."
     }
-    Expand-Archive $zip -DestinationPath $Root -Force   # runtime\, plang.cmd, Start.goal, .build\
+    # runtime\, plang.cmd, Start.goal, .build\, child\ - and data.vhd, the empty data disk (seeded /home/plang,
+    # plangos/datadisk/mkdisk.sh). Unpacked beside, then moved in: a data.vhd already here holds the person's
+    # files and is never replaced.
+    $unpacked = Join-Path $Root '.install'
+    if (Test-Path $unpacked) { Remove-Item $unpacked -Recurse -Force }
+    Expand-Archive $zip -DestinationPath $unpacked -Force
+    $disk = Join-Path $unpacked 'data.vhd'
+    if ((Test-Path $disk) -and (Test-Path (Join-Path $Root 'data.vhd'))) { Remove-Item $disk -Force }
+    Get-ChildItem $unpacked -Force | ForEach-Object { Move-Item $_.FullName $Root -Force }
+    Remove-Item $unpacked -Recurse -Force
     Remove-Item $zip
 }
 
