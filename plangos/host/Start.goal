@@ -29,16 +29,27 @@ OpenPlangOS
 - wait for %container%
 
 Input
-/ Our window's mouse and keyboard go down to PlangOS; a message from PlangOS's plang ({"guest": …})
-/ is for us: PlangOS calling one of our goals ({"call": {id, goal, parameters}} — %!app.parent% there).
-/ (formal, as a dict: the window's line arrives as JSON text, and text isn't navigated into — %event.guest%)
-- variable.set(Name=%event%, Value=%!data%, Type="dict")
-/ (an event with no "guest" — the mouse, a key — has it as null; "is empty" doesn't see a missing one)
-- condition.if(Left=%event.guest%, Operator="==", Right=null) { goal.call(Name="ToPlangOS") }
+/ What happens in our window: the person's input (the mouse, a key, typed text, back/forward/reload) and what they
+/ copied come as themselves, and go down to PlangOS as they are; the window's other lines (its numbers, a video note,
+/ a message from PlangOS) come as text, until each has a type of its own.
+- variable.set(Name=%event%, Value=%!data%)
+- condition.if(Left=%event%, Operator="is", Right="input") { goal.call(Name="ToPlangOS") }
+- condition.if(Left=%event%, Operator="is", Right="clipboard") { goal.call(Name="ToPlangOS") }
+- condition.if(Left=%event%, Operator="is", Right="text") { goal.call(Name="Line") }
+
+Line
+/ A line from the window: its numbers and notes go down to PlangOS; a message from PlangOS's plang ({"guest": …}) is
+/ for us: PlangOS calling one of our goals ({"call": {id, goal, parameters}} — %!app.parent% there).
+/ (formal, as a dict: the line arrives as JSON text, and text isn't navigated into — %event.guest%)
+/ (set apart from %event%: a variable set from itself is a resolve cycle)
+- variable.set(Name=%line%, Value=%event%, Type="dict")
+/ (a line with no "guest" — the numbers, a note — has it as null; "is empty" doesn't see a missing one)
+- condition.if(Left=%line.guest%, Operator="==", Right=null) { goal.call(Name="ToPlangOS") }
 / a call runs in parallel, not waited for — a turn with Claude takes minutes, and the mouse mustn't wait for it
-- condition.if(Left=%event.guest.call%) { goal.call(Name="ChildCalls", Parameter={called: %event.guest.call%}, Parallel=true) }
+- condition.if(Left=%line.guest.call%) { goal.call(Name="ChildCalls", Parameter={called: %line.guest.call%}, Parallel=true) }
 
 ToPlangOS
+/ an input or a clipboard writes itself as the line PlangOS's screen reads
 - terminal.send(Data=%event%, Process=%container%)
 
 ChildCalls
