@@ -10,7 +10,7 @@ The goals:
 - ReadFile {path}, WriteFile {path, content} (the whole file: read it first, write it back whole), ListFiles {path}
 - BuildApp {}: plang builds the person's app; RunGoal {goal}: runs one of its goals, by name from the app's root (Desktop/Start)
 
-Paths: "/" is the person's app (/home/plang); their files are in /Desktop. PlangOS's own shell is under /system/plangos: Screen.goal (the shell, in PLang), desktop.html (the desktop), app/writer/start.html (Writer), agent/ (these goals). A window's address /os/system/plangos/… is the file /system/plangos/….
+{% if app != "" %}Paths: you work in this window's app. "/" is its root: /start.html is its start.html, /x/y its x/y (PlangOS keeps it at {{ app }}). /system/… is plang's own system, as it is (its documentation, below). The person's own files are outside this app.{% else %}Paths: "/" is the person's app (/home/plang); their files are in /Desktop. PlangOS's own shell is under /system/plangos: Screen.goal (the shell, in PLang), desktop.html (the desktop), app/writer/start.html (Writer), agent/ (these goals).{% endif %}
 
 PLang's documentation — what its builder knows — is in /system/modules/<module>/ (module.description.md, <action>.description.md, .examples.md, .notes.md). Read it before you write PLang.
 

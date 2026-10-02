@@ -174,6 +174,9 @@
   .agent .me { align-self: flex-end; max-width: 85%; background: rgba(242, 163, 58, .16); border: 1px solid rgba(242, 163, 58, .35);
     padding: 7px 11px; border-radius: 10px 10px 2px 10px; white-space: pre-wrap; word-break: break-word; }
   .agent .it { line-height: 1.5; word-break: break-word; }
+  /* the talk can be selected and copied (the desktop itself selects nothing) */
+  .agent .talk { user-select: text; cursor: auto; }
+  .agent .it.draft { color: var(--dim); }
   .agent .it p { margin: 0 0 8px; }
   .agent .it pre { margin: 6px 0; padding: 8px 10px; background: rgba(0, 0, 0, .35); border-radius: 6px; overflow: auto;
     font: 12px/1.45 ui-monospace, "DejaVu Sans Mono", monospace; max-height: 220px; }
@@ -658,10 +661,10 @@
   const agent = {
     open: false, window: null, busy: false, wait: null,
 
-    show({ window: id, x, y }) {
+    show({ window: id, x, y, page }) {
       if (this.open && this.window?.id === id) { this.close(); return true; }
       const title = windows.get(id)?.title ?? (id === 0 ? 'Desktop' : '');
-      this.window = { id, title };
+      this.window = { id, title, app: this.appOf(page) };
       document.getElementById('agent-for').textContent = title;
       agentBox.hidden = false;
       this.open = true;
@@ -720,13 +723,35 @@
       agentSend.disabled = true;
       this.working(true);
       // "about", not "window": {"window": …} is a command for the screen
-      ask({ say: text, about: { window: this.window?.id ?? 0, title: this.window?.title ?? '' } });
+      ask({ say: text, about: { window: this.window?.id ?? 0, title: this.window?.title ?? '', app: this.window?.app ?? '' } });
     },
 
+    // the app a window shows, from its page: the page's folder, as plang names it — a page of plang's os folder
+    // (file:///opt/plang/os/system/plangos/app/writer/start.html) is /system/plangos/app/writer, one of the person's
+    // app (file:///home/plang/x/page.html) /x; a website none ("": Claude's "/" is then the person's app)
+    appOf(page) {
+      const m = /^file:\/\/(\/opt\/plang\/os|\/home\/plang)(\/.*)$/.exec(String(page ?? ''));
+      if (!m) return '';
+      const folder = decodeURI(m[2]).replace(/\/[^/]*$/, '');
+      return folder === '' ? '' : folder;
+    },
     // what plang tells the box
     // Claude's turn (the agent standard, /system/llm/agent.md): its words, and whether it goes on (working) or
     // has stopped (done, question, failed). Its calls show themselves as they run.
+    // Claude's answer while it is being written (half-written JSON): its text so far, greyed, where the waiting line
+    // is — the whole answer replaces it
+    writing({ partial }) {
+      const m = /"text"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(String(partial ?? ''));
+      if (!m) return;
+      let text;
+      try { text = JSON.parse('"' + m[1].replace(/\\$/, '') + '"'); } catch { return; }
+      if (!this.draft) { this.draft = this.add('it draft', ''); if (this.wait) talk.append(this.wait); }
+      this.draft.innerHTML = this.render(text);
+      talk.scrollTop = talk.scrollHeight;
+    },
     says({ text, status, calls, error }) {
+      this.draft?.remove();
+      this.draft = null;
       if (error) { this.add('call bad', esc(error)); this.done(); return; }
       if (text) this.add('it' + (status === 'failed' ? ' failed' : ''), this.render(text));
       if (!calls?.length) this.done();
@@ -741,10 +766,12 @@
     called({ goal, got }) {
       const row = this.running ?? this.add('call', esc(goal));
       this.running = null;
-      const failed = typeof got === 'string' && got.startsWith('failed: ');
+      // what it gave, as text whatever form it came in (a text, or a value plang wrote out)
+      const said = typeof got === 'string' ? got : (got?.value ?? got?.text ?? JSON.stringify(got ?? ''));
+      const failed = typeof said === 'string' && /^"?failed: /.test(said);
       row.classList.remove('running');
       row.classList.add(failed ? 'bad' : 'ok');
-      if (failed) row.append(' — ' + got.slice(8));
+      if (failed) row.append(' — ' + said.replace(/^"?failed: /, '').replace(/"$/, ''));
       else if (goal === 'Screenshot' && typeof got === 'string' && got.length > 100) {
         const img = document.createElement('img');
         img.src = 'data:image/png;base64,' + got;
@@ -763,6 +790,7 @@
   window.agentPlace = () => agent.open ? agent.place() : null;
   window.AgentShow = args => agent.show(args ?? {});
   window.AgentSays = args => { agent.says(args ?? {}); return true; };
+  window.AgentWriting = args => { agent.writing(args ?? {}); return true; };
   window.AgentCalling = args => { agent.calling(args ?? {}); return true; };
   window.AgentCalled = args => { agent.called(args ?? {}); return true; };
   window.AgentDone = () => { agent.done(); return true; };

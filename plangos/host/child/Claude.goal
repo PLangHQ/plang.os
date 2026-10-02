@@ -5,6 +5,8 @@ Claude
 / so it can't act on this computer — it acts only through what it answers, {text, calls}: its words, and the
 / plang goals it asks PlangOS to run. Its session carries the conversation from turn to turn.
 - set %claudeSaid% to ""
+/ the answer as Claude writes it (--include-partial-messages: it streams in pieces); PlangOS shows it as it grows
+- set %claudePartial% to ""
 / the shape every answer has (a JSON schema)
 - read 'answer.shape.txt', write to %answerShape%
 - set %claudeInput% to {"type": "user", "message": {"role": "user", "content": %message%}}
@@ -15,15 +17,23 @@ Claude
 - return %claudeAnswer.structured_output%
 
 FirstTurn
-- terminal.start(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--tools", "", "--strict-mcp-config", "--mcp-config", "{\"mcpServers\":{}}", "--json-schema", %answerShape%], Input=%claudeInput%, OnOutput=goal.call(Name="ClaudeLine")); on.timeout(After="PT10M")
+- terminal.start(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--tools", "", "--strict-mcp-config", "--mcp-config", "{\"mcpServers\":{}}", "--json-schema", %answerShape%], Input=%claudeInput%, OnOutput=goal.call(Name="ClaudeLine")); on.timeout(After="PT10M")
 
 NextTurn
-- terminal.start(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--tools", "", "--strict-mcp-config", "--mcp-config", "{\"mcpServers\":{}}", "--json-schema", %answerShape%, "--resume", %claudeSession%], Input=%claudeInput%, OnOutput=goal.call(Name="ClaudeLine")); on.timeout(After="PT10M")
+- terminal.start(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--tools", "", "--strict-mcp-config", "--mcp-config", "{\"mcpServers\":{}}", "--json-schema", %answerShape%, "--resume", %claudeSession%], Input=%claudeInput%, OnOutput=goal.call(Name="ClaudeLine")); on.timeout(After="PT10M")
 
 ClaudeLine
-/ Each line Claude writes is one event; the turn's answer is the result — the one with its structured_output.
+/ Each line Claude writes is one event; the turn's answer is the result — the one with its structured_output. A piece
+/ of the answer as it is written (an input_json_delta) is added to what came before, and PlangOS shows it.
 - set %claudeLine% to %!data%
 - condition.if(Left=%claudeLine%, Operator="contains", Right="structured_output") { goal.call(Name="KeepResult") }
+- condition.if(Left=%claudeLine%, Operator="contains", Right="input_json_delta") { goal.call(Name="Writing") }
+
+Writing
+- variable.set(Name=%claudeEvent%, Value=%claudeLine%, Type="dict")
+- set %claudePartial% to "%claudePartial%%claudeEvent.event.delta.partial_json%"
+/ not waited for: Claude goes on writing while PlangOS shows it
+- goal.call(Name=%container.goal["AgentWriting"]%, Parameter={partial: %claudePartial%}, Wait=false)
 
 KeepResult
 - set %claudeSaid% to %claudeLine%
