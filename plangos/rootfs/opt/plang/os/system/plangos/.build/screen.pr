@@ -421,11 +421,11 @@
     },
     {
       "index": 5,
-      "text": "goal.call(Name=\"Update\", Wait=false)",
+      "text": "goal.call(Name=\"Update\", Parallel=true)",
       "line": {
         "number": 21
       },
-      "comment": "new files for this shell, if the host has any — not waited for, so the shell starts anyway",
+      "comment": "new files for this shell, if the host has any — in parallel, so the shell starts anyway",
       "code": [
         {
           "module": "goal",
@@ -439,20 +439,11 @@
               "value": "Update"
             },
             {
-              "name": "Wait",
+              "name": "Parallel",
               "type": {
                 "name": "bool"
               },
-              "value": false
-            }
-          ],
-          "default": [
-            {
-              "name": "parallel",
-              "type": {
-                "name": "bool"
-              },
-              "value": false
+              "value": true
             }
           ]
         }
@@ -473,7 +464,7 @@
             {
               "name": "Event",
               "type": {
-                "name": "app.event",
+                "name": "event",
                 "template": "plang"
               },
               "value": "%!screen.element[\"#window.bot\"].on.click%",
@@ -1878,7 +1869,7 @@
         },
         {
           "index": 12,
-          "text": "if %asked.update%, call Update, don't wait",
+          "text": "if %asked.update%, call Update in parallel",
           "line": {
             "number": 62
           },
@@ -1912,7 +1903,7 @@
               "child": [
                 {
                   "index": 0,
-                  "text": "goal.call(Name=\"Update\", Wait=false)",
+                  "text": "goal.call(Name=\"Update\", Parallel=true)",
                   "line": {
                     "number": 62
                   },
@@ -1929,20 +1920,11 @@
                           "value": "Update"
                         },
                         {
-                          "name": "Wait",
+                          "name": "Parallel",
                           "type": {
                             "name": "bool"
                           },
-                          "value": false
-                        }
-                      ],
-                      "default": [
-                        {
-                          "name": "parallel",
-                          "type": {
-                            "name": "bool"
-                          },
-                          "value": false
+                          "value": true
                         }
                       ]
                     }
@@ -1957,7 +1939,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "b98132f987a43af9d7ff369bc5c1135360e094050d81d4c3df881569ba0881cd"
+      "hash": "0048aac9ad67f7758db8c96f451adceb28b3c7f717f8eae76c9226b04cf32634"
     },
     {
       "name": "Update",
@@ -2059,13 +2041,6 @@
                     "name": "bool"
                   },
                   "value": false
-                },
-                {
-                  "name": "wait",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": true
                 }
               ]
             },
@@ -2119,6 +2094,12 @@
                 }
               ]
             }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 1's saved code no longer holds — rebuilt: step 1 'goal.call(Name=%!app.parent.goal[\"ShellUpdate\"]%); variable.set(Name=%update%, Value=%!data%)': goal.call: the default frozen for 'wait' is no option of this action any more."
+            }
           ]
         },
         {
@@ -2163,15 +2144,14 @@
                     "name": "bool"
                   },
                   "value": false
-                },
-                {
-                  "name": "wait",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": true
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 2's saved code no longer holds — rebuilt: step 2 'goal.call(Name=\"InstallAll\", Parameter={files: %update%}, Actor=\"system\")': goal.call: the default frozen for 'wait' is no option of this action any more."
             }
           ]
         },
@@ -2218,7 +2198,7 @@
                   "index": 0,
                   "text": "goal.call(Name=\"Updated\")",
                   "line": {
-                    "number": 71
+                    "number": 72
                   },
                   "code": [
                     {
@@ -2240,19 +2220,18 @@
                             "name": "bool"
                           },
                           "value": false
-                        },
-                        {
-                          "name": "wait",
-                          "type": {
-                            "name": "bool"
-                          },
-                          "value": true
                         }
                       ]
                     }
                   ]
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 3's saved code no longer holds — rebuilt: step 3 'condition.if(Left=%update%, Operator=\"isnotempty\") { goal.call(Name=\"Updated\") }': goal.call: the default frozen for 'wait' is no option of this action any more."
             }
           ]
         }
@@ -2342,15 +2321,14 @@
                     "name": "bool"
                   },
                   "value": false
-                },
-                {
-                  "name": "wait",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": true
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'foreach %files%, call Install sent=%item%': goal.call: the default frozen for 'wait' is no option of this action any more."
             }
           ]
         }
@@ -2512,15 +2490,14 @@
                     "name": "bool"
                   },
                   "value": false
-                },
-                {
-                  "name": "wait",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": true
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 1's saved code no longer holds — rebuilt: step 1 'goal.call(Name=\"Files\")': goal.call: the default frozen for 'wait' is no option of this action any more."
             }
           ]
         },
@@ -4863,7 +4840,7 @@
         },
         {
           "index": 3,
-          "text": "call Turn content=%content%, don't wait",
+          "text": "call Turn content=%content% in parallel",
           "line": {
             "number": 162
           },
@@ -4888,22 +4865,19 @@
                   "value": [{"name":"content","type":{"name":"item","template":"plang"},"value":"%content%","variable":[{"text":"%content%","code":[{"variable":"content"}]}]}]
                 },
                 {
-                  "name": "Wait",
+                  "name": "Parallel",
                   "type": {
                     "name": "bool"
                   },
-                  "value": false
-                }
-              ],
-              "default": [
-                {
-                  "name": "parallel",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": false
+                  "value": true
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Unsure",
+              "message": "step 3 uses goal.call, which the decider was not sure of (0.88)"
             }
           ]
         }
@@ -4912,7 +4886,7 @@
       "visibility": "Private",
       "path": "/system/plangos/Screen.goal",
       "prPath": "/system/plangos/.build/screen.pr",
-      "hash": "98850c8f167076fc5ee9cb995e98dfb5799c94302ec34ef3c7eab8082857c56e"
+      "hash": "ef8dbe5f897fed5be06367c0b120405749334927c9d5df639bd1a36c2b0a6071"
     },
     {
       "name": "FirstWords",
@@ -6173,19 +6147,18 @@
                             "name": "bool"
                           },
                           "value": false
-                        },
-                        {
-                          "name": "wait",
-                          "type": {
-                            "name": "bool"
-                          },
-                          "value": true
                         }
                       ]
                     }
                   ]
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 1's saved code no longer holds — rebuilt: step 1 'condition.if(Left=%claudeApp%, Operator=\"isnotempty\") { goal.call(Name=\"IntoApp\") }': goal.call: the default frozen for 'wait' is no option of this action any more."
             }
           ]
         },
@@ -6709,19 +6682,18 @@
                             "name": "bool"
                           },
                           "value": false
-                        },
-                        {
-                          "name": "wait",
-                          "type": {
-                            "name": "bool"
-                          },
-                          "value": true
                         }
                       ]
                     }
                   ]
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'condition.if(Left=%call.parameters.path%, Operator=\"isnotempty\") { goal.call(Name=\"PathIntoApp\") }': goal.call: the default frozen for 'wait' is no option of this action any more."
             }
           ]
         }
@@ -6813,19 +6785,18 @@
                             "name": "bool"
                           },
                           "value": false
-                        },
-                        {
-                          "name": "wait",
-                          "type": {
-                            "name": "bool"
-                          },
-                          "value": true
                         }
                       ]
                     }
                   ]
                 }
               ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Reopened",
+              "message": "step 0's saved code no longer holds — rebuilt: step 0 'condition.if(Left=%call.parameters.path%, Operator=\"notstartswith\", Right=\"/system/\") { goal.call(Name=\"AppPath\") }': goal.call: the default frozen for 'wait' is no option of this action any more."
             }
           ]
         }
@@ -7980,5 +7951,5 @@
   "visibility": "Public",
   "path": "/system/plangos/Screen.goal",
   "prPath": "/system/plangos/.build/screen.pr",
-  "hash": "efcd2214a417b072e45366abd9b0f44166e0af756fa04b3c99c0f859c3ac3a7f"
+  "hash": "4dcf8c73f3180a7d997807f41cc852c9019e8fecf6dedadf1fce13bde8978dc4"
 }
