@@ -23,7 +23,11 @@ PackFile
 - file.read(Path=%file%); variable.set(Name=%content%, Value=%!data%, Type="text")
 / the path from the shell's folder: shell.next/.build/screen.pr.staged.txt is .build/screen.pr (plang has no text replace
 / yet; a path won't become text, but a text with the path in it is one)
-- set %where% to "/%file%"
+- set %written% to "/%file%"
+/ on Windows the path is written with \ (shell.next\agent\x.md): made / first, or the cut below finds nothing and the
+/ whole Windows path becomes the file's name in PlangOS
+- list.split(Value=%written%, Separator="\\", Empty=false); variable.set(Name=%parts%, Value=%!data%)
+- list.join(ListName=%parts%, Separator="/"); variable.set(Name=%where%, Value=%!data%)
 - list.split(Value=%where%, Separator="shell.next/", Empty=false); variable.set(Name=%pieces%, Value=%!data%)
 - list.last(ListName=%pieces%); variable.set(Name=%staged%, Value=%!data%)
 - list.split(Value=%staged%, Separator=".staged.txt", Empty=false); variable.set(Name=%names%, Value=%!data%)
