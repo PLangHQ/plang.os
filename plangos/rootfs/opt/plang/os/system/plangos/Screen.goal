@@ -93,7 +93,8 @@ Files
 / the desktop's files: what is in the app's Desktop/, shown as icons. A path that starts with "/"
 / is in the app (/home/plang); without it, it would be beside this goal, in the os folder.
 - list files in '/Desktop', write to %files%
-- call ShowFiles files=%files% in %browser.desktop%
+/ (formal: "call X in %window%" is a page's function, which the builder takes for a goal)
+- window.callGoal(Name="ShowFiles", Window=%browser.desktop%, Parameter={files: %files%})
 
 Edit
 / a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file
