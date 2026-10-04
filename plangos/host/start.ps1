@@ -23,7 +23,8 @@ function Fail($msg) { Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }
 $Root  = if ($PSScriptRoot) { $PSScriptRoot } else { Join-Path $env:LOCALAPPDATA 'PlangOS' }
 $Plang = Join-Path $Root 'runtime\plang.exe'   # plang.cmd next to this script runs the same one
 
-# A new runtime staged while the old one was running (runtime.new) takes its place now.
+# A new runtime staged while the old one was running (runtime.new) takes its place now. The one it replaces is kept
+# as runtime.prev (the one before that goes): to go back, close PlangOS and rename runtime.prev to runtime.new.
 $staged = Join-Path $Root 'runtime.new'
 if (Test-Path $staged) {
     $old = Join-Path $Root 'runtime.old'
@@ -39,7 +40,12 @@ if (Test-Path $staged) {
         if (Test-Path $changes) { Get-Content $changes | ForEach-Object { Write-Host "    $_" } }
         else { Write-Host '    (it came without CHANGES.txt: no notes on what is new)' -ForegroundColor Yellow }
         Write-Host ''
-        Remove-Item $old -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path $old) {
+            $prev = Join-Path $Root 'runtime.prev'
+            if (Test-Path $prev) { Remove-Item $prev -Recurse -Force -ErrorAction SilentlyContinue }
+            Rename-Item $old 'runtime.prev' -ErrorAction SilentlyContinue
+            Write-Host '    The previous runtime is kept in runtime.prev.' -ForegroundColor DarkGray
+        }
     } catch {
         Write-Host "The new runtime waits in runtime.new: close PlangOS (plang is still running) and start again." -ForegroundColor Yellow
     }
