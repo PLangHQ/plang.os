@@ -1,0 +1,20 @@
+Start
+/ A Linux host for PlangOS — what the Windows host's OpenPlangOS does, for testing on Linux: the screen is a view (no
+/ window), PlangOS runs from the unpacked image through /plangos.sh, its frames come up its stdout straight to the view,
+/ and this app's own input lines are the person's (mouse, keys), going down to PlangOS.
+- screen.open(OnInput=goal.call(Name="Input"), OnClose=goal.call(Name="Close")); variable.set(Name=%screen%, Value=%!data%)
+- terminal.open(App="/plangos.sh", Binary=true, OutputTo=%screen%); variable.set(Name=%container%, Value=%!data%)
+- goal.call(Name="Shot", Parallel=true)
+- screen.listen(Screen=%screen%)
+
+Shot
+/ (testing) what the host shows, 25 s in
+- wait 25 seconds
+- write %screen.picture% to file 'shot.png'
+
+Input
+/ the person's input, a message from PlangOS, the view's numbers: down to PlangOS as they are
+- terminal.send(Data=%!data%, Process=%container%)
+
+Close
+- terminal.stop(Process=%container%)
