@@ -96,7 +96,8 @@
   .bar .errs { font-size: 13px; gap: 6px; color: #ff8a8d; }
   .bar .errs.seen { color: var(--dim); }
   .menu.errors { left: auto; right: 12px; width: 520px; max-height: 60vh; overflow: auto; }
-  .errors .err { padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.45; word-break: break-word; }
+  .errors .err { padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.45; word-break: break-word; user-select: text; cursor: auto; }
+  .errors .err button { float: right; margin-left: 8px; border: 1px solid var(--line); border-radius: 4px; background: none; color: var(--dim); font: 12px inherit; cursor: pointer; }
   .errors .err b { color: #ff8a8d; font-weight: 600; }
   .errors .err small { display: block; color: var(--dim); font: 12px ui-monospace, "DejaVu Sans Mono", monospace; }
   .errors .none { color: var(--dim); font-size: 13px; }
@@ -407,6 +408,18 @@
   const errorsPanel = document.getElementById('errors'), errorsList = document.getElementById('errors-list');
   const errs = document.getElementById('errs');
   let errorCount = 0, unseen = 0;
+  // text to the clipboard (and from there to the host's): the clipboard API where the page may, else a selection copied
+  const copyText = text => {
+    navigator.clipboard?.writeText(text).catch(() => copyBySelection(text)) ?? copyBySelection(text);
+  };
+  const copyBySelection = text => {
+    const area = Object.assign(document.createElement('textarea'), { value: text });
+    area.style.cssText = 'position:fixed;left:-9999px;user-select:text';
+    document.body.append(area);
+    area.select();
+    document.execCommand('copy');
+    area.remove();
+  };
   const field = (e, ...names) => { for (const n of names) { const v = n.split('.').reduce((o, k) => o?.[k] ?? o?.[k[0].toUpperCase() + k.slice(1)], e); if (v !== undefined && v !== null && v !== '') return v; } return ''; };
   window.ErrorShow = ({ error, where: at }) => {
     const e = typeof error === 'string' ? { message: error } : (error ?? {});
@@ -415,10 +428,14 @@
     // where it happened: {goal, step} from the error channel (%where%), else what the error itself says
     const where = (at && typeof at === 'object' ? [at.goal, at.step] : [at])
       .concat(at ? [] : [field(e, 'goal.name', 'goal'), field(e, 'step.text', 'step')]).filter(Boolean).join(' · ');
-    row.innerHTML = '<b></b> <span></span><small></small>';
+    row.innerHTML = '<b></b> <span></span><small></small><button>Copy</button>';
     row.children[0].textContent = field(e, 'key') || 'Error';
     row.children[1].textContent = field(e, 'message') || JSON.stringify(e).slice(0, 400);
     row.children[2].textContent = new Date().toLocaleTimeString() + (where ? ' · ' + where : '');
+    // the whole error, not only what the row shows: its key, message, where, and everything it carries
+    const whole = [row.children[0].textContent + ': ' + row.children[1].textContent, row.children[2].textContent,
+      JSON.stringify(e, null, 2)].join('\n');
+    row.children[3].onclick = ev => { ev.stopPropagation(); copyText(whole); ev.target.textContent = 'Copied'; };
     if (!errorCount) errorsList.replaceChildren();
     errorsList.prepend(row);
     errorCount++;
