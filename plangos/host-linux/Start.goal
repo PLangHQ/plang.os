@@ -8,9 +8,10 @@ Start
 - screen.listen(Screen=%screen%)
 
 Shot
-/ (testing) what the host shows, 25 s in
-- wait 25 seconds
+/ (testing) what the host shows, 70 s in, and how many video pictures it showed itself
+- wait 70 seconds
 - write %screen.picture% to file 'shot.png'
+- write %screen.videonumbers% to file 'videoframes.txt'
 
 Input
 / the person's input, a message from PlangOS, the view's numbers: down to PlangOS as they are
