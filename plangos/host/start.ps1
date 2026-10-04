@@ -162,11 +162,15 @@ if (Test-Path $dataDisk) {
     Write-Host '==> No data disk (data.vhd): /home/plang is the image''s, and a new image replaces it.' -ForegroundColor Yellow
 }
 
-# What runs, said every start: the runtime (its CHANGES.txt's first line) and the image.
+# What runs, said every start: the runtime (the commit from its CHANGES.txt's first line, "plang <commit> (…") and the
+# image (its sha256's first 8). Also kept in version.txt, which PlangOS's desktop shows (child/Version.goal).
 $notes = Join-Path $Root 'runtime\CHANGES.txt'
-$runtimeIs = if (Test-Path $notes) { (Get-Content $notes -TotalCount 1) } else { 'no CHANGES.txt' }
+$first = if (Test-Path $notes) { Get-Content $notes -TotalCount 1 } else { '' }
+$runtimeIs = if ($first -match '^plang (\S+)') { $Matches[1] } else { 'unknown' }
 $imageIs   = if ($manifest) { $manifest.sha256.Substring(0, 8) } else { 'none' }
-Write-Host "plang runtime: $runtimeIs | PlangOS image: $imageIs" -ForegroundColor DarkGray
+$version   = "plang $runtimeIs, image $imageIs"
+[System.IO.File]::WriteAllText((Join-Path $Root 'version.txt'), $version)   # UTF-8 without a BOM (Set-Content's utf8 has one on PowerShell 5)
+Write-Host "==> Running $version" -ForegroundColor Cyan
 
 # Run plang in the folder, which runs Start.goal.
 Push-Location $Root

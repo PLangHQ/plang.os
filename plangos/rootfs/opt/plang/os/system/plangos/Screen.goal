@@ -19,6 +19,8 @@ Screen
 - goal.call(Name="Files")
 / new files for this shell, if the host has any — in parallel, so the shell starts anyway
 - goal.call(Name="Update", Parallel=true)
+/ what runs (the host's plang and the image), on the taskbar — in parallel too
+- goal.call(Name="Version", Parallel=true)
 / ☰ on a window is its agent: Claude, who works on the window's app with the person, through plang.
 / (on click on #window.bot, call ShowClaude — formal until the builder learns # elements)
 - on.event(Event=%!screen.element["#window.bot"].on.click%, When="after", Action=goal.call(Name="ShowClaude"))
@@ -70,6 +72,15 @@ Update
 / the system writes the system's files: os/** is written by the system actor only — a user's program writing there is asked
 - goal.call(Name="InstallAll", Parameter={files: %update%}, Actor="system")
 - condition.if(Left=%update%, Operator="isnotempty") { goal.call(Name="Updated") }
+
+Version
+/ The host says what runs ("plang a61a8c2b7, image c88437e5"); the desktop shows it on the taskbar. A host from
+/ before Version has none to say: nothing shown, no error.
+- goal.call(Name=%!app.parent.goal["Version"]%); on.error(Recovery=[goal.call(Name="NoVersion")]); variable.set(Name=%version%, Value=%!data%)
+- window.call(Name="VersionShow", Window=%browser.desktop%, Parameter={version: %version%})
+
+NoVersion
+- set %version% to ""
 
 InstallAll
 - foreach %files%, call Install sent=%item%

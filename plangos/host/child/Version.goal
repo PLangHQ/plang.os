@@ -1,0 +1,5 @@
+Version
+/ What runs on Windows, for PlangOS's desktop to show: the plang runtime's commit and the image's sha256 (its first 8),
+/ as one line ("plang a61a8c2b7, image c88437e5"). start.ps1 writes it to version.txt every start.
+- file.read(Path="/version.txt"); variable.set(Name=%version%, Value=%!data%, Type="text")
+- return %version%
