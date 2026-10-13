@@ -3,18 +3,32 @@ Claude
 / %message% is what the person said, as Claude reads it: a list of parts (text, and pictures — a screenshot).
 / Claude runs here, on Windows: the person's own Claude Code, with no tools of its own (none built in, no MCP),
 / so it can't act on this computer — it acts only through what it answers, {text, calls}: its words, and the
-/ plang goals it asks PlangOS to run. Its session carries the conversation from turn to turn.
-- set %claudeSaid% to ""
+/ plang goals it asks PlangOS to run. Its session carries the conversation from turn to turn: kept in a file per
+/ %session% (the calling app's id — several apps may talk to Claude through this host), since a turn runs as a call
+/ of its own and what it sets goes with it. %first%: the conversation starts now, Claude afresh.
+/ (formal steps: the builder misreads `set %x% to ""` today)
+- variable.set(Name=%claudeSaid%, Value="")
+- variable.set(Name=%claudeSession%, Value="")
+- variable.set(Name=%claudeFile%, Value="/child/claude/%session%.txt")
+- condition.if(Left=%first%, Operator="isempty") { goal.call(Name="KeptSession") }
 / the answer as Claude writes it (--include-partial-messages: it streams in pieces); PlangOS shows it as it grows
-- set %claudePartial% to ""
+- variable.set(Name=%claudePartial%, Value="")
 / the shape every answer has (a JSON schema)
-- read 'answer.shape.txt', write to %answerShape%
-- set %claudeInput% to {"type": "user", "message": {"role": "user", "content": %message%}}
+- file.read(Path="answer.shape.txt"); variable.set(Name=%answerShape%, Value=%!data%)
+- variable.set(Name=%claudeInput%, Value={"type": "user", "message": {"role": "user", "content": %message%}})
 - condition.if(Left=%claudeSession%, Operator="isnotempty") { goal.call(Name="NextTurn") }
 - condition.if(Left=%claudeSession%, Operator="isempty") { goal.call(Name="FirstTurn") }
 - variable.set(Name=%claudeAnswer%, Value=%claudeSaid%, Type="dict")
-- set %claudeSession% to %claudeAnswer.session_id%
+- file.save(Path=%claudeFile%, Value=%claudeAnswer.session_id%)
 - return %claudeAnswer.structured_output%
+
+KeptSession
+/ the conversation's Claude session, when this host has one for it
+- file.exists(Path=%claudeFile%); variable.set(Name=%claudeKept%, Value=%!data%)
+- condition.if(Left=%claudeKept%, Operator="isnotempty") { goal.call(Name="ReadSession") }
+
+ReadSession
+- file.read(Path=%claudeFile%); variable.set(Name=%claudeSession%, Value=%!data%, Type="text")
 
 FirstTurn
 - terminal.start(App="claude", Parameter=["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--tools", "", "--strict-mcp-config", "--mcp-config", "{\"mcpServers\":{}}", "--json-schema", %answerShape%], Input=%claudeInput%, OnOutput=goal.call(Name="ClaudeLine")); on.timeout(After="PT10M")
@@ -25,15 +39,15 @@ NextTurn
 ClaudeLine
 / Each line Claude writes is one event; the turn's answer is the result — the one with its structured_output. A piece
 / of the answer as it is written (an input_json_delta) is added to what came before, and PlangOS shows it.
-- set %claudeLine% to %!data%
+- variable.set(Name=%claudeLine%, Value=%!data%)
 - condition.if(Left=%claudeLine%, Operator="contains", Right="structured_output") { goal.call(Name="KeepResult") }
 - condition.if(Left=%claudeLine%, Operator="contains", Right="input_json_delta") { goal.call(Name="Writing") }
 
 Writing
 - variable.set(Name=%claudeEvent%, Value=%claudeLine%, Type="dict")
-- set %claudePartial% to "%claudePartial%%claudeEvent.event.delta.partial_json%"
+- variable.set(Name=%claudePartial%, Value="%claudePartial%%claudeEvent.event.delta.partial_json%")
 / in parallel: Claude goes on writing while PlangOS shows it
 - goal.call(Name=%container.goal["AgentWriting"]%, Parameter={partial: %claudePartial%}, Parallel=true)
 
 KeepResult
-- set %claudeSaid% to %claudeLine%
+- variable.set(Name=%claudeSaid%, Value=%claudeLine%)

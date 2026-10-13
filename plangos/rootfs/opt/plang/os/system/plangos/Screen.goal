@@ -201,17 +201,24 @@ FirstWords
 - file.read(Path="/system/llm/agent.md"); variable.set(Name=%standard%, Value=%!data%, Type="text")
 - set %content% to [{"type": "text", "text": "%instructions%\n\n%standard%\n\n---\n\n%asked.say%"}]
 - set %claudeStarted% to true
+/ a new conversation: the host starts Claude afresh for it (and keeps its session under this app's id)
+- set %claudeFirst% to true
 
 PlaceInstructions
 - file.copy(Source="/system/plangos/agent/instructions.md", Destination="/agent/instructions.md")
 
 NextWords
 - set %content% to [{"type": "text", "text": %asked.say%}]
+- set %claudeFirst% to false
 
 Turn
 / One turn: Claude, in the host (the app that started this one), gets %content%; its words go to the box;
-/ the goals it asks for run here, and what they gave is its next turn — until it asks for none.
-- goal.call(Name=%!app.parent.goal["Claude"]%, Parameter={message: %content%}); on.error(Recovery=[goal.call(Name="ClaudeFailed")]); variable.set(Name=%reply%, Value=%!data%)
+/ the goals it asks for run here, and what they gave is its next turn — until it asks for none. The host keeps
+/ the conversation under this app's id (%!app.id%: several apps may talk to Claude through one host); the first
+/ turn of a conversation starts it afresh.
+- goal.call(Name=%!app.parent.goal["Claude"]%, Parameter={message: %content%, session: %!app.id%, first: %claudeFirst%}); on.error(Recovery=[goal.call(Name="ClaudeFailed")]); variable.set(Name=%reply%, Value=%!data%)
+/ the turns after it (what the goals Claude asked for gave) go on in the same conversation
+- set %claudeFirst% to false
 - window.call(Name="AgentSays", Window=%browser.desktop%, Parameter={text: %reply.text%, status: %reply.status%, calls: %reply.calls%})
 - condition.if(Left=%reply.calls%, Operator="isnotempty") { goal.call(Name="RunCalls") }
 - condition.if(Left=%reply.calls%, Operator="isempty") { goal.call(Name="TurnDone") }

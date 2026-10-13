@@ -6491,13 +6491,62 @@
               ]
             }
           ]
+        },
+        {
+          "index": 6,
+          "text": "set %claudeFirst% to true",
+          "line": {
+            "number": 205
+          },
+          "comment": "a new conversation: the host starts Claude afresh for it (and keeps its session under this app's id)",
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%claudeFirst%",
+                  "variable": [
+                    {
+                      "text": "%claudeFirst%",
+                      "code": [
+                        {
+                          "variable": "claudeFirst"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": true
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "debeac744abb7cc735c918386b97725dcb70d13b3eb87e1cfa622507095dc178"
+      "hash": "103b6bba8141827dbab1bd270edffe62c112ca40b8230a10a52be95e989c646d"
     },
     {
       "name": "PlaceInstructions",
@@ -6506,7 +6555,7 @@
           "index": 0,
           "text": "file.copy(Source=\"/system/plangos/agent/instructions.md\", Destination=\"/agent/instructions.md\")",
           "line": {
-            "number": 206
+            "number": 208
           },
           "code": [
             {
@@ -6562,7 +6611,7 @@
           "index": 0,
           "text": "set %content% to [{\"type\": \"text\", \"text\": %asked.say%}]",
           "line": {
-            "number": 209
+            "number": 211
           },
           "code": [
             {
@@ -6619,24 +6668,72 @@
               ]
             }
           ]
+        },
+        {
+          "index": 1,
+          "text": "set %claudeFirst% to false",
+          "line": {
+            "number": 212
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%claudeFirst%",
+                  "variable": [
+                    {
+                      "text": "%claudeFirst%",
+                      "code": [
+                        {
+                          "variable": "claudeFirst"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
         }
       ],
       "child": [],
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "84b192280da0c9ba57c304bac3ae2c64447f2d1e1d82a66acbee39b3e69b85e7"
+      "hash": "8625c95f4b1404c79daa0b8f917ca1e4a8c6e0913671116586930e00c70cd085"
     },
     {
       "name": "Turn",
       "step": [
         {
           "index": 0,
-          "text": "goal.call(Name=%!app.parent.goal[\"Claude\"]%, Parameter={message: %content%}); on.error(Recovery=[goal.call(Name=\"ClaudeFailed\")]); variable.set(Name=%reply%, Value=%!data%)",
+          "text": "goal.call(Name=%!app.parent.goal[\"Claude\"]%, Parameter={message: %content%, session: %!app.id%, first: %claudeFirst%}); on.error(Recovery=[goal.call(Name=\"ClaudeFailed\")]); variable.set(Name=%reply%, Value=%!data%)",
           "line": {
-            "number": 214
+            "number": 219
           },
-          "comment": "One turn: Claude, in the host (the app that started this one), gets %content%; its words go to the box;\nthe goals it asks for run here, and what they gave is its next turn — until it asks for none.",
+          "comment": "One turn: Claude, in the host (the app that started this one), gets %content%; its words go to the box;\nthe goals it asks for run here, and what they gave is its next turn — until it asks for none. The host keeps\nthe conversation under this app's id (%!app.id%: several apps may talk to Claude through one host); the first\nturn of a conversation starts it afresh.",
           "code": [
             {
               "module": "goal",
@@ -6676,16 +6773,7 @@
                   "type": {
                     "name": "list"
                   },
-                  "value": [{"name":"message","type":{"name":"item","template":"plang"},"value":"%content%","variable":[{"text":"%content%","code":[{"variable":"content"}]}]}]
-                }
-              ],
-              "default": [
-                {
-                  "name": "parallel",
-                  "type": {
-                    "name": "bool"
-                  },
-                  "value": false
+                  "value": [{"name":"message","type":{"name":"item","template":"plang"},"value":"%content%","variable":[{"text":"%content%","code":[{"variable":"content"}]}]},{"name":"session","type":{"name":"item","template":"plang"},"value":"%!app.id%","variable":[{"text":"%!app.id%","code":[{"variable":"!app"},{"property":"id"}]}]},{"name":"first","type":{"name":"item","template":"plang"},"value":"%claudeFirst%","variable":[{"text":"%claudeFirst%","code":[{"variable":"claudeFirst"}]}]}]
                 }
               ]
             },
@@ -6710,15 +6798,6 @@
                             "name": "goal"
                           },
                           "value": "ClaudeFailed"
-                        }
-                      ],
-                      "default": [
-                        {
-                          "name": "parallel",
-                          "type": {
-                            "name": "bool"
-                          },
-                          "value": false
                         }
                       ]
                     }
@@ -6789,9 +6868,58 @@
         },
         {
           "index": 1,
+          "text": "set %claudeFirst% to false",
+          "line": {
+            "number": 221
+          },
+          "comment": "the turns after it (what the goals Claude asked for gave) go on in the same conversation",
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%claudeFirst%",
+                  "variable": [
+                    {
+                      "text": "%claudeFirst%",
+                      "code": [
+                        {
+                          "variable": "claudeFirst"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
           "text": "window.call(Name=\"AgentSays\", Window=%browser.desktop%, Parameter={text: %reply.text%, status: %reply.status%, calls: %reply.calls%})",
           "line": {
-            "number": 215
+            "number": 222
           },
           "code": [
             {
@@ -6838,10 +6966,10 @@
           ]
         },
         {
-          "index": 2,
+          "index": 3,
           "text": "condition.if(Left=%reply.calls%, Operator=\"isnotempty\") { goal.call(Name=\"RunCalls\") }",
           "line": {
-            "number": 216
+            "number": 223
           },
           "code": [
             {
@@ -6915,10 +7043,10 @@
           ]
         },
         {
-          "index": 3,
+          "index": 4,
           "text": "condition.if(Left=%reply.calls%, Operator=\"isempty\") { goal.call(Name=\"TurnDone\") }",
           "line": {
-            "number": 217
+            "number": 224
           },
           "code": [
             {
@@ -6996,7 +7124,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "3c74c70c1573764d40860f2374fc10f1d99dbc5f47b97998bb62db80f928ccf1"
+      "hash": "45f66b3e910e224b8b62900632459a1fc5123796270d6be3f886d0e6d6643bda"
     },
     {
       "name": "ClaudeFailed",
@@ -7005,7 +7133,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentSays\", Window=%browser.desktop%, Parameter={error: %!error.Message%})",
           "line": {
-            "number": 220
+            "number": 227
           },
           "code": [
             {
@@ -7055,7 +7183,7 @@
           "index": 1,
           "text": "return {text: \"\", calls: []}",
           "line": {
-            "number": 221
+            "number": 228
           },
           "code": [
             {
@@ -7088,7 +7216,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentDone\", Window=%browser.desktop%)",
           "line": {
-            "number": 224
+            "number": 231
           },
           "code": [
             {
@@ -7141,7 +7269,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentWriting\", Window=%browser.desktop%, Parameter={partial: %partial%})",
           "line": {
-            "number": 229
+            "number": 236
           },
           "comment": "The host calls this while Claude writes its answer (%partial%: the answer so far, half-written JSON): the box\nshows the words as they come, until the whole answer is there.",
           "code": [
@@ -7202,7 +7330,7 @@
           "index": 0,
           "text": "set %results% to []",
           "line": {
-            "number": 234
+            "number": 241
           },
           "comment": "Each goal Claude asked for runs here — only its own, in agent/ — and what it gave goes into its next\nturn: a screenshot as a picture, anything else as text.",
           "code": [
@@ -7251,7 +7379,7 @@
           "index": 1,
           "text": "foreach %reply.calls%, call RunCall call=%item%",
           "line": {
-            "number": 235
+            "number": 242
           },
           "code": [
             {
@@ -7335,7 +7463,7 @@
           "index": 2,
           "text": "goal.call(Name=\"Turn\", Parameter={content: %results%})",
           "line": {
-            "number": 236
+            "number": 243
           },
           "code": [
             {
@@ -7383,7 +7511,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentCalling\", Window=%browser.desktop%, Parameter={goal: %call.goal%, parameters: %call.parameters%, why: %call.why%})",
           "line": {
-            "number": 240
+            "number": 247
           },
           "comment": "the box shows the call as it starts (what, and why Claude asked for it), and what it gave when it ends",
           "code": [
@@ -7434,7 +7562,7 @@
           "index": 1,
           "text": "condition.if(Left=%claudeApp%, Operator=\"isnotempty\") { goal.call(Name=\"IntoApp\") }",
           "line": {
-            "number": 243
+            "number": 250
           },
           "comment": "then a path Claude gave (in the window's app) is made the shell's own: /start.html in Writer is\n/system/plangos/app/writer/start.html; /system/… is plang's system as it is",
           "code": [
@@ -7515,7 +7643,7 @@
           "index": 2,
           "text": "set %agentGoal% to \"/system/plangos/agent/%call.goal%\"",
           "line": {
-            "number": 244
+            "number": 251
           },
           "code": [
             {
@@ -7577,7 +7705,7 @@
           "index": 3,
           "text": "goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name=\"CallFailed\")]); variable.set(Name=%got%, Value=%!data%)",
           "line": {
-            "number": 245
+            "number": 252
           },
           "code": [
             {
@@ -7736,7 +7864,7 @@
           "index": 4,
           "text": "window.call(Name=\"AgentCalled\", Window=%browser.desktop%, Parameter={goal: %call.goal%, got: %got%})",
           "line": {
-            "number": 246
+            "number": 253
           },
           "code": [
             {
@@ -7786,7 +7914,7 @@
           "index": 5,
           "text": "condition.if(Left=%call.goal%, Operator=\"==\", Right=\"Screenshot\") { goal.call(Name=\"GavePicture\") }",
           "line": {
-            "number": 247
+            "number": 254
           },
           "code": [
             {
@@ -7870,7 +7998,7 @@
           "index": 6,
           "text": "condition.if(Left=%call.goal%, Operator=\"!=\", Right=\"Screenshot\") { goal.call(Name=\"GaveText\") }",
           "line": {
-            "number": 248
+            "number": 255
           },
           "code": [
             {
@@ -7964,7 +8092,7 @@
           "index": 0,
           "text": "condition.if(Left=%call.parameters.path%, Operator=\"isnotempty\") { goal.call(Name=\"PathIntoApp\") }",
           "line": {
-            "number": 251
+            "number": 258
           },
           "code": [
             {
@@ -8060,7 +8188,7 @@
           "index": 0,
           "text": "condition.if(Left=%call.parameters.path%, Operator=\"notstartswith\", Right=\"/system/\") { goal.call(Name=\"AppPath\") }",
           "line": {
-            "number": 254
+            "number": 261
           },
           "code": [
             {
@@ -8163,7 +8291,7 @@
           "index": 0,
           "text": "set %appPath% to \"%claudeApp%%call.parameters.path%\"",
           "line": {
-            "number": 258
+            "number": 265
           },
           "comment": "(made apart first: a member set from a text naming itself is a resolve cycle)",
           "code": [
@@ -8237,7 +8365,7 @@
           "index": 1,
           "text": "set %call.parameters.path% to %appPath%",
           "line": {
-            "number": 259
+            "number": 266
           },
           "code": [
             {
@@ -8312,7 +8440,7 @@
           "index": 0,
           "text": "return \"failed: %!error.Message%\"",
           "line": {
-            "number": 262
+            "number": 269
           },
           "code": [
             {
@@ -8367,7 +8495,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave this picture:\"} to %results%",
           "line": {
-            "number": 265
+            "number": 272
           },
           "code": [
             {
@@ -8429,7 +8557,7 @@
           "index": 1,
           "text": "add {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": %got%}} to %results%",
           "line": {
-            "number": 266
+            "number": 273
           },
           "code": [
             {
@@ -8498,7 +8626,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave: %got%\"} to %results%",
           "line": {
-            "number": 269
+            "number": 276
           },
           "code": [
             {
@@ -8578,7 +8706,7 @@
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 275
+            "number": 282
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -8644,7 +8772,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 276
+            "number": 283
           },
           "code": [
             {
@@ -8698,7 +8826,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 277
+            "number": 284
           },
           "code": [
             {
@@ -8767,7 +8895,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 278
+            "number": 285
           },
           "code": [
             {
@@ -8836,7 +8964,7 @@
           "index": 4,
           "text": "if %event.tool%, call Tool",
           "line": {
-            "number": 279
+            "number": 286
           },
           "code": [
             {
@@ -8905,7 +9033,7 @@
           "index": 5,
           "text": "if %event.paste%, call Paste",
           "line": {
-            "number": 280
+            "number": 287
           },
           "code": [
             {
@@ -8984,7 +9112,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 283
+            "number": 290
           },
           "code": [
             {
@@ -9075,7 +9203,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 286
+            "number": 293
           },
           "code": [
             {
@@ -9145,7 +9273,7 @@
           "index": 0,
           "text": "window.call(Name=\"Tool\", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})",
           "line": {
-            "number": 291
+            "number": 298
           },
           "comment": "One of the app's tools in its window's title bar was clicked ({\"tool\": \"save\", \"id\"}): its page's\ngoal Tool gets it. The page named its tools itself ({\"window\": \"tools\", \"tools\": [...]}).",
           "code": [
@@ -9224,7 +9352,7 @@
           "index": 0,
           "text": "window.call(Name=\"Paste\", Window=%event.id%, Browser=%browser%, Parameter={value: %event.paste%})",
           "line": {
-            "number": 296
+            "number": 303
           },
           "comment": "A page asked for the clipboard as a value ({\"window\": \"paste\"}): a copy that knows where it came\nfrom, as json; its page's goal Paste gets it.",
           "code": [
