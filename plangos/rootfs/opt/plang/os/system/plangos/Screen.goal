@@ -7,8 +7,21 @@ Screen
 / the pipe to host plang. Input from the host comes down on stdin, one line per event, and goes
 / to the screen. Ends when the host closes the pipe.
 / The first page is the desktop; every app opens in a window of its own.
-- screen.open(ToOutput=true, OnWindow=goal.call(Name="Window")); variable.set(Name=%screen%, Value=%!data%)
+- screen.open(ToOutput=true); variable.set(Name=%screen%, Value=%!data%)
 - browser.start(Url="file:///opt/plang/os/system/plangos/desktop.html", Screen=%screen%, OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
+/ What happens to a window — every window, today's and later: its own news and its title bar's requests — goes to Window,
+/ the happening as %!data% ({"window":"closed","id":3}, {"navigate":"mbl.is","id":2}).
+- on.event(Event=%browser.window.on.opened%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.titled%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.focused%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.minimized%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.maximized%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.restored%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.closed%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.navigate%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.open%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.tool%, When="after", Action=goal.call(Name="Window"))
+- on.event(Event=%browser.window.on.paste%, When="after", Action=goal.call(Name="Window"))
 / A question for the user (a permission, `ask user "…"`) is a dialog on the screen: asked on the
 / console, it would go into the screen's pipe and wait on the host's input.
 - channel.set(Name="input", Goal=goal.call(Name="Question"))
@@ -42,6 +55,8 @@ ShowError
 / An error written to an error channel is %message%, and where it happened %where% ({goal, step}; there only when
 / it happened in a goal): the desktop lists it (what, where, when) and counts it on the taskbar.
 - window.call(Name="ErrorShow", Window=%browser.desktop%, Parameter={error: %message%, where: %where%})
+/ and to the host, which keeps it (errors.jsonl in its folder): read there, no copying from the screen
+- screen.send(Data={"error": %message%, "where": %where%}, Screen=%screen%)
 
 Desktop
 / The desktop page asks: {"open": url} opens a window; {"window": "focus|minimize|…", "id"}
