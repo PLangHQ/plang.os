@@ -55,8 +55,9 @@ ShowError
 / An error written to an error channel is %message%, and where it happened %where% ({goal, step}; there only when
 / it happened in a goal): the desktop lists it (what, where, when) and counts it on the taskbar.
 - window.call(Name="ErrorShow", Window=%browser.desktop%, Parameter={error: %message%, where: %where%})
-/ and to the host, which keeps it (errors.jsonl in its folder): read there, no copying from the screen
-- screen.send(Data={"error": %message%, "where": %where%}, Screen=%screen%)
+/ and to the host, which keeps it (errors.jsonl in its folder): read there, no copying from the screen — through the
+/ errorlog channel, the door to the host the screen opened
+- output.write(Data={"error": %message%, "where": %where%}, channel="errorlog")
 
 Desktop
 / The desktop page asks: {"open": url} opens a window; {"window": "focus|minimize|…", "id"}
@@ -190,12 +191,19 @@ Say
 - call Turn content=%content% in parallel
 
 FirstWords
-- render 'agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, app=%asked.about.app%, write to %instructions%
+/ Claude's instructions are the app's own (/agent/instructions.md, at its root — the person may change them); the
+/ first time, the shell's copy is put there
+- file.exists(Path="/agent/instructions.md"); variable.set(Name=%hasInstructions%, Value=%!data%)
+- condition.if(Left=%hasInstructions%, Operator="isempty") { goal.call(Name="PlaceInstructions") }
+- render '/agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, app=%asked.about.app%, write to %instructions%
 / how every agent in PLang reports back (plang's own: /system/llm/agent.md)
 / (formal: `as text` is dropped by the builder, and a file in a text is its name, not what it holds)
 - file.read(Path="/system/llm/agent.md"); variable.set(Name=%standard%, Value=%!data%, Type="text")
 - set %content% to [{"type": "text", "text": "%instructions%\n\n%standard%\n\n---\n\n%asked.say%"}]
 - set %claudeStarted% to true
+
+PlaceInstructions
+- file.copy(Source="/system/plangos/agent/instructions.md", Destination="/agent/instructions.md")
 
 NextWords
 - set %content% to [{"type": "text", "text": %asked.say%}]
