@@ -43,24 +43,13 @@ Screen
 - stop %browser%
 
 Question
-/ A question (a permission, `ask user "…"`) belongs to the app that asked: on the window that asked (%askWindow%,
-/ where the shell works for a window) it is modal in that window until answered; else (the system asked) it is a
-/ dialog on the desktop, lifted above every window and kept up until answered. The answer is what the person chose
-/ (a permission: y, a or n; a question: what they typed). The question is %message%.
-- variable.set(Name=%answered%, Value="")
-- condition.if(Left=%askWindow%, Operator="isnotempty") { goal.call(Name="AskOnWindow") }
-- condition.if(Left=%askWindow%, Operator="isempty") { goal.call(Name="AskOnDesktop") }
-- return %answered%
-
-AskOnWindow
-- window.ask(Window=%askWindow%, Question=%message%, Browser=%browser%); variable.set(Name=%answered%, Value=%!data%)
-
-AskOnDesktop
+/ The question in a dialog on the desktop, lifted above every window; the answer is what the person
+/ chose (a permission: y, a or n; a question: what they typed). The question is %message%.
 - window.call(Name="AskShow", Window=%browser.desktop%, Parameter={question: %message%}); variable.set(Name=%above%, Value=%!data%)
 - send %above% to %screen%
 - window.call(Name="AskAnswer", Window=%browser.desktop%); variable.set(Name=%answer%, Value=%!data%)
 - send %answer.below% to %screen%
-- variable.set(Name=%answered%, Value=%answer.text%)
+- return %answer.text%
 
 ShowError
 / An error written to an error channel is %message%, and where it happened %where% ({goal, step}; there only when
@@ -77,8 +66,6 @@ Desktop
 / {"build": path}, {"run": goal}; "from" is the window that asked. Claude's box (on the desktop)
 / asks: {"say": what the person wrote, "about": {"window", "title"}}.
 - set %asked% to %!data%
-/ a question while this runs is asked on the window that asked (Question): modal in that app
-- variable.set(Name=%askWindow%, Value=%asked.from%)
 - if %asked.open%, call Open
 - if %asked.window%, call Command
 - if %asked.files%, call Files
@@ -256,8 +243,6 @@ RunCalls
 - goal.call(Name="Turn", Parameter={content: %results%})
 
 RunCall
-/ a question while Claude's goal runs (a permission) is asked on the window Claude works on (Question)
-- variable.set(Name=%askWindow%, Value=%asked.about.window%)
 / the box shows the call as it starts (what, and why Claude asked for it), and what it gave when it ends
 - window.call(Name="AgentCalling", Window=%browser.desktop%, Parameter={goal: %call.goal%, parameters: %call.parameters%, why: %call.why%})
 / then a path Claude gave (in the window's app) is made the shell's own: /start.html in Writer is
