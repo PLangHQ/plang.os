@@ -797,14 +797,12 @@
       ask({ say: text, about: { window: this.window?.id ?? 0, title: this.window?.title ?? '', app: this.window?.app ?? '' } });
     },
 
-    // the app a window shows, from its page: the page's folder, as plang names it — a page of plang's os folder
-    // (file:///opt/plang/os/system/plangos/app/writer/start.html) is /system/plangos/app/writer, one of the person's
-    // app (file:///home/plang/x/page.html) /x; a website none ("": Claude's "/" is then the person's app)
+    // the app a window shows, from its page (plang's path for it): the page's folder — /system/plangos/app/writer/start.html
+    // is /system/plangos/app/writer, the person's /x/page.html /x; a website none ("": Claude's "/" is then the person's app)
     appOf(page) {
-      const m = /^file:\/\/(\/opt\/plang\/os|\/home\/plang)(\/.*)$/.exec(String(page ?? ''));
-      if (!m) return '';
-      const folder = decodeURI(m[2]).replace(/\/[^/]*$/, '');
-      return folder === '' ? '' : folder;
+      const path = String(page ?? '');
+      if (!path.startsWith('/')) return '';
+      return path.replace(/\/[^/]*$/, '');
     },
     // what plang tells the box
     // Claude's turn (the agent standard, /system/llm/agent.md): its words, and whether it goes on (working) or

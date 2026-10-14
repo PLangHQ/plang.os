@@ -99,7 +99,7 @@
     },
     {
       "index": 1,
-      "text": "browser.start(Url=\"file:///opt/plang/os/system/plangos/desktop.html\", Screen=%screen%, OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)",
+      "text": "browser.start(Url=\"/system/plangos/desktop.html\", Screen=%screen%, OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)",
       "line": {
         "number": 11
       },
@@ -113,7 +113,7 @@
               "type": {
                 "name": "text"
               },
-              "value": "file:///opt/plang/os/system/plangos/desktop.html"
+              "value": "/system/plangos/desktop.html"
             },
             {
               "name": "Screen",
@@ -148,15 +148,6 @@
                       "name": "goal"
                     },
                     "value": "Desktop"
-                  }
-                ],
-                "default": [
-                  {
-                    "name": "parallel",
-                    "type": {
-                      "name": "bool"
-                    },
-                    "value": false
                   }
                 ]
               }
@@ -242,12 +233,6 @@
               "value": false
             }
           ]
-        }
-      ],
-      "warning": [
-        {
-          "key": "Reopened",
-          "message": "step 1's saved code no longer holds — rebuilt: step 1 'browser.start(Url=\"file:///opt/plang/os/system/plangos/desktop.html\", Screen=%screen%, OnMessage=goal.call(Name=\"Desktop\")); variable.set(Name=%browser%, Value=%!data%)': variable.set: the default frozen for 'asdefault' is no option of this action any more."
         }
       ]
     },
@@ -4010,7 +3995,7 @@
       "step": [
         {
           "index": 0,
-          "text": "variable.set(Name=%writerPage%, Value=\"file:///opt/plang/os/system/plangos/app/writer/start.html\")",
+          "text": "variable.set(Name=%writerPage%, Value=\"/system/plangos/app/writer/start.html\")",
           "line": {
             "number": 130
           },
@@ -4042,7 +4027,7 @@
                   "type": {
                     "name": "text"
                   },
-                  "value": "file:///opt/plang/os/system/plangos/app/writer/start.html"
+                  "value": "/system/plangos/app/writer/start.html"
                 }
               ],
               "default": [
@@ -4474,14 +4459,14 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "4cfa10db93ce4085c91909dbd51eb4cf12f2d9888209b21c667a36112d8502b3"
+      "hash": "9da65b7c9d7e9de8c68bd4d5af7ede4cb87f24d69198a65faa916a5479a3a04d"
     },
     {
       "name": "OwnWriter",
       "step": [
         {
           "index": 0,
-          "text": "variable.set(Name=%writerPage%, Value=\"file:///home/plang/app/writer/start.html\")",
+          "text": "variable.set(Name=%writerPage%, Value=\"/app/writer/start.html\")",
           "line": {
             "number": 139
           },
@@ -4512,7 +4497,7 @@
                   "type": {
                     "name": "text"
                   },
-                  "value": "file:///home/plang/app/writer/start.html"
+                  "value": "/app/writer/start.html"
                 }
               ],
               "default": [
@@ -4532,7 +4517,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "5ca01649c24120f2daf68fabe73e6014b37f41bd5145c9c1f1f962e77fa3dd87"
+      "hash": "70566ff56878610be4e12371f5871cecefe2ce98e857825b7406af6604176bfe"
     },
     {
       "name": "Save",
@@ -5903,7 +5888,7 @@
           "line": {
             "number": 186
           },
-          "comment": "the window's page (Writer's: file:///opt/plang/os/system/plangos/app/writer/start.html): the box takes the app from it",
+          "comment": "the window's page (Writer's: /system/plangos/app/writer/start.html): the box takes the app from it",
           "code": [
             {
               "module": "variable",
@@ -6035,7 +6020,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "d6c34795c0965537038e510cc304eb7bca4776ae3e728dbc77e48ab561939d46"
+      "hash": "4a8c6e8a52cf2d27fa9799e030b6f75594cc860e334a6f452a035da2e1d0fb0a"
     },
     {
       "name": "Say",
@@ -9367,7 +9352,7 @@
         },
         {
           "index": 7,
-          "text": "condition.if(Left=%shownPage%, Operator=\"startswith\", Right=\"file:///opt/plang/os/system/plangos/app/\") { goal.call(Name=\"ShowOwnApp\") }",
+          "text": "condition.if(Left=%shownPage%, Operator=\"startswith\", Right=\"/system/plangos/app/\") { goal.call(Name=\"ShowOwnApp\") }",
           "line": {
             "number": 293
           },
@@ -9407,7 +9392,7 @@
                   "type": {
                     "name": "text"
                   },
-                  "value": "file:///opt/plang/os/system/plangos/app/"
+                  "value": "/system/plangos/app/"
                 }
               ],
               "child": [
@@ -9442,7 +9427,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "23063655e11c8a29041f920dc77fe0134824bd372b54d5a1377c566ac836e55f"
+      "hash": "27082ab6c034dfbf8effd2e8c1628b71dfedaac19e73ab9ab6070b501b533852"
     },
     {
       "name": "CopyApp",
@@ -9671,7 +9656,7 @@
       "step": [
         {
           "index": 0,
-          "text": "set %ownPage% to %shownPage.replace(\"file:///opt/plang/os/system/plangos/app/\", \"file:///home/plang/app/\")%",
+          "text": "set %ownPage% to %shownPage.replace(\"/system/plangos/app/\", \"/app/\")%",
           "line": {
             "number": 301
           },
@@ -9703,10 +9688,10 @@
                     "name": "item",
                     "template": "plang"
                   },
-                  "value": "%shownPage.replace(\"file:///opt/plang/os/system/plangos/app/\", \"file:///home/plang/app/\")%",
+                  "value": "%shownPage.replace(\"/system/plangos/app/\", \"/app/\")%",
                   "variable": [
                     {
-                      "text": "%shownPage.replace(\"file:///opt/plang/os/system/plangos/app/\", \"file:///home/plang/app/\")%",
+                      "text": "%shownPage.replace(\"/system/plangos/app/\", \"/app/\")%",
                       "code": [
                         {
                           "variable": "shownPage"
@@ -9718,13 +9703,13 @@
                               "type": {
                                 "name": "text"
                               },
-                              "value": "file:///opt/plang/os/system/plangos/app/"
+                              "value": "/system/plangos/app/"
                             },
                             {
                               "type": {
                                 "name": "text"
                               },
-                              "value": "file:///home/plang/app/"
+                              "value": "/app/"
                             }
                           ]
                         }
@@ -9831,7 +9816,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "e3cfbae2c3cad54b9c635af16bad9388d37f3873907f077d16d09fa8a05546bf"
+      "hash": "9fe580bcab2f80e27fcc9a2b50fa71be655ebb46c95f715cfbc5cb42014944b9"
     },
     {
       "name": "CallFailed",
@@ -10828,5 +10813,5 @@
   "visibility": "Public",
   "path": "/Screen.goal",
   "prPath": "/.build/screen.pr",
-  "hash": "02801e8ed1854deadd900f2c2f92fb415913ff447edb6869b66eca23a385ea27"
+  "hash": "2abc6bed65b7a7201554a4be6076f0d29b0eb5858496bbc0a6837c345102339c"
 }

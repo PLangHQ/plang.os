@@ -8,7 +8,7 @@ Screen
 / to the screen. Ends when the host closes the pipe.
 / The first page is the desktop; every app opens in a window of its own.
 - screen.open(ToOutput=true); variable.set(Name=%screen%, Value=%!data%)
-- browser.start(Url="file:///opt/plang/os/system/plangos/desktop.html", Screen=%screen%, OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
+- browser.start(Url="/system/plangos/desktop.html", Screen=%screen%, OnMessage=goal.call(Name="Desktop")); variable.set(Name=%browser%, Value=%!data%)
 / What happens to a window — every window, today's and later: its own news and its title bar's requests — goes to Window,
 / the happening as %!data% ({"window":"closed","id":3}, {"navigate":"mbl.is","id":2}).
 - on.event(Event=%browser.window.on.opened%, When="after", Action=goal.call(Name="Window"))
@@ -127,7 +127,7 @@ Edit
 / a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file
 / its value
 / the person's own Writer when they have one (changed, so theirs: /app/writer, see OwnApp), else PlangOS's
-- variable.set(Name=%writerPage%, Value="file:///opt/plang/os/system/plangos/app/writer/start.html")
+- variable.set(Name=%writerPage%, Value="/system/plangos/app/writer/start.html")
 - file.exists(Path="/app/writer/start.html"); variable.set(Name=%ownWriter%, Value=%!data%)
 - condition.if(Left=%ownWriter%, Operator="isnotempty") { goal.call(Name="OwnWriter") }
 - open window %writerPage% in %browser%, write to %writer%
@@ -136,7 +136,7 @@ Edit
 - window.call(Name="Show", Window=%writer%, Parameter={file: %asked.edit%, content: %content%})
 
 OwnWriter
-- variable.set(Name=%writerPage%, Value="file:///home/plang/app/writer/start.html")
+- variable.set(Name=%writerPage%, Value="/app/writer/start.html")
 
 Save
 / Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value
@@ -182,7 +182,7 @@ ShowClaude
 / ☰ clicked (#window.bot): Claude's box drops down under it — part of the desktop page, lifted above the
 / windows. %!event!result% is the click: its window, where.
 - set %click% to %!event!result%
-/ the window's page (Writer's: file:///opt/plang/os/system/plangos/app/writer/start.html): the box takes the app from it
+/ the window's page (Writer's: /system/plangos/app/writer/start.html): the box takes the app from it
 - set %clickedPage% to %browser.window[%click.window%].url%
 - window.call(Name="AgentShow", Window=%browser.desktop%, Parameter={window: %click.window%, x: %click.x%, y: %click.y%, page: %clickedPage%})
 
@@ -290,7 +290,7 @@ OwnApp
 - set %call.parameters.path% to %ownPath%
 - set %claudeApp% to %ownApp%
 - set %shownPage% to %browser.window[%asked.about.window%].url%
-- condition.if(Left=%shownPage%, Operator="startswith", Right="file:///opt/plang/os/system/plangos/app/") { goal.call(Name="ShowOwnApp") }
+- condition.if(Left=%shownPage%, Operator="startswith", Right="/system/plangos/app/") { goal.call(Name="ShowOwnApp") }
 
 CopyApp
 - set %baseApp% to %claudeApp.replace("/system/plangos/app/", "/app/.base/")%
@@ -298,7 +298,7 @@ CopyApp
 - file.copy(Source=%claudeApp%, Destination=%baseApp%)
 
 ShowOwnApp
-- set %ownPage% to %shownPage.replace("file:///opt/plang/os/system/plangos/app/", "file:///home/plang/app/")%
+- set %ownPage% to %shownPage.replace("/system/plangos/app/", "/app/")%
 - navigate window %asked.about.window% to %ownPage% in %browser%
 
 CallFailed
