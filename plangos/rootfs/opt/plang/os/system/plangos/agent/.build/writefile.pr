@@ -3,11 +3,83 @@
   "step": [
     {
       "index": 0,
+      "text": "condition.if(Left=%path%, Operator=\"startswith\", Right=\"/system/plangos/app/\") { goal.call(Name=\"NotHere\") }",
+      "line": {
+        "number": 5
+      },
+      "comment": "Writes %content% to the file at %path%, all of it (a new file, or in place of what it held).\nAn app that came with PlangOS is changed from its own window (its ☰): there the change makes it the person's, kept\nwhen PlangOS gets a new image. Written here, in PlangOS's copy, the next image would take it away.",
+      "code": [
+        {
+          "module": "condition",
+          "name": "if",
+          "property": [
+            {
+              "name": "Left",
+              "type": {
+                "name": "item",
+                "template": "plang"
+              },
+              "value": "%path%",
+              "variable": [
+                {
+                  "text": "%path%",
+                  "code": [
+                    {
+                      "variable": "path"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Operator",
+              "type": {
+                "name": "choice",
+                "kind": "operator"
+              },
+              "value": "startswith"
+            },
+            {
+              "name": "Right",
+              "type": {
+                "name": "text"
+              },
+              "value": "/system/plangos/app/"
+            }
+          ],
+          "child": [
+            {
+              "index": 0,
+              "text": "goal.call(Name=\"NotHere\")",
+              "line": {
+                "number": 5
+              },
+              "code": [
+                {
+                  "module": "goal",
+                  "name": "call",
+                  "property": [
+                    {
+                      "name": "Name",
+                      "type": {
+                        "name": "goal"
+                      },
+                      "value": "NotHere"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
       "text": "file.save(Path=%path%, Value=%content%)",
       "line": {
-        "number": 3
+        "number": 6
       },
-      "comment": "Writes %content% to the file at %path%, all of it (a new file, or in place of what it held).",
       "code": [
         {
           "module": "file",
@@ -51,14 +123,13 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     },
     {
-      "index": 1,
+      "index": 2,
       "text": "return \"written\"",
       "line": {
-        "number": 4
+        "number": 7
       },
       "code": [
         {
@@ -83,17 +154,72 @@
             }
           ]
         }
-      ],
-      "waitForExecution": true
+      ]
     }
   ],
-  "child": [],
+  "child": [
+    {
+      "name": "NotHere",
+      "step": [
+        {
+          "index": 0,
+          "text": "throw error \"%path% is an app that comes with PlangOS; a change written here is lost with the next PlangOS. Ask the person to open the app and change it from its window's ☰: it then becomes theirs, and is kept.\"",
+          "line": {
+            "number": 10
+          },
+          "code": [
+            {
+              "module": "error",
+              "name": "throw",
+              "property": [
+                {
+                  "name": "Message",
+                  "type": {
+                    "name": "text",
+                    "template": "plang"
+                  },
+                  "value": "\"%path% is an app that comes with PlangOS; a change written here is lost with the next PlangOS. Ask the person to open the app and change it from its window's ☰: it then becomes theirs, and is kept.\"",
+                  "variable": [
+                    {
+                      "text": "%path%",
+                      "code": [
+                        {
+                          "variable": "path"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "status",
+                  "type": {
+                    "name": "status"
+                  },
+                  "value": 400
+                },
+                {
+                  "name": "key",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "error"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/agent/WriteFile.goal",
+      "prPath": "/agent/.build/writefile.pr",
+      "hash": "adbe618bf33dd37d77df3c35d0e68005c38c10ebed055c4154085fd178eaed18"
+    }
+  ],
   "visibility": "Public",
-  "path": "/system/plangos/agent/WriteFile.goal",
-  "prPath": "/system/plangos/agent/.build/writefile.pr",
-  "hash": "658d1f60aece4854ccafc073a3ada11b013244be6e689ad79d0a8a55d15d0a6d",
-  "isSetup": false,
-  "isEvent": false,
-  "isSystem": true,
-  "isTest": false
+  "path": "/agent/WriteFile.goal",
+  "prPath": "/agent/.build/writefile.pr",
+  "hash": "4ca0aeb59634913e54fc621372e327c96ef5f8e333bb859a30d2d8312d90556b"
 }

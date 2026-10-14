@@ -4010,11 +4010,196 @@
       "step": [
         {
           "index": 0,
-          "text": "open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%",
+          "text": "variable.set(Name=%writerPage%, Value=\"file:///opt/plang/os/system/plangos/app/writer/start.html\")",
           "line": {
-            "number": 129
+            "number": 130
           },
-          "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value",
+          "comment": "a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file\nits value\nthe person's own Writer when they have one (changed, so theirs: /app/writer, see OwnApp), else PlangOS's",
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%writerPage%",
+                  "variable": [
+                    {
+                      "text": "%writerPage%",
+                      "code": [
+                        {
+                          "variable": "writerPage"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "file:///opt/plang/os/system/plangos/app/writer/start.html"
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "text": "file.exists(Path=\"/app/writer/start.html\"); variable.set(Name=%ownWriter%, Value=%!data%)",
+          "line": {
+            "number": 131
+          },
+          "code": [
+            {
+              "module": "file",
+              "name": "exists",
+              "property": [
+                {
+                  "name": "Path",
+                  "type": {
+                    "name": "path"
+                  },
+                  "value": "/app/writer/start.html"
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%ownWriter%",
+                  "variable": [
+                    {
+                      "text": "%ownWriter%",
+                      "code": [
+                        {
+                          "variable": "ownWriter"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "condition.if(Left=%ownWriter%, Operator=\"isnotempty\") { goal.call(Name=\"OwnWriter\") }",
+          "line": {
+            "number": 132
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%ownWriter%",
+                  "variable": [
+                    {
+                      "text": "%ownWriter%",
+                      "code": [
+                        {
+                          "variable": "ownWriter"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Operator",
+                  "type": {
+                    "name": "choice",
+                    "kind": "operator"
+                  },
+                  "value": "isnotempty"
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"OwnWriter\")",
+                  "line": {
+                    "number": 132
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "OwnWriter"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "text": "open window %writerPage% in %browser%, write to %writer%",
+          "line": {
+            "number": 133
+          },
           "code": [
             {
               "module": "window",
@@ -4023,9 +4208,20 @@
                 {
                   "name": "Url",
                   "type": {
-                    "name": "text"
+                    "name": "text",
+                    "template": "plang"
                   },
-                  "value": "file:///opt/plang/os/system/plangos/app/writer/start.html"
+                  "value": "%writerPage%",
+                  "variable": [
+                    {
+                      "text": "%writerPage%",
+                      "code": [
+                        {
+                          "variable": "writerPage"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
                   "name": "Browser",
@@ -4100,20 +4296,20 @@
           ],
           "warning": [
             {
-              "key": "Reopened",
-              "message": "step 0's saved code no longer holds — rebuilt: step 0 'open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%': variable.set: the default frozen for 'asdefault' is no option of this action any more."
+              "key": "Unsure",
+              "message": "step 3 uses window.open, which the decider was not sure of (0.98)"
             },
             {
               "key": "Unsure",
-              "message": "step 0 uses window.open, which the decider was not sure of (0.99)"
+              "message": "step 3 uses variable.set, which the decider was not sure of (0.54)"
             }
           ]
         },
         {
-          "index": 1,
+          "index": 4,
           "text": "read %asked.edit%, write to %content%",
           "line": {
-            "number": 130
+            "number": 134
           },
           "code": [
             {
@@ -4226,10 +4422,10 @@
           ]
         },
         {
-          "index": 2,
+          "index": 5,
           "text": "window.call(Name=\"Show\", Window=%writer%, Parameter={file: %asked.edit%, content: %content%})",
           "line": {
-            "number": 132
+            "number": 136
           },
           "comment": "(call Show file=%asked.edit%, content=%content% in %writer% — formal until builder issue 41 is fixed)",
           "code": [
@@ -4278,7 +4474,65 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "d0aec0bc49a56e66b376d58b127c361d9cded78e743722590ba79054eeb105dc"
+      "hash": "4cfa10db93ce4085c91909dbd51eb4cf12f2d9888209b21c667a36112d8502b3"
+    },
+    {
+      "name": "OwnWriter",
+      "step": [
+        {
+          "index": 0,
+          "text": "variable.set(Name=%writerPage%, Value=\"file:///home/plang/app/writer/start.html\")",
+          "line": {
+            "number": 139
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%writerPage%",
+                  "variable": [
+                    {
+                      "text": "%writerPage%",
+                      "code": [
+                        {
+                          "variable": "writerPage"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "file:///home/plang/app/writer/start.html"
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "5ca01649c24120f2daf68fabe73e6014b37f41bd5145c9c1f1f962e77fa3dd87"
     },
     {
       "name": "Save",
@@ -4287,7 +4541,7 @@
           "index": 0,
           "text": "save %asked.content% to %asked.save%",
           "line": {
-            "number": 136
+            "number": 143
           },
           "comment": "Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value",
           "code": [
@@ -4345,7 +4599,7 @@
           "index": 1,
           "text": "window.call(Name=\"Saved\", Window=%asked.from%, Browser=%browser%)",
           "line": {
-            "number": 137
+            "number": 144
           },
           "code": [
             {
@@ -4416,7 +4670,7 @@
           "index": 0,
           "text": "list files in %asked.list% recursive, write to %files%",
           "line": {
-            "number": 141
+            "number": 148
           },
           "comment": "Writer's Open and New: the files in a folder and its folders",
           "code": [
@@ -4525,7 +4779,7 @@
           "index": 1,
           "text": "window.call(Name=\"ShowList\", Window=%asked.from%, Browser=%browser%, Parameter={folder: %asked.list%, files: %files%})",
           "line": {
-            "number": 142
+            "number": 149
           },
           "code": [
             {
@@ -4603,7 +4857,7 @@
           "index": 0,
           "text": "read %asked.load%, write to %content%",
           "line": {
-            "number": 146
+            "number": 153
           },
           "comment": "Writer's Open: another file in the same window",
           "code": [
@@ -4704,7 +4958,7 @@
           "index": 1,
           "text": "window.call(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.load%, content: %content%})",
           "line": {
-            "number": 147
+            "number": 154
           },
           "code": [
             {
@@ -4782,7 +5036,7 @@
           "index": 0,
           "text": "file.save(Path=%asked.create%, Value=\"\")",
           "line": {
-            "number": 151
+            "number": 158
           },
           "comment": "Writer's New: an empty file, opened in the same window; the desktop shows it",
           "code": [
@@ -4826,7 +5080,7 @@
           "index": 1,
           "text": "window.call(Name=\"Show\", Window=%asked.from%, Browser=%browser%, Parameter={file: %asked.create%, content: \"\"})",
           "line": {
-            "number": 152
+            "number": 159
           },
           "code": [
             {
@@ -4894,7 +5148,7 @@
           "index": 2,
           "text": "call Files",
           "line": {
-            "number": 153
+            "number": 160
           },
           "code": [
             {
@@ -4935,7 +5189,7 @@
           "index": 0,
           "text": "terminal.start(App=\"plang\", Parameter=[\"build\", \"--llmservice=openai\"]); on.timeout(After=\"PT10M\"); on.error(Recovery=[goal.call(Name=\"BuildFailed\")]); variable.set(Name=%built%, Value=%!data%)",
           "line": {
-            "number": 158
+            "number": 165
           },
           "comment": "Writer's ▶ (build): plang builds the app — its own process, as plang build does anywhere; what it\nwrote, and how it ended, go back to the window.",
           "code": [
@@ -5096,7 +5350,7 @@
           "index": 1,
           "text": "window.call(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={output: %built%, error: %built!error%, code: %built!exitCode%})",
           "line": {
-            "number": 159
+            "number": 166
           },
           "code": [
             {
@@ -5174,7 +5428,7 @@
           "index": 0,
           "text": "window.call(Name=\"Built\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
           "line": {
-            "number": 163
+            "number": 170
           },
           "comment": "plang couldn't be started (or timed out): the window hears it, rather than waiting on",
           "code": [
@@ -5253,7 +5507,7 @@
           "index": 0,
           "text": "terminal.start(App=\"plang\", Parameter=[%asked.run%]); on.timeout(After=\"PT5M\"); on.error(Recovery=[goal.call(Name=\"RunFailed\")]); variable.set(Name=%ran%, Value=%!data%)",
           "line": {
-            "number": 168
+            "number": 175
           },
           "comment": "Writer's ▶ (run): the goal runs in a plang of its own (this one's output is the screen); what it\nwrote goes back to the window.",
           "code": [
@@ -5428,7 +5682,7 @@
           "index": 1,
           "text": "window.call(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={output: %ran%, error: %ran!error%, code: %ran!exitCode%})",
           "line": {
-            "number": 169
+            "number": 176
           },
           "code": [
             {
@@ -5506,7 +5760,7 @@
           "index": 0,
           "text": "window.call(Name=\"Ran\", Window=%asked.from%, Browser=%browser%, Parameter={error: %!error.Message%, code: -1})",
           "line": {
-            "number": 172
+            "number": 179
           },
           "code": [
             {
@@ -5584,7 +5838,7 @@
           "index": 0,
           "text": "set %click% to %!event!result%",
           "line": {
-            "number": 177
+            "number": 184
           },
           "comment": "☰ clicked (#window.bot): Claude's box drops down under it — part of the desktop page, lifted above the\nwindows. %!event!result% is the click: its window, where.",
           "code": [
@@ -5647,7 +5901,7 @@
           "index": 1,
           "text": "set %clickedPage% to %browser.window[%click.window%].url%",
           "line": {
-            "number": 179
+            "number": 186
           },
           "comment": "the window's page (Writer's: file:///opt/plang/os/system/plangos/app/writer/start.html): the box takes the app from it",
           "code": [
@@ -5730,7 +5984,7 @@
           "index": 2,
           "text": "window.call(Name=\"AgentShow\", Window=%browser.desktop%, Parameter={window: %click.window%, x: %click.x%, y: %click.y%, page: %clickedPage%})",
           "line": {
-            "number": 180
+            "number": 187
           },
           "code": [
             {
@@ -5790,7 +6044,7 @@
           "index": 0,
           "text": "set %claudeApp% to %asked.about.app%",
           "line": {
-            "number": 186
+            "number": 193
           },
           "comment": "The person wrote to Claude about a window. The first time, with what Claude has to know about PlangOS\nand this window (agent/instructions.md); then it's a conversation. Claude's paths are in the window's app\n(%asked.about.app%: its folder, as the box worked it out from its page; none for a website).",
           "code": [
@@ -5856,7 +6110,7 @@
           "index": 1,
           "text": "condition.if(Left=%claudeStarted%, Operator=\"isnotempty\") { goal.call(Name=\"NextWords\") }",
           "line": {
-            "number": 187
+            "number": 194
           },
           "code": [
             {
@@ -5930,7 +6184,7 @@
           "index": 2,
           "text": "condition.if(Left=%claudeStarted%, Operator=\"isempty\") { goal.call(Name=\"FirstWords\") }",
           "line": {
-            "number": 188
+            "number": 195
           },
           "code": [
             {
@@ -6004,7 +6258,7 @@
           "index": 3,
           "text": "call Turn content=%content% in parallel",
           "line": {
-            "number": 191
+            "number": 198
           },
           "comment": "the conversation runs on its own: a turn waits minutes for Claude, and the screen's clicks (☰ among them) must not\nwait behind it",
           "code": [
@@ -6057,7 +6311,7 @@
           "index": 0,
           "text": "file.exists(Path=\"/agent/instructions.md\"); variable.set(Name=%hasInstructions%, Value=%!data%)",
           "line": {
-            "number": 196
+            "number": 203
           },
           "comment": "Claude's instructions are the app's own (/agent/instructions.md, at its root — the person may change them); the\nfirst time, the shell's copy is put there",
           "code": [
@@ -6130,7 +6384,7 @@
           "index": 1,
           "text": "condition.if(Left=%hasInstructions%, Operator=\"isempty\") { goal.call(Name=\"PlaceInstructions\") }",
           "line": {
-            "number": 197
+            "number": 204
           },
           "code": [
             {
@@ -6195,7 +6449,7 @@
           "index": 2,
           "text": "render '/agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, app=%asked.about.app%, write to %instructions%",
           "line": {
-            "number": 198
+            "number": 205
           },
           "code": [
             {
@@ -6280,7 +6534,7 @@
           "index": 3,
           "text": "file.read(Path=\"/system/llm/agent.md\"); variable.set(Name=%standard%, Value=%!data%, Type=\"text\")",
           "line": {
-            "number": 201
+            "number": 208
           },
           "comment": "how every agent in PLang reports back (plang's own: /system/llm/agent.md)\n(formal: `as text` is dropped by the builder, and a file in a text is its name, not what it holds)",
           "code": [
@@ -6370,7 +6624,7 @@
           "index": 4,
           "text": "set %content% to [{\"type\": \"text\", \"text\": \"%instructions%\\n\\n%standard%\\n\\n---\\n\\n%asked.say%\"}]",
           "line": {
-            "number": 202
+            "number": 209
           },
           "code": [
             {
@@ -6448,7 +6702,7 @@
           "index": 5,
           "text": "set %claudeStarted% to true",
           "line": {
-            "number": 203
+            "number": 210
           },
           "code": [
             {
@@ -6496,7 +6750,7 @@
           "index": 6,
           "text": "set %claudeFirst% to true",
           "line": {
-            "number": 205
+            "number": 212
           },
           "comment": "a new conversation: the host starts Claude afresh for it (and keeps its session under this app's id)",
           "code": [
@@ -6555,7 +6809,7 @@
           "index": 0,
           "text": "file.copy(Source=\"/system/plangos/agent/instructions.md\", Destination=\"/agent/instructions.md\")",
           "line": {
-            "number": 208
+            "number": 215
           },
           "code": [
             {
@@ -6611,7 +6865,7 @@
           "index": 0,
           "text": "set %content% to [{\"type\": \"text\", \"text\": %asked.say%}]",
           "line": {
-            "number": 211
+            "number": 218
           },
           "code": [
             {
@@ -6673,7 +6927,7 @@
           "index": 1,
           "text": "set %claudeFirst% to false",
           "line": {
-            "number": 212
+            "number": 219
           },
           "code": [
             {
@@ -6731,7 +6985,7 @@
           "index": 0,
           "text": "goal.call(Name=%!app.parent.goal[\"Claude\"]%, Parameter={message: %content%, session: %!app.id%, first: %claudeFirst%}); on.error(Recovery=[goal.call(Name=\"ClaudeFailed\")]); variable.set(Name=%reply%, Value=%!data%)",
           "line": {
-            "number": 219
+            "number": 226
           },
           "comment": "One turn: Claude, in the host (the app that started this one), gets %content%; its words go to the box;\nthe goals it asks for run here, and what they gave is its next turn — until it asks for none. The host keeps\nthe conversation under this app's id (%!app.id%: several apps may talk to Claude through one host); the first\nturn of a conversation starts it afresh.",
           "code": [
@@ -6870,7 +7124,7 @@
           "index": 1,
           "text": "set %claudeFirst% to false",
           "line": {
-            "number": 221
+            "number": 228
           },
           "comment": "the turns after it (what the goals Claude asked for gave) go on in the same conversation",
           "code": [
@@ -6919,7 +7173,7 @@
           "index": 2,
           "text": "window.call(Name=\"AgentSays\", Window=%browser.desktop%, Parameter={text: %reply.text%, status: %reply.status%, calls: %reply.calls%})",
           "line": {
-            "number": 222
+            "number": 229
           },
           "code": [
             {
@@ -6969,7 +7223,7 @@
           "index": 3,
           "text": "condition.if(Left=%reply.calls%, Operator=\"isnotempty\") { goal.call(Name=\"RunCalls\") }",
           "line": {
-            "number": 223
+            "number": 230
           },
           "code": [
             {
@@ -7046,7 +7300,7 @@
           "index": 4,
           "text": "condition.if(Left=%reply.calls%, Operator=\"isempty\") { goal.call(Name=\"TurnDone\") }",
           "line": {
-            "number": 224
+            "number": 231
           },
           "code": [
             {
@@ -7133,7 +7387,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentSays\", Window=%browser.desktop%, Parameter={error: %!error.Message%})",
           "line": {
-            "number": 227
+            "number": 234
           },
           "code": [
             {
@@ -7183,7 +7437,7 @@
           "index": 1,
           "text": "return {text: \"\", calls: []}",
           "line": {
-            "number": 228
+            "number": 235
           },
           "code": [
             {
@@ -7216,7 +7470,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentDone\", Window=%browser.desktop%)",
           "line": {
-            "number": 231
+            "number": 238
           },
           "code": [
             {
@@ -7269,7 +7523,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentWriting\", Window=%browser.desktop%, Parameter={partial: %partial%})",
           "line": {
-            "number": 236
+            "number": 243
           },
           "comment": "The host calls this while Claude writes its answer (%partial%: the answer so far, half-written JSON): the box\nshows the words as they come, until the whole answer is there.",
           "code": [
@@ -7330,7 +7584,7 @@
           "index": 0,
           "text": "set %results% to []",
           "line": {
-            "number": 241
+            "number": 248
           },
           "comment": "Each goal Claude asked for runs here — only its own, in agent/ — and what it gave goes into its next\nturn: a screenshot as a picture, anything else as text.",
           "code": [
@@ -7379,7 +7633,7 @@
           "index": 1,
           "text": "foreach %reply.calls%, call RunCall call=%item%",
           "line": {
-            "number": 242
+            "number": 249
           },
           "code": [
             {
@@ -7463,7 +7717,7 @@
           "index": 2,
           "text": "goal.call(Name=\"Turn\", Parameter={content: %results%})",
           "line": {
-            "number": 243
+            "number": 250
           },
           "code": [
             {
@@ -7511,7 +7765,7 @@
           "index": 0,
           "text": "window.call(Name=\"AgentCalling\", Window=%browser.desktop%, Parameter={goal: %call.goal%, parameters: %call.parameters%, why: %call.why%})",
           "line": {
-            "number": 247
+            "number": 254
           },
           "comment": "the box shows the call as it starts (what, and why Claude asked for it), and what it gave when it ends",
           "code": [
@@ -7562,7 +7816,7 @@
           "index": 1,
           "text": "condition.if(Left=%claudeApp%, Operator=\"isnotempty\") { goal.call(Name=\"IntoApp\") }",
           "line": {
-            "number": 250
+            "number": 257
           },
           "comment": "then a path Claude gave (in the window's app) is made the shell's own: /start.html in Writer is\n/system/plangos/app/writer/start.html; /system/… is plang's system as it is",
           "code": [
@@ -7641,9 +7895,85 @@
         },
         {
           "index": 2,
+          "text": "condition.if(Left=%call.goal%, Operator=\"==\", Right=\"WriteFile\") { goal.call(Name=\"ChangesApp\") }",
+          "line": {
+            "number": 259
+          },
+          "comment": "a change to an app that came with PlangOS makes it the person's own (OwnApp)",
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%call.goal%",
+                  "variable": [
+                    {
+                      "text": "%call.goal%",
+                      "code": [
+                        {
+                          "variable": "call"
+                        },
+                        {
+                          "property": "goal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Operator",
+                  "type": {
+                    "name": "choice",
+                    "kind": "operator"
+                  },
+                  "value": "=="
+                },
+                {
+                  "name": "Right",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "WriteFile"
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"ChangesApp\")",
+                  "line": {
+                    "number": 259
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "ChangesApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
           "text": "set %agentGoal% to \"/system/plangos/agent/%call.goal%\"",
           "line": {
-            "number": 251
+            "number": 260
           },
           "code": [
             {
@@ -7702,10 +8032,10 @@
           ]
         },
         {
-          "index": 3,
+          "index": 4,
           "text": "goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name=\"CallFailed\")]); variable.set(Name=%got%, Value=%!data%)",
           "line": {
-            "number": 252
+            "number": 261
           },
           "code": [
             {
@@ -7861,10 +8191,10 @@
           ]
         },
         {
-          "index": 4,
+          "index": 5,
           "text": "window.call(Name=\"AgentCalled\", Window=%browser.desktop%, Parameter={goal: %call.goal%, got: %got%})",
           "line": {
-            "number": 253
+            "number": 262
           },
           "code": [
             {
@@ -7911,10 +8241,10 @@
           ]
         },
         {
-          "index": 5,
+          "index": 6,
           "text": "condition.if(Left=%call.goal%, Operator=\"==\", Right=\"Screenshot\") { goal.call(Name=\"GavePicture\") }",
           "line": {
-            "number": 254
+            "number": 263
           },
           "code": [
             {
@@ -7995,10 +8325,10 @@
           ]
         },
         {
-          "index": 6,
+          "index": 7,
           "text": "condition.if(Left=%call.goal%, Operator=\"!=\", Right=\"Screenshot\") { goal.call(Name=\"GaveText\") }",
           "line": {
-            "number": 255
+            "number": 264
           },
           "code": [
             {
@@ -8083,7 +8413,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "2d61359569fd174640492836b472acd30d895ed56db13a86ea27a12828155252"
+      "hash": "b53542131ff5b6e22e9b4d5c17fb1dbaa1df93561abc9e89ea647ad20f59ada3"
     },
     {
       "name": "IntoApp",
@@ -8092,7 +8422,7 @@
           "index": 0,
           "text": "condition.if(Left=%call.parameters.path%, Operator=\"isnotempty\") { goal.call(Name=\"PathIntoApp\") }",
           "line": {
-            "number": 258
+            "number": 267
           },
           "code": [
             {
@@ -8188,7 +8518,7 @@
           "index": 0,
           "text": "condition.if(Left=%call.parameters.path%, Operator=\"notstartswith\", Right=\"/system/\") { goal.call(Name=\"AppPath\") }",
           "line": {
-            "number": 261
+            "number": 270
           },
           "code": [
             {
@@ -8291,7 +8621,7 @@
           "index": 0,
           "text": "set %appPath% to \"%claudeApp%%call.parameters.path%\"",
           "line": {
-            "number": 265
+            "number": 274
           },
           "comment": "(made apart first: a member set from a text naming itself is a resolve cycle)",
           "code": [
@@ -8365,7 +8695,7 @@
           "index": 1,
           "text": "set %call.parameters.path% to %appPath%",
           "line": {
-            "number": 266
+            "number": 275
           },
           "code": [
             {
@@ -8434,13 +8764,1083 @@
       "hash": "60904b5e2a9c678fa243126d72b8223a936bf762a4f83e0b8f53358a5a2eab2c"
     },
     {
+      "name": "ChangesApp",
+      "step": [
+        {
+          "index": 0,
+          "text": "condition.if(Left=%claudeApp%, Operator=\"startswith\", Right=\"/system/plangos/app/\") { goal.call(Name=\"OwnApp\") }",
+          "line": {
+            "number": 278
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%claudeApp%",
+                  "variable": [
+                    {
+                      "text": "%claudeApp%",
+                      "code": [
+                        {
+                          "variable": "claudeApp"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Operator",
+                  "type": {
+                    "name": "choice",
+                    "kind": "operator"
+                  },
+                  "value": "startswith"
+                },
+                {
+                  "name": "Right",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "/system/plangos/app/"
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"OwnApp\")",
+                  "line": {
+                    "number": 278
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "OwnApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "3427731942af8b438dc0bd56f426378dacb63228fbc78ea4923c3f118558938b"
+    },
+    {
+      "name": "OwnApp",
+      "step": [
+        {
+          "index": 0,
+          "text": "set %ownApp% to %claudeApp.replace(\"/system/plangos/app/\", \"/app/\")%",
+          "line": {
+            "number": 285
+          },
+          "comment": "The window's app came with PlangOS: it is in the image, and the next image replaces it. Its first change makes it\nthe person's: copied into their app (/app/<name>, on the data disk, which a new image never touches) — and what it\ncame from beside it (/app/.base/<name>), to compare with a newer PlangOS's — then the window shows the copy. The\nchange, and every one after it, is made in the copy.",
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%ownApp%",
+                  "variable": [
+                    {
+                      "text": "%ownApp%",
+                      "code": [
+                        {
+                          "variable": "ownApp"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%claudeApp.replace(\"/system/plangos/app/\", \"/app/\")%",
+                  "variable": [
+                    {
+                      "text": "%claudeApp.replace(\"/system/plangos/app/\", \"/app/\")%",
+                      "code": [
+                        {
+                          "variable": "claudeApp"
+                        },
+                        {
+                          "method": "replace",
+                          "parameter": [
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "/system/plangos/app/"
+                            },
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "/app/"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "text": "file.exists(Path=\"%ownApp%/\"); variable.set(Name=%owned%, Value=%!data%)",
+          "line": {
+            "number": 287
+          },
+          "comment": "(the folder as a template, \"%ownApp%/\": a path that is only a variable comes back as its text, which is never empty)",
+          "code": [
+            {
+              "module": "file",
+              "name": "exists",
+              "property": [
+                {
+                  "name": "Path",
+                  "type": {
+                    "name": "path",
+                    "template": "plang"
+                  },
+                  "value": "%ownApp%/",
+                  "variable": [
+                    {
+                      "text": "%ownApp%",
+                      "code": [
+                        {
+                          "variable": "ownApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%owned%",
+                  "variable": [
+                    {
+                      "text": "%owned%",
+                      "code": [
+                        {
+                          "variable": "owned"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%!data%",
+                  "variable": [
+                    {
+                      "text": "%!data%",
+                      "code": [
+                        {
+                          "variable": "!data"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "condition.if(Left=%owned%, Operator=\"isempty\") { goal.call(Name=\"CopyApp\") }",
+          "line": {
+            "number": 288
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%owned%",
+                  "variable": [
+                    {
+                      "text": "%owned%",
+                      "code": [
+                        {
+                          "variable": "owned"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Operator",
+                  "type": {
+                    "name": "choice",
+                    "kind": "operator"
+                  },
+                  "value": "isempty"
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"CopyApp\")",
+                  "line": {
+                    "number": 288
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "CopyApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "text": "set %ownPath% to %call.parameters.path.replace(\"/system/plangos/app/\", \"/app/\")%",
+          "line": {
+            "number": 289
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%ownPath%",
+                  "variable": [
+                    {
+                      "text": "%ownPath%",
+                      "code": [
+                        {
+                          "variable": "ownPath"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%call.parameters.path.replace(\"/system/plangos/app/\", \"/app/\")%",
+                  "variable": [
+                    {
+                      "text": "%call.parameters.path.replace(\"/system/plangos/app/\", \"/app/\")%",
+                      "code": [
+                        {
+                          "variable": "call"
+                        },
+                        {
+                          "property": "parameters"
+                        },
+                        {
+                          "property": "path"
+                        },
+                        {
+                          "method": "replace",
+                          "parameter": [
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "/system/plangos/app/"
+                            },
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "/app/"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "text": "set %call.parameters.path% to %ownPath%",
+          "line": {
+            "number": 290
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%call.parameters.path%",
+                  "variable": [
+                    {
+                      "text": "%call.parameters.path%",
+                      "code": [
+                        {
+                          "variable": "call"
+                        },
+                        {
+                          "property": "parameters"
+                        },
+                        {
+                          "property": "path"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%ownPath%",
+                  "variable": [
+                    {
+                      "text": "%ownPath%",
+                      "code": [
+                        {
+                          "variable": "ownPath"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "text": "set %claudeApp% to %ownApp%",
+          "line": {
+            "number": 291
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%claudeApp%",
+                  "variable": [
+                    {
+                      "text": "%claudeApp%",
+                      "code": [
+                        {
+                          "variable": "claudeApp"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%ownApp%",
+                  "variable": [
+                    {
+                      "text": "%ownApp%",
+                      "code": [
+                        {
+                          "variable": "ownApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "text": "set %shownPage% to %browser.window[%asked.about.window%].url%",
+          "line": {
+            "number": 292
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%shownPage%",
+                  "variable": [
+                    {
+                      "text": "%shownPage%",
+                      "code": [
+                        {
+                          "variable": "shownPage"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%browser.window[%asked.about.window%].url%",
+                  "variable": [
+                    {
+                      "text": "%browser.window[%asked.about.window%].url%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        },
+                        {
+                          "property": "window"
+                        },
+                        {
+                          "index": {
+                            "variable": [
+                              {
+                                "text": "%asked.about.window%",
+                                "code": [
+                                  {
+                                    "variable": "asked"
+                                  },
+                                  {
+                                    "property": "about"
+                                  },
+                                  {
+                                    "property": "window"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "property": "url"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "text": "condition.if(Left=%shownPage%, Operator=\"startswith\", Right=\"file:///opt/plang/os/system/plangos/app/\") { goal.call(Name=\"ShowOwnApp\") }",
+          "line": {
+            "number": 293
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%shownPage%",
+                  "variable": [
+                    {
+                      "text": "%shownPage%",
+                      "code": [
+                        {
+                          "variable": "shownPage"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Operator",
+                  "type": {
+                    "name": "choice",
+                    "kind": "operator"
+                  },
+                  "value": "startswith"
+                },
+                {
+                  "name": "Right",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "file:///opt/plang/os/system/plangos/app/"
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"ShowOwnApp\")",
+                  "line": {
+                    "number": 293
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "ShowOwnApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "23063655e11c8a29041f920dc77fe0134824bd372b54d5a1377c566ac836e55f"
+    },
+    {
+      "name": "CopyApp",
+      "step": [
+        {
+          "index": 0,
+          "text": "set %baseApp% to %claudeApp.replace(\"/system/plangos/app/\", \"/app/.base/\")%",
+          "line": {
+            "number": 296
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%baseApp%",
+                  "variable": [
+                    {
+                      "text": "%baseApp%",
+                      "code": [
+                        {
+                          "variable": "baseApp"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%claudeApp.replace(\"/system/plangos/app/\", \"/app/.base/\")%",
+                  "variable": [
+                    {
+                      "text": "%claudeApp.replace(\"/system/plangos/app/\", \"/app/.base/\")%",
+                      "code": [
+                        {
+                          "variable": "claudeApp"
+                        },
+                        {
+                          "method": "replace",
+                          "parameter": [
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "/system/plangos/app/"
+                            },
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "/app/.base/"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "text": "file.copy(Source=%claudeApp%, Destination=%ownApp%)",
+          "line": {
+            "number": 297
+          },
+          "code": [
+            {
+              "module": "file",
+              "name": "copy",
+              "property": [
+                {
+                  "name": "Source",
+                  "type": {
+                    "name": "path",
+                    "template": "plang"
+                  },
+                  "value": "%claudeApp%",
+                  "variable": [
+                    {
+                      "text": "%claudeApp%",
+                      "code": [
+                        {
+                          "variable": "claudeApp"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Destination",
+                  "type": {
+                    "name": "path",
+                    "template": "plang"
+                  },
+                  "value": "%ownApp%",
+                  "variable": [
+                    {
+                      "text": "%ownApp%",
+                      "code": [
+                        {
+                          "variable": "ownApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "overwrite",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                },
+                {
+                  "name": "subfolder",
+                  "type": {
+                    "name": "choice",
+                    "kind": "subfolder"
+                  },
+                  "value": "include"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "file.copy(Source=%claudeApp%, Destination=%baseApp%)",
+          "line": {
+            "number": 298
+          },
+          "code": [
+            {
+              "module": "file",
+              "name": "copy",
+              "property": [
+                {
+                  "name": "Source",
+                  "type": {
+                    "name": "path",
+                    "template": "plang"
+                  },
+                  "value": "%claudeApp%",
+                  "variable": [
+                    {
+                      "text": "%claudeApp%",
+                      "code": [
+                        {
+                          "variable": "claudeApp"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Destination",
+                  "type": {
+                    "name": "path",
+                    "template": "plang"
+                  },
+                  "value": "%baseApp%",
+                  "variable": [
+                    {
+                      "text": "%baseApp%",
+                      "code": [
+                        {
+                          "variable": "baseApp"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "overwrite",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                },
+                {
+                  "name": "subfolder",
+                  "type": {
+                    "name": "choice",
+                    "kind": "subfolder"
+                  },
+                  "value": "include"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "0b8dd7443a805ff57630658e0491f3fd153d6e0431af99386c299dad79aa83ed"
+    },
+    {
+      "name": "ShowOwnApp",
+      "step": [
+        {
+          "index": 0,
+          "text": "set %ownPage% to %shownPage.replace(\"file:///opt/plang/os/system/plangos/app/\", \"file:///home/plang/app/\")%",
+          "line": {
+            "number": 301
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%ownPage%",
+                  "variable": [
+                    {
+                      "text": "%ownPage%",
+                      "code": [
+                        {
+                          "variable": "ownPage"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%shownPage.replace(\"file:///opt/plang/os/system/plangos/app/\", \"file:///home/plang/app/\")%",
+                  "variable": [
+                    {
+                      "text": "%shownPage.replace(\"file:///opt/plang/os/system/plangos/app/\", \"file:///home/plang/app/\")%",
+                      "code": [
+                        {
+                          "variable": "shownPage"
+                        },
+                        {
+                          "method": "replace",
+                          "parameter": [
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "file:///opt/plang/os/system/plangos/app/"
+                            },
+                            {
+                              "type": {
+                                "name": "text"
+                              },
+                              "value": "file:///home/plang/app/"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "text": "navigate window %asked.about.window% to %ownPage% in %browser%",
+          "line": {
+            "number": 302
+          },
+          "code": [
+            {
+              "module": "window",
+              "name": "navigate",
+              "property": [
+                {
+                  "name": "Window",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%asked.about.window%",
+                  "variable": [
+                    {
+                      "text": "%asked.about.window%",
+                      "code": [
+                        {
+                          "variable": "asked"
+                        },
+                        {
+                          "property": "about"
+                        },
+                        {
+                          "property": "window"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Url",
+                  "type": {
+                    "name": "text",
+                    "template": "plang"
+                  },
+                  "value": "%ownPage%",
+                  "variable": [
+                    {
+                      "text": "%ownPage%",
+                      "code": [
+                        {
+                          "variable": "ownPage"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Browser",
+                  "type": {
+                    "name": "browser",
+                    "template": "plang"
+                  },
+                  "value": "%browser%",
+                  "variable": [
+                    {
+                      "text": "%browser%",
+                      "code": [
+                        {
+                          "variable": "browser"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "warning": [
+            {
+              "key": "Unsure",
+              "message": "step 1 uses window.navigate, which the decider was not sure of (0.99)"
+            }
+          ]
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "e3cfbae2c3cad54b9c635af16bad9388d37f3873907f077d16d09fa8a05546bf"
+    },
+    {
       "name": "CallFailed",
       "step": [
         {
           "index": 0,
           "text": "return \"failed: %!error.Message%\"",
           "line": {
-            "number": 269
+            "number": 305
           },
           "code": [
             {
@@ -8495,7 +9895,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave this picture:\"} to %results%",
           "line": {
-            "number": 272
+            "number": 308
           },
           "code": [
             {
@@ -8557,7 +9957,7 @@
           "index": 1,
           "text": "add {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": %got%}} to %results%",
           "line": {
-            "number": 273
+            "number": 309
           },
           "code": [
             {
@@ -8626,7 +10026,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave: %got%\"} to %results%",
           "line": {
-            "number": 276
+            "number": 312
           },
           "code": [
             {
@@ -8706,7 +10106,7 @@
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 282
+            "number": 318
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -8772,7 +10172,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 283
+            "number": 319
           },
           "code": [
             {
@@ -8826,7 +10226,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 284
+            "number": 320
           },
           "code": [
             {
@@ -8895,7 +10295,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 285
+            "number": 321
           },
           "code": [
             {
@@ -8964,7 +10364,7 @@
           "index": 4,
           "text": "if %event.tool%, call Tool",
           "line": {
-            "number": 286
+            "number": 322
           },
           "code": [
             {
@@ -9033,7 +10433,7 @@
           "index": 5,
           "text": "if %event.paste%, call Paste",
           "line": {
-            "number": 287
+            "number": 323
           },
           "code": [
             {
@@ -9112,7 +10512,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 290
+            "number": 326
           },
           "code": [
             {
@@ -9203,7 +10603,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 293
+            "number": 329
           },
           "code": [
             {
@@ -9273,7 +10673,7 @@
           "index": 0,
           "text": "window.call(Name=\"Tool\", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})",
           "line": {
-            "number": 298
+            "number": 334
           },
           "comment": "One of the app's tools in its window's title bar was clicked ({\"tool\": \"save\", \"id\"}): its page's\ngoal Tool gets it. The page named its tools itself ({\"window\": \"tools\", \"tools\": [...]}).",
           "code": [
@@ -9352,7 +10752,7 @@
           "index": 0,
           "text": "window.call(Name=\"Paste\", Window=%event.id%, Browser=%browser%, Parameter={value: %event.paste%})",
           "line": {
-            "number": 303
+            "number": 339
           },
           "comment": "A page asked for the clipboard as a value ({\"window\": \"paste\"}): a copy that knows where it came\nfrom, as json; its page's goal Paste gets it.",
           "code": [

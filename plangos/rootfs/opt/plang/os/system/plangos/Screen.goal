@@ -126,10 +126,17 @@ Files
 Edit
 / a file opens in Writer, in a window of its own: what it holds — a text file its text, a json file
 / its value
-- open window 'file:///opt/plang/os/system/plangos/app/writer/start.html' in %browser%, write to %writer%
+/ the person's own Writer when they have one (changed, so theirs: /app/writer, see OwnApp), else PlangOS's
+- variable.set(Name=%writerPage%, Value="file:///opt/plang/os/system/plangos/app/writer/start.html")
+- file.exists(Path="/app/writer/start.html"); variable.set(Name=%ownWriter%, Value=%!data%)
+- condition.if(Left=%ownWriter%, Operator="isnotempty") { goal.call(Name="OwnWriter") }
+- open window %writerPage% in %browser%, write to %writer%
 - read %asked.edit%, write to %content%
 / (call Show file=%asked.edit%, content=%content% in %writer% — formal until builder issue 41 is fixed)
 - window.call(Name="Show", Window=%writer%, Parameter={file: %asked.edit%, content: %content%})
+
+OwnWriter
+- variable.set(Name=%writerPage%, Value="file:///home/plang/app/writer/start.html")
 
 Save
 / Ctrl+S in Writer: the file's format writes what Writer sends — a text file's text, a json file's value
@@ -248,6 +255,8 @@ RunCall
 / then a path Claude gave (in the window's app) is made the shell's own: /start.html in Writer is
 / /system/plangos/app/writer/start.html; /system/… is plang's system as it is
 - condition.if(Left=%claudeApp%, Operator="isnotempty") { goal.call(Name="IntoApp") }
+/ a change to an app that came with PlangOS makes it the person's own (OwnApp)
+- condition.if(Left=%call.goal%, Operator="==", Right="WriteFile") { goal.call(Name="ChangesApp") }
 - set %agentGoal% to "/system/plangos/agent/%call.goal%"
 - goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name="CallFailed")]); variable.set(Name=%got%, Value=%!data%)
 - window.call(Name="AgentCalled", Window=%browser.desktop%, Parameter={goal: %call.goal%, got: %got%})
@@ -264,6 +273,33 @@ AppPath
 / (made apart first: a member set from a text naming itself is a resolve cycle)
 - set %appPath% to "%claudeApp%%call.parameters.path%"
 - set %call.parameters.path% to %appPath%
+
+ChangesApp
+- condition.if(Left=%claudeApp%, Operator="startswith", Right="/system/plangos/app/") { goal.call(Name="OwnApp") }
+
+OwnApp
+/ The window's app came with PlangOS: it is in the image, and the next image replaces it. Its first change makes it
+/ the person's: copied into their app (/app/<name>, on the data disk, which a new image never touches) — and what it
+/ came from beside it (/app/.base/<name>), to compare with a newer PlangOS's — then the window shows the copy. The
+/ change, and every one after it, is made in the copy.
+- set %ownApp% to %claudeApp.replace("/system/plangos/app/", "/app/")%
+/ (the folder as a template, "%ownApp%/": a path that is only a variable comes back as its text, which is never empty)
+- file.exists(Path="%ownApp%/"); variable.set(Name=%owned%, Value=%!data%)
+- condition.if(Left=%owned%, Operator="isempty") { goal.call(Name="CopyApp") }
+- set %ownPath% to %call.parameters.path.replace("/system/plangos/app/", "/app/")%
+- set %call.parameters.path% to %ownPath%
+- set %claudeApp% to %ownApp%
+- set %shownPage% to %browser.window[%asked.about.window%].url%
+- condition.if(Left=%shownPage%, Operator="startswith", Right="file:///opt/plang/os/system/plangos/app/") { goal.call(Name="ShowOwnApp") }
+
+CopyApp
+- set %baseApp% to %claudeApp.replace("/system/plangos/app/", "/app/.base/")%
+- file.copy(Source=%claudeApp%, Destination=%ownApp%)
+- file.copy(Source=%claudeApp%, Destination=%baseApp%)
+
+ShowOwnApp
+- set %ownPage% to %shownPage.replace("file:///opt/plang/os/system/plangos/app/", "file:///home/plang/app/")%
+- navigate window %asked.about.window% to %ownPage% in %browser%
 
 CallFailed
 - return "failed: %!error.Message%"

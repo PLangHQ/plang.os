@@ -1,4 +1,10 @@
 WriteFile
 / Writes %content% to the file at %path%, all of it (a new file, or in place of what it held).
+/ An app that came with PlangOS is changed from its own window (its ☰): there the change makes it the person's, kept
+/ when PlangOS gets a new image. Written here, in PlangOS's copy, the next image would take it away.
+- condition.if(Left=%path%, Operator="startswith", Right="/system/plangos/app/") { goal.call(Name="NotHere") }
 - file.save(Path=%path%, Value=%content%)
 - return "written"
+
+NotHere
+- throw error "%path% is an app that comes with PlangOS; a change written here is lost with the next PlangOS. Ask the person to open the app and change it from its window's ☰: it then becomes theirs, and is kept."
