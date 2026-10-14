@@ -1,65 +1,42 @@
 # os bot — branch `os/plangos`
 
 ## Version
-v1. The first PlangOS image, stage 1 of `/shared/os/start.md`.
+v3 (2026-10-14). Installed in /shared/plangos: image 07aeec3c (fallback image.last 224a46fe), runtime b7bb7e11c.
 
 ## What this is
-PlangOS is the Linux half of "one link on plang.is". Host plang on Windows imports this image into WSL and starts it. Inside is Debian 13 with self-contained plang and Chromium, sealed from Windows: interop off, no `/mnt/c`, no shell, and nothing that can become root.
-
-This branch replaces the v2 Photino/WebKitGTK desktop idea (branch `os/v1-container`) with Chromium, as Ingi decided on 2026-09-28. The Alpine no-shell image in `container/` stays as the headless server image.
+PlangOS: a WSL distro where only PLang runs (C# Wayland compositor + Chromium), shown on Windows by plang.exe.
+This version: what the person changes in PlangOS's own apps survives a new image, and the bot box (☰) behaves.
 
 ## What was done
-- **`plangos/`** (new):
-  - `build.sh` has two commands. `lock` resolves `packages.conf` against snapshot.debian.org into `packages.lock`. `image` assembles the rootfs with `dpkg-deb -x` (no install scripts), generates caches through unprivileged chroots, adds plang and `/etc`, and writes a deterministic `.tar.xz` plus a manifest.
-  - `mktar.py` writes the deterministic tar and refuses setuid files.
-  - `checks.py` covers checks 1.4 and 1.6, plus confirming every ELF finds its libraries.
-  - `run-local.sh` runs the rootfs as uid 10001 via pivot_root.
-  - `tardiff.py` diagnoses check 1.5.
-  - `rootfs/etc/` holds wsl.conf, passwd, group and nsswitch.
-  - `host/start.ps1` is the draft from `/shared/os`.
-  - `dev/import.ps1` lets you test on Windows before host plang exists.
-- **Results:**
-  - 224.3 MB xz: PASS.
-  - Two builds are byte-identical: PASS.
-  - checks.py 14/14.
-  - plang starts in 1.4–2.5 s.
-  - Chromium renders headless as uid 10001 with its sandbox on.
-- **Key decisions** (see `v1/tradeoffs.md`):
-  - Build without a container runtime or root.
-  - Deny Mesa: 192 MB, since Chromium renders on the CPU.
-  - xz, because gzip is 326 MB.
-  - No `[boot] command`.
-  - `/home/plang` is the only user tree.
-- **Plan updated:** the `/shared/os/start.md` stage 1 results table.
+- **Your app survives (v3).** A new image replaces /opt/plang/os; only /home/plang (data.vhd) is kept. Claude's first
+  change to an app that comes with PlangOS (WriteFile from that app's window ☰) copies the app to /app/<name>
+  (= /home/plang/app/<name>), keeps the original in /app/.base/<name>, writes the change in the copy and navigates the
+  window to it. Writer opens from /app/writer when it exists. WriteFile into /system/plangos/app/ (the desktop box)
+  is refused with why. Files: Screen.goal (Edit, OwnWriter, ChangesApp, OwnApp, CopyApp, ShowOwnApp),
+  agent/WriteFile.goal (NotHere). Tested on the Linux harness (ownapptest.sh): copy, base, change, window, re-open,
+  load and save from the copy.
+- **Bot box (v2→image 224a46fe):** closes on a click elsewhere (page blur; the box gives the desktop the keyboard),
+  ☰ opens in one click, what is written while Claude works is queued. desktop.html.
+- **Modal questions: withdrawn.** window.ask + %askWindow% were rejected by Ingi: the asker just asks; the input
+  channel's goal (Question) must get *who asked* from plang. Proposal with the architect ("a question knows who
+  asked", next branch). The display Sheet.cs is on local plang branch plang-os-sheet (e95b20b72).
+- plang branch plang-os-stable sits on runtime2 (app-systems closed, decision 743); nothing to merge.
 
-## Delivered to Ingi: `/shared/plangos/`
-- `start.ps1` runs `plang\plang.exe` in that folder.
-- `Start.goal` handles WSL (check, install, RunOnce resume), a sha256-verified import, and `wsl -d PlangOS`, all through `run terminal`.
-- `plang\` is a win-x64 self-contained runtime (295 MB) with `os\`.
-- `image\` holds `plangos-amd64.tar.xz` (sha256 `f5773f30…`) and its manifest.
-- A README states what works and what doesn't. **The terminal module doesn't exist yet**, so `Start.goal` can't be built or run. The image can be imported by hand.
-
-## Next
-1. **Ingi on Windows:** build or copy `out/`, run `dev/import.ps1`, `wsl -d PlangOS` → checks 1.4 (WSL half) and 1.7.
-2. **A built `Start.goal` for the image.** The pre-built `.pr` files in `app-systems` are outdated (`PrFormatOutdated`), so it needs `plang build` with an LLM.
-3. **Remaining checks:**
-   - CVE scan (trivy/grype);
-   - SBOM (syft);
-   - manifest signing, which waits on PLang's signature format for host plang.
-4. **PLang-side (coder):**
-   - `terminal`;
-   - `container`/Service keepalive;
-   - channel framing;
-   - the cross-channel goal call.
-   Host plang's `start.goal` can't run until these exist.
-
-## Open for Ingi
-- Does plang drive Chromium through Playwright? If not, drop the Node copy (−44 MB).
-- The old `container-desktop/` and `scripts/*-desktop.ps1` (the v2 Photino desktop) are superseded. OK to delete?
+## Open
+- Stop button for the bot (cancel the turn + end claude on the host).
+- Compare /app/.base/<name> with a newer image's app and tell the person (not built yet).
+- plang bug reported: file.exists(Path=%var%) answers text, never empty; workaround Path="%x%/".
+- ShellUpdate's %file!relative% bug: shell.next doesn't work; ship through images.
 
 ## Code example
-```sh
-plangos/build.sh image /tmp/plang-publish      # -> out/plangos-amd64.tar.xz + manifest-amd64.json
-python3 plangos/checks.py plangos/.work/rootfs plangos/out/plangos-amd64.tar.xz
-plangos/run-local.sh plangos/.work/rootfs /usr/lib/chromium/chromium --headless --disable-gpu --dump-dom 'data:text/html,<h1>hi</h1>'
 ```
+OwnApp
+- set %ownApp% to %claudeApp.replace("/system/plangos/app/", "/app/")%
+- file.exists(Path="%ownApp%/"); variable.set(Name=%owned%, Value=%!data%)
+- condition.if(Left=%owned%, Operator="isempty") { goal.call(Name="CopyApp") }
+- set %ownPath% to %call.parameters.path.replace("/system/plangos/app/", "/app/")%
+```
+
+## After review (v2)
+Ingi: "window.ask hljómar rangt" — a second verb beside `ask`, and the shell storing which window asked. Withdrawn;
+the question should carry who asked (plang core change, with the architect).
