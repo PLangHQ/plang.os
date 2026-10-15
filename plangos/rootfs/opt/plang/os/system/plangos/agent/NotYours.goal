@@ -1,0 +1,3 @@
+NotYours
+/ What runs when Claude names a goal that isn't one of its own (a name with / or ..): it is said why, and nothing runs.
+- throw error "Only your goals can be called, by their names (ReadFile, WriteFile, ListFiles, Reload, Screenshot, BuildApp, RunGoal): a name with / or .. is not one of them."

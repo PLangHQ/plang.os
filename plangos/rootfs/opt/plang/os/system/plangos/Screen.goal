@@ -258,6 +258,10 @@ RunCall
 / a change to an app that came with PlangOS makes it the person's own (OwnApp)
 - condition.if(Left=%call.goal%, Operator="==", Right="WriteFile") { goal.call(Name="ChangesApp") }
 - set %agentGoal% to "/system/plangos/agent/%call.goal%"
+/ only Claude's own goals, by their names: a name that reaches out of agent/ (../, a /) would run any goal here, in the
+/ shell — the one plang linked to the host
+- condition.if(Left=%call.goal%, Operator="contains", Right="/") { goal.call(Name="NotAgentGoal") }
+- condition.if(Left=%call.goal%, Operator="contains", Right="..") { goal.call(Name="NotAgentGoal") }
 - goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name="CallFailed")]); variable.set(Name=%got%, Value=%!data%)
 - window.call(Name="AgentCalled", Window=%browser.desktop%, Parameter={goal: %call.goal%, got: %got%})
 - condition.if(Left=%call.goal%, Operator="==", Right="Screenshot") { goal.call(Name="GavePicture") }
@@ -300,6 +304,9 @@ CopyApp
 ShowOwnApp
 - set %ownPage% to %shownPage.replace("/system/plangos/app/", "/app/")%
 - navigate window %asked.about.window% to %ownPage% in %browser%
+
+NotAgentGoal
+- set %agentGoal% to "/system/plangos/agent/NotYours"
 
 CallFailed
 - return "failed: %!error.Message%"

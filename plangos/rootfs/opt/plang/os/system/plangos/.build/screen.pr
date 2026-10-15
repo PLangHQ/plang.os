@@ -8018,9 +8018,160 @@
         },
         {
           "index": 4,
+          "text": "condition.if(Left=%call.goal%, Operator=\"contains\", Right=\"/\") { goal.call(Name=\"NotAgentGoal\") }",
+          "line": {
+            "number": 263
+          },
+          "comment": "only Claude's own goals, by their names: a name that reaches out of agent/ (../, a /) would run any goal here, in the\nshell — the one plang linked to the host",
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%call.goal%",
+                  "variable": [
+                    {
+                      "text": "%call.goal%",
+                      "code": [
+                        {
+                          "variable": "call"
+                        },
+                        {
+                          "property": "goal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Operator",
+                  "type": {
+                    "name": "choice",
+                    "kind": "operator"
+                  },
+                  "value": "contains"
+                },
+                {
+                  "name": "Right",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "/"
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"NotAgentGoal\")",
+                  "line": {
+                    "number": 263
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "NotAgentGoal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "text": "condition.if(Left=%call.goal%, Operator=\"contains\", Right=\"..\") { goal.call(Name=\"NotAgentGoal\") }",
+          "line": {
+            "number": 264
+          },
+          "code": [
+            {
+              "module": "condition",
+              "name": "if",
+              "property": [
+                {
+                  "name": "Left",
+                  "type": {
+                    "name": "item",
+                    "template": "plang"
+                  },
+                  "value": "%call.goal%",
+                  "variable": [
+                    {
+                      "text": "%call.goal%",
+                      "code": [
+                        {
+                          "variable": "call"
+                        },
+                        {
+                          "property": "goal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Operator",
+                  "type": {
+                    "name": "choice",
+                    "kind": "operator"
+                  },
+                  "value": "contains"
+                },
+                {
+                  "name": "Right",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": ".."
+                }
+              ],
+              "child": [
+                {
+                  "index": 0,
+                  "text": "goal.call(Name=\"NotAgentGoal\")",
+                  "line": {
+                    "number": 264
+                  },
+                  "code": [
+                    {
+                      "module": "goal",
+                      "name": "call",
+                      "property": [
+                        {
+                          "name": "Name",
+                          "type": {
+                            "name": "goal"
+                          },
+                          "value": "NotAgentGoal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
           "text": "goal.call(Name=%agentGoal%, Parameter=%call.parameters%); on.error(Recovery=[goal.call(Name=\"CallFailed\")]); variable.set(Name=%got%, Value=%!data%)",
           "line": {
-            "number": 261
+            "number": 265
           },
           "code": [
             {
@@ -8176,10 +8327,10 @@
           ]
         },
         {
-          "index": 5,
+          "index": 7,
           "text": "window.call(Name=\"AgentCalled\", Window=%browser.desktop%, Parameter={goal: %call.goal%, got: %got%})",
           "line": {
-            "number": 262
+            "number": 266
           },
           "code": [
             {
@@ -8226,10 +8377,10 @@
           ]
         },
         {
-          "index": 6,
+          "index": 8,
           "text": "condition.if(Left=%call.goal%, Operator=\"==\", Right=\"Screenshot\") { goal.call(Name=\"GavePicture\") }",
           "line": {
-            "number": 263
+            "number": 267
           },
           "code": [
             {
@@ -8310,10 +8461,10 @@
           ]
         },
         {
-          "index": 7,
+          "index": 9,
           "text": "condition.if(Left=%call.goal%, Operator=\"!=\", Right=\"Screenshot\") { goal.call(Name=\"GaveText\") }",
           "line": {
-            "number": 264
+            "number": 268
           },
           "code": [
             {
@@ -8398,7 +8549,7 @@
       "visibility": "Private",
       "path": "/Screen.goal",
       "prPath": "/.build/screen.pr",
-      "hash": "b53542131ff5b6e22e9b4d5c17fb1dbaa1df93561abc9e89ea647ad20f59ada3"
+      "hash": "f0b601b6a0f038a42428555977fdf26c68561e26aae3659a864c9634fd72c871"
     },
     {
       "name": "IntoApp",
@@ -8407,7 +8558,7 @@
           "index": 0,
           "text": "condition.if(Left=%call.parameters.path%, Operator=\"isnotempty\") { goal.call(Name=\"PathIntoApp\") }",
           "line": {
-            "number": 267
+            "number": 271
           },
           "code": [
             {
@@ -8503,7 +8654,7 @@
           "index": 0,
           "text": "condition.if(Left=%call.parameters.path%, Operator=\"notstartswith\", Right=\"/system/\") { goal.call(Name=\"AppPath\") }",
           "line": {
-            "number": 270
+            "number": 274
           },
           "code": [
             {
@@ -8606,7 +8757,7 @@
           "index": 0,
           "text": "set %appPath% to \"%claudeApp%%call.parameters.path%\"",
           "line": {
-            "number": 274
+            "number": 278
           },
           "comment": "(made apart first: a member set from a text naming itself is a resolve cycle)",
           "code": [
@@ -8680,7 +8831,7 @@
           "index": 1,
           "text": "set %call.parameters.path% to %appPath%",
           "line": {
-            "number": 275
+            "number": 279
           },
           "code": [
             {
@@ -8755,7 +8906,7 @@
           "index": 0,
           "text": "condition.if(Left=%claudeApp%, Operator=\"startswith\", Right=\"/system/plangos/app/\") { goal.call(Name=\"OwnApp\") }",
           "line": {
-            "number": 278
+            "number": 282
           },
           "code": [
             {
@@ -8837,7 +8988,7 @@
           "index": 0,
           "text": "set %ownApp% to %claudeApp.replace(\"/system/plangos/app/\", \"/app/\")%",
           "line": {
-            "number": 285
+            "number": 289
           },
           "comment": "The window's app came with PlangOS: it is in the image, and the next image replaces it. Its first change makes it\nthe person's: copied into their app (/app/<name>, on the data disk, which a new image never touches) — and what it\ncame from beside it (/app/.base/<name>), to compare with a newer PlangOS's — then the window shows the copy. The\nchange, and every one after it, is made in the copy.",
           "code": [
@@ -8914,7 +9065,7 @@
           "index": 1,
           "text": "file.exists(Path=\"%ownApp%/\"); variable.set(Name=%owned%, Value=%!data%)",
           "line": {
-            "number": 287
+            "number": 291
           },
           "comment": "(the folder as a template, \"%ownApp%/\": a path that is only a variable comes back as its text, which is never empty)",
           "code": [
@@ -8998,7 +9149,7 @@
           "index": 2,
           "text": "condition.if(Left=%owned%, Operator=\"isempty\") { goal.call(Name=\"CopyApp\") }",
           "line": {
-            "number": 288
+            "number": 292
           },
           "code": [
             {
@@ -9063,7 +9214,7 @@
           "index": 3,
           "text": "set %ownPath% to %call.parameters.path.replace(\"/system/plangos/app/\", \"/app/\")%",
           "line": {
-            "number": 289
+            "number": 293
           },
           "code": [
             {
@@ -9145,7 +9296,7 @@
           "index": 4,
           "text": "set %call.parameters.path% to %ownPath%",
           "line": {
-            "number": 290
+            "number": 294
           },
           "code": [
             {
@@ -9210,7 +9361,7 @@
           "index": 5,
           "text": "set %claudeApp% to %ownApp%",
           "line": {
-            "number": 291
+            "number": 295
           },
           "code": [
             {
@@ -9269,7 +9420,7 @@
           "index": 6,
           "text": "set %shownPage% to %browser.window[%asked.about.window%].url%",
           "line": {
-            "number": 292
+            "number": 296
           },
           "code": [
             {
@@ -9354,7 +9505,7 @@
           "index": 7,
           "text": "condition.if(Left=%shownPage%, Operator=\"startswith\", Right=\"/system/plangos/app/\") { goal.call(Name=\"ShowOwnApp\") }",
           "line": {
-            "number": 293
+            "number": 297
           },
           "code": [
             {
@@ -9436,7 +9587,7 @@
           "index": 0,
           "text": "set %baseApp% to %claudeApp.replace(\"/system/plangos/app/\", \"/app/.base/\")%",
           "line": {
-            "number": 296
+            "number": 300
           },
           "code": [
             {
@@ -9512,7 +9663,7 @@
           "index": 1,
           "text": "file.copy(Source=%claudeApp%, Destination=%ownApp%)",
           "line": {
-            "number": 297
+            "number": 301
           },
           "code": [
             {
@@ -9580,7 +9731,7 @@
           "index": 2,
           "text": "file.copy(Source=%claudeApp%, Destination=%baseApp%)",
           "line": {
-            "number": 298
+            "number": 302
           },
           "code": [
             {
@@ -9658,7 +9809,7 @@
           "index": 0,
           "text": "set %ownPage% to %shownPage.replace(\"/system/plangos/app/\", \"/app/\")%",
           "line": {
-            "number": 301
+            "number": 305
           },
           "code": [
             {
@@ -9734,7 +9885,7 @@
           "index": 1,
           "text": "navigate window %asked.about.window% to %ownPage% in %browser%",
           "line": {
-            "number": 302
+            "number": 306
           },
           "code": [
             {
@@ -9819,13 +9970,71 @@
       "hash": "9fe580bcab2f80e27fcc9a2b50fa71be655ebb46c95f715cfbc5cb42014944b9"
     },
     {
+      "name": "NotAgentGoal",
+      "step": [
+        {
+          "index": 0,
+          "text": "set %agentGoal% to \"/system/plangos/agent/NotYours\"",
+          "line": {
+            "number": 309
+          },
+          "code": [
+            {
+              "module": "variable",
+              "name": "set",
+              "property": [
+                {
+                  "name": "Name",
+                  "type": {
+                    "name": "variable"
+                  },
+                  "value": "%agentGoal%",
+                  "variable": [
+                    {
+                      "text": "%agentGoal%",
+                      "code": [
+                        {
+                          "variable": "agentGoal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Value",
+                  "type": {
+                    "name": "text"
+                  },
+                  "value": "/system/plangos/agent/NotYours"
+                }
+              ],
+              "default": [
+                {
+                  "name": "default",
+                  "type": {
+                    "name": "bool"
+                  },
+                  "value": false
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "child": [],
+      "visibility": "Private",
+      "path": "/Screen.goal",
+      "prPath": "/.build/screen.pr",
+      "hash": "d4abc57502840701fa8296f07da2fadb2fd06dbdd47c23d3b2e54b1215cde11d"
+    },
+    {
       "name": "CallFailed",
       "step": [
         {
           "index": 0,
           "text": "return \"failed: %!error.Message%\"",
           "line": {
-            "number": 305
+            "number": 312
           },
           "code": [
             {
@@ -9880,7 +10089,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave this picture:\"} to %results%",
           "line": {
-            "number": 308
+            "number": 315
           },
           "code": [
             {
@@ -9942,7 +10151,7 @@
           "index": 1,
           "text": "add {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": %got%}} to %results%",
           "line": {
-            "number": 309
+            "number": 316
           },
           "code": [
             {
@@ -10011,7 +10220,7 @@
           "index": 0,
           "text": "add {\"type\": \"text\", \"text\": \"%call.goal% gave: %got%\"} to %results%",
           "line": {
-            "number": 312
+            "number": 319
           },
           "code": [
             {
@@ -10091,7 +10300,7 @@
           "index": 0,
           "text": "set %event% to %!data%",
           "line": {
-            "number": 318
+            "number": 325
           },
           "comment": "The screen says what happened to a window: the desktop's taskbar shows it. Enter in a\nwindow's address field ({\"navigate\": what was typed, \"id\"}) sends that window there; its\nmenu's New window, and links opened as tabs ({\"open\": url}), open a window.",
           "code": [
@@ -10157,7 +10366,7 @@
           "index": 1,
           "text": "post %event% to %browser.desktop%",
           "line": {
-            "number": 319
+            "number": 326
           },
           "code": [
             {
@@ -10211,7 +10420,7 @@
           "index": 2,
           "text": "if %event.navigate%, call Navigate",
           "line": {
-            "number": 320
+            "number": 327
           },
           "code": [
             {
@@ -10280,7 +10489,7 @@
           "index": 3,
           "text": "if %event.open%, call OpenPage",
           "line": {
-            "number": 321
+            "number": 328
           },
           "code": [
             {
@@ -10349,7 +10558,7 @@
           "index": 4,
           "text": "if %event.tool%, call Tool",
           "line": {
-            "number": 322
+            "number": 329
           },
           "code": [
             {
@@ -10418,7 +10627,7 @@
           "index": 5,
           "text": "if %event.paste%, call Paste",
           "line": {
-            "number": 323
+            "number": 330
           },
           "code": [
             {
@@ -10497,7 +10706,7 @@
           "index": 0,
           "text": "navigate window %event.id% to %event.navigate% in %browser%",
           "line": {
-            "number": 326
+            "number": 333
           },
           "code": [
             {
@@ -10588,7 +10797,7 @@
           "index": 0,
           "text": "open window %event.open% in %browser%",
           "line": {
-            "number": 329
+            "number": 336
           },
           "code": [
             {
@@ -10658,7 +10867,7 @@
           "index": 0,
           "text": "window.call(Name=\"Tool\", Window=%event.id%, Browser=%browser%, Parameter={tool: %event.tool%})",
           "line": {
-            "number": 334
+            "number": 341
           },
           "comment": "One of the app's tools in its window's title bar was clicked ({\"tool\": \"save\", \"id\"}): its page's\ngoal Tool gets it. The page named its tools itself ({\"window\": \"tools\", \"tools\": [...]}).",
           "code": [
@@ -10737,7 +10946,7 @@
           "index": 0,
           "text": "window.call(Name=\"Paste\", Window=%event.id%, Browser=%browser%, Parameter={value: %event.paste%})",
           "line": {
-            "number": 339
+            "number": 346
           },
           "comment": "A page asked for the clipboard as a value ({\"window\": \"paste\"}): a copy that knows where it came\nfrom, as json; its page's goal Paste gets it.",
           "code": [
