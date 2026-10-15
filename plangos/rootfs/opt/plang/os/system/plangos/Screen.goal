@@ -198,21 +198,23 @@ Say
 - call Turn content=%content% in parallel
 
 FirstWords
-/ Claude's instructions are the app's own (/agent/instructions.md, at its root — the person may change them); the
-/ first time, the shell's copy is put there
-- file.exists(Path="/agent/instructions.md"); variable.set(Name=%hasInstructions%, Value=%!data%)
-- condition.if(Left=%hasInstructions%, Operator="isempty") { goal.call(Name="PlaceInstructions") }
-- render '/agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, app=%asked.about.app%, write to %instructions%
+/ Claude's instructions are PlangOS's, as this PlangOS has them (a new PlangOS brings new ones); what the person
+/ adds is theirs, /agent/notes.md in their home, after them
+- render '/system/plangos/agent/instructions.md', window=%asked.about.window%, title=%asked.about.title%, app=%asked.about.app%, write to %instructions%
+- variable.set(Name=%notes%, Value="")
+- file.exists(Path="/agent/notes.md"); variable.set(Name=%hasNotes%, Value=%!data%)
+- condition.if(Left=%hasNotes%, Operator="isnotempty") { goal.call(Name="PersonsNotes") }
 / how every agent in PLang reports back (plang's own: /system/llm/agent.md)
 / (formal: `as text` is dropped by the builder, and a file in a text is its name, not what it holds)
 - file.read(Path="/system/llm/agent.md"); variable.set(Name=%standard%, Value=%!data%, Type="text")
-- set %content% to [{"type": "text", "text": "%instructions%\n\n%standard%\n\n---\n\n%asked.say%"}]
+- set %content% to [{"type": "text", "text": "%instructions%%notes%\n\n%standard%\n\n---\n\n%asked.say%"}]
 - set %claudeStarted% to true
 / a new conversation: the host starts Claude afresh for it (and keeps its session under this app's id)
 - set %claudeFirst% to true
 
-PlaceInstructions
-- file.copy(Source="/system/plangos/agent/instructions.md", Destination="/agent/instructions.md")
+PersonsNotes
+- file.read(Path="/agent/notes.md"); variable.set(Name=%personsNotes%, Value=%!data%, Type="text")
+- variable.set(Name=%notes%, Value="\n\n## From the person\n\n%personsNotes%")
 
 NextWords
 - set %content% to [{"type": "text", "text": %asked.say%}]

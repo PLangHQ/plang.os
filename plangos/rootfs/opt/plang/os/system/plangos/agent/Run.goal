@@ -1,0 +1,13 @@
+Run
+/ Runs the goal Claude wrote, %goal% (the whole goal: its name, then its steps): saved in the person's app
+/ (/agent/run/Run.goal), built, and run in a plang of its own — no link to the host, the person's own permissions.
+/ What it wrote and its exit code; or, when it doesn't build, what the build said.
+- file.save(Path="/agent/run/Run.goal", Value=%goal%)
+- terminal.start(App="plang", Parameter=["build", "agent/run/Run.goal"]); on.timeout(After="PT2M"); variable.set(Name=%built%, Value=%!data%)
+- condition.if(Left=%built!exitCode%, Operator="!=", Right=0) { goal.call(Name="NotBuilt") }
+- terminal.start(App="plang", Parameter=["agent/run/Run"]); on.timeout(After="PT5M"); variable.set(Name=%ran%, Value=%!data%)
+- return {output: %ran%, error: %ran!error%, code: %ran!exitCode%}
+
+NotBuilt
+/ out of Run too (depth 2): what didn't build is the answer, nothing runs
+- goal.return(Data={built: false, output: %built%, error: %built!error%, code: %built!exitCode%}, Depth=2)
